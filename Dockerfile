@@ -1,26 +1,15 @@
-# Production Dockerfile for E-Commerce Customer Intelligence & ML Platform
-FROM python:3.11-slim
+# Production Container for Nexus Retail AI (HTML5 / CSS3 / Vanilla JS)
+FROM nginx:alpine
 
-# System dependencies for scientific packages and OpenMP
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libgomp1 \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+# Remove default nginx static assets
+RUN rm -rf /usr/share/nginx/html/*
 
-WORKDIR /app
+# Copy web application assets into nginx web root
+COPY index.html /usr/share/nginx/html/
+COPY style.css /usr/share/nginx/html/
+COPY app.js /usr/share/nginx/html/
 
-# Install python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+# Expose HTTP port
+EXPOSE 80
 
-# Copy repository assets
-COPY . .
-
-# Expose default Streamlit port
-EXPOSE 8501
-
-ENV PYTHONUNBUFFERED=1
-
-CMD ["streamlit", "run", "app/main.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]
+CMD ["nginx", "-g", "daemon off;"]
