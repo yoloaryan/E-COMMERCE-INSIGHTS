@@ -1,0 +1,32 @@
+# ==============================================================================
+# Render Infrastructure Blueprint Configuration (render.yaml)
+# E-Commerce Customer Intelligence & Sales Prediction Platform
+# ==============================================================================
+
+services:
+  # 1. Full Python Streamlit ML Application Service
+  - type: web
+    name: ecommerce-ml-streamlit
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
+    startCommand: "streamlit run app/main.py --server.port $PORT --server.address 0.0.0.0 --server.enableCORS false --server.enableXsrfProtection false"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: PORT
+        value: 10000
+
+  # 2. High-Performance Static Web Dashboard Service (HTML/CSS/JS)
+  - type: static
+    name: ecommerce-analytics-dashboard
+    env: static
+    region: oregon
+    plan: free
+    buildCommand: "echo 'Static assets ready'"
+    staticPublishPath: "."
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=3600

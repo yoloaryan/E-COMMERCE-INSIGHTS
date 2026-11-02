@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Retail AI | Enterprise Customer Intelligence & Admin Platform</title>
+    <meta name="description" content="Production Enterprise Data Science & Machine Learning Admin Suite: Customer Segmentation, Time-Series Demand Forecasting, Churn Early Warning, Collaborative Filtering Recommender, and Operations Studio.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="appSidebar">
+            <div class="brand">
+                <div class="brand-icon">
+                    <span class="icon-pulse"></span>
+                    <span class="brand-emoji">⚡</span>
+                </div>
+                <div class="brand-text">
+                    <h2>Nexus Retail AI</h2>
+                    <span class="brand-tag">Enterprise Admin Suite</span>
+                </div>
+            </div>
+
+            <!-- Role Indicator Switcher -->
+            <div class="role-switcher">
+                <label for="adminRoleSelect">ACTIVE OPERATIONAL ROLE</label>
+                <select id="adminRoleSelect">
+                    <option value="admin">Principal Admin (Full Control)</option>
+                    <option value="lead_ds">Lead Data Scientist (ML Ops)</option>
+                    <option value="growth">Growth & Marketing Director</option>
+                    <option value="supply">Supply Chain & Inventory VP</option>
+                </select>
+            </div>
+
+            <nav class="nav-menu">
+                <div class="nav-section-title">BUSINESS INTELLIGENCE</div>
+                <button class="nav-item active" data-tab="overview">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-label">Executive Overview</span>
+                </button>
+                <button class="nav-item" data-tab="segmentation">
+                    <span class="nav-icon">👥</span>
+                    <span class="nav-label">Customer Segments</span>
+                </button>
+                <button class="nav-item" data-tab="forecasting">
+                    <span class="nav-icon">📈</span>
+                    <span class="nav-label">Demand Forecasting</span>
+                </button>
+                <button class="nav-item" data-tab="churn">
+                    <span class="nav-icon">⚠️</span>
+                    <span class="nav-label">Churn Early Warning</span>
+                    <span class="menu-badge alert">22 VIP</span>
+                </button>
+                <button class="nav-item" data-tab="recommendations">
+                    <span class="nav-icon">🎯</span>
+                    <span class="nav-label">Product Recommender</span>
+                </button>
+
+                <div class="nav-section-title">ADMIN CONTROL CENTER</div>
+                <button class="nav-item" data-tab="admin-ops">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-label">MLOps & Model Registry</span>
+                    <span class="menu-badge green">Healthy</span>
+                </button>
+                <button class="nav-item" data-tab="customer-mgmt">
+                    <span class="nav-icon">🗂️</span>
+                    <span class="nav-label">Customer Ledger</span>
+                </button>
+                <button class="nav-item" data-tab="inventory-mart">
+                    <span class="nav-icon">📦</span>
+                    <span class="nav-label">Inventory & SKU Mart</span>
+                </button>
+                <button class="nav-item" data-tab="campaign-studio">
+                    <span class="nav-icon">🚀</span>
+                    <span class="nav-label">Retention Campaigns</span>
+                </button>
+                <button class="nav-item" data-tab="transaction-simulator">
+                    <span class="nav-icon">🧪</span>
+                    <span class="nav-label">Live POS Simulator</span>
+                </button>
+                <button class="nav-item" data-tab="audit-logs">
+                    <span class="nav-icon">🛡️</span>
+                    <span class="nav-label">Security & Audit Logs</span>
+                </button>
+                <button class="nav-item" data-tab="api-console">
+                    <span class="nav-icon">⚡</span>
+                    <span class="nav-label">Developer API Console</span>
+                    <span class="menu-badge blue">REST</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="system-status-card">
+                    <div class="status-indicator">
+                        <span class="status-beacon live"></span>
+                        <div>
+                            <strong>Engine Online</strong>
+                            <small id="telemetryLatency">Latency: 18ms | v2.4-prod</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-content">
+            <!-- Global Top Bar -->
+            <header class="top-header">
+                <div class="header-titles">
+                    <div class="breadcrumbs">
+                        <span>Portal</span> <span class="sep">/</span> <span id="crumbCurrent">Executive Overview</span>
+                    </div>
+                    <h1 id="page-title">Executive Business Intelligence Overview</h1>
+                    <p id="page-subtitle">Macro store revenue velocity, customer acquisition, and transactional health metrics.</p>
+                </div>
+                <div class="header-tools">
+                    <!-- Live Search Bar -->
+                    <div class="global-search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="globalOmniSearch" placeholder="Omni search SKU, Customer ID, or Segment...">
+                    </div>
+
+                    <!-- Executive Briefing Report Generator -->
+                    <button class="btn btn-secondary btn-sm" id="boardReportBtn" title="Generate Executive Board Briefing Report" style="display:flex;align-items:center;gap:0.4rem;font-weight:600;">
+                        <span>📄</span> Board Briefing
+                    </button>
+
+                    <!-- Theme Toggle -->
+                    <button class="icon-tool-btn" id="themeToggleBtn" title="Toggle Theme (Dark/Light)">
+                        <span id="themeIcon">☀️</span>
+                    </button>
+
+                    <!-- Notifications Dropdown Trigger -->
+                    <div class="notif-wrapper">
+                        <button class="icon-tool-btn" id="notifBtn">
+                            <span>🔔</span>
+                            <span class="notif-count">3</span>
+                        </button>
+                        <div class="notif-dropdown" id="notifDropdown">
+                            <div class="notif-header">
+                                <strong>System Alerts</strong>
+                                <span class="notif-mark-read">Mark all read</span>
+                            </div>
+                            <div class="notif-list">
+                                <div class="notif-item critical">
+                                    <div class="notif-badge">⚠️ Churn Alert</div>
+                                    <p>Customer #14096 (Historical Spend: £65,164) reached 81.2% churn risk probability.</p>
+                                    <small>12 mins ago</small>
+                                </div>
+                                <div class="notif-item info">
+                                    <div class="notif-badge">📦 Inventory Warning</div>
+                                    <p>Regency Cakestand (StockCode: 22423) projected to stock out in 11 days based on forecast velocity.</p>
+                                    <small>1 hour ago</small>
+                                </div>
+                                <div class="notif-item success">
+                                    <div class="notif-badge">🚀 Model Synchronized</div>
+                                    <p>Random Forest Sales Forecaster model checkpoint verified with 26.28% MAPE.</p>
+                                    <small>3 hours ago</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="admin-user-chip">
+                        <div class="avatar-ring">AG</div>
+                        <div class="user-info-text">
+                            <strong>Aryan Gupta</strong>
+                            <span id="adminBadgeText">Principal Admin</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- ============================================================= -->
+            <!-- TAB 1: EXECUTIVE OVERVIEW -->
+            <!-- ============================================================= -->
+            <section id="tab-overview" class="tab-pane active">
+                <!-- Date Range & Preset Filter Bar -->
+                <div class="overview-filter-bar">
+                    <div class="filter-group">
+                        <span class="filter-label">📅 Analytical Date Filter:</span>
+                        <div class="date-preset-buttons">
+                            <button class="date-preset-btn active" data-range="all">All Time (374 Days)</button>
+                            <button class="date-preset-btn" data-range="q1">Q1 2011 (Jan - Mar)</button>
+                            <button class="date-preset-btn" data-range="q2">Q2 2011 (Apr - Jun)</button>
+                            <button class="date-preset-btn" data-range="q3">Q3 2011 (Jul - Sep)</button>
+                            <button class="date-preset-btn" data-range="q4">Q4 Peak (Oct - Dec)</button>
+                        </div>
+                    </div>
+                    <div class="filter-status-tag" id="dateFilterStatus">Viewing: Full Historical Dataset</div>
+                </div>
+
+                <div class="kpi-grid">
+                    <div class="kpi-card highlight-glow">
+                        <div class="kpi-icon-wrap bg-blue">💰</div>
+                        <div>
+                            <div class="kpi-label">Total Gross Revenue</div>
+                            <div class="kpi-value" id="kpi-revenue">£10,279,169.87</div>
+                            <div class="kpi-meta"><span class="badge-tag green" id="kpi-rev-growth">↑ +14.2%</span> <small id="kpi-rev-sub">vs prior period</small></div>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon-wrap bg-purple">🛍️</div>
+                        <div>
+                            <div class="kpi-label">Completed Orders</div>
+                            <div class="kpi-value" id="kpi-orders">19,776</div>
+                            <div class="kpi-meta"><strong id="kpi-units">5,577,275</strong> units fulfilled</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon-wrap bg-emerald">💳</div>
+                        <div>
+                            <div class="kpi-label">Average Order Value (AOV)</div>
+                            <div class="kpi-value" id="kpi-aov">£519.78</div>
+                            <div class="kpi-meta"><span class="badge-tag blue">Wholesale / B2B</span></div>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon-wrap bg-amber">⚡</div>
+                        <div>
+                            <div class="kpi-label">Cancellation Rate</div>
+                            <div class="kpi-value" id="kpi-cancel">1.62%</div>
+                            <div class="kpi-meta"><span class="badge-tag green">Within Target &lt; 2.5%</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-row">
+                    <div class="chart-card flex-2">
+                        <div class="card-header">
+                            <div>
+                                <h3>Monthly Gross Revenue Velocity (£)</h3>
+                                <p class="card-sub">Aggregated trajectory across 374 operating days (Nov 2010 – Dec 2011)</p>
+                            </div>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="monthlySalesChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <div>
+                                <h3>Market Share by Country</h3>
+                                <p class="card-sub">Top 5 International Buying Markets</p>
+                            </div>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="countryShareChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="card-header">
+                        <div>
+                            <h3>Top 10 High-Velocity Revenue SKUs</h3>
+                            <p class="card-sub">Demonstrating the Retail Pareto Principle (Top 10 drive 12.1% of total catalog GMV)</p>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" id="exportTopSkusBtn">📥 Export CSV</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table" id="topProductsTable">
+                            <thead>
+                                <tr>
+                                    <th>Stock Code</th>
+                                    <th>Product Name</th>
+                                    <th>Units Sold</th>
+                                    <th>Completed Orders</th>
+                                    <th>Gross Revenue (£)</th>
+                                    <th>Catalog Share</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Customer Monthly Cohort Retention Heatmap -->
+                <div class="table-card" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <div>
+                            <h3>📊 Customer Monthly Cohort Retention Heatmap (12-Month Matrix)</h3>
+                            <p class="card-sub">Tracking month-over-month re-order retention across 4,334 verified customer acquisition cohorts</p>
+                        </div>
+                        <div class="filter-actions">
+                            <div class="btn-group-segmented">
+                                <button class="btn-seg active" id="cohortModeRateBtn">Retention Rate (%)</button>
+                                <button class="btn-seg" id="cohortModeSpendBtn">Cumulative Spend (£)</button>
+                            </div>
+                            <button class="btn btn-secondary btn-sm" id="exportCohortBtn">📥 Export Cohort CSV</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive" style="overflow-x: auto;">
+                        <table class="data-table cohort-matrix-table" id="cohortTable">
+                            <!-- Populated dynamically by JS -->
+                        </table>
+                    </div>
+                    <div class="cohort-legend-bar">
+                        <span class="legend-title">Retention Intensity:</span>
+                        <div class="legend-gradient">
+                            <span class="leg-stop leg-0">&lt; 20%</span>
+                            <span class="leg-stop leg-1">20 - 35%</span>
+                            <span class="leg-stop leg-2">35 - 50%</span>
+                            <span class="leg-stop leg-3">50 - 75%</span>
+                            <span class="leg-stop leg-4">&gt; 75%</span>
+                        </div>
+                        <small class="text-muted" style="margin-left: auto;">UCI Retail baseline demonstrates exceptional 38.4% 1-month wholesale repeat order retention.</small>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================= -->
+            <!-- TAB 2: CUSTOMER SEGMENTS -->
+            <!-- ============================================================= -->
+            <section id="tab-segmentation" class="tab-pane">
+                <div class="kpi-grid">
+                    <div class="kpi-card gold-border">
+                        <div class="kpi-label">Champions (VIPs)</div>
+                        <div class="kpi-value">708</div>
+                        <div class="kpi-subtext"><strong>64.55%</strong> of Total Revenue (£7,993 avg spend)</div>
+                    </div>
+                    <div class="kpi-card red-border">
+                        <div class="kpi-label">At-Risk / Lapsing</div>
+                        <div class="kpi-value">1,180</div>
+                        <div class="kpi-subtext"><strong>24.02%</strong> of Total Revenue (69 days inactive)</div>
+                    </div>
+                    <div class="kpi-card green-border">
+                        <div class="kpi-label">Loyal Customers</div>
+                        <div class="kpi-value">844</div>
+                        <div class="kpi-subtext"><strong>5.10%</strong> of Total Revenue (19 days recency)</div>
+                    </div>
+                    <div class="kpi-card gray-border">
+                        <div class="kpi-label">Occasional / Hibernating</div>
+                        <div class="kpi-value">1,602</div>
+                        <div class="kpi-subtext"><strong>6.33%</strong> of Total Revenue (184 days recency)</div>
+                    </div>
+                </div>
+
+                <div class="charts-row">
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <h3>Segment Revenue Contribution</h3>
+                            <span class="badge info-badge">K-Means (K=4)</span>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="segmentPieChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card flex-2">
+                        <div class="card-header">
+                            <h3>Average Spend (£) vs Purchase Frequency</h3>
+                            <span class="badge info-badge">Behavioral Clustering</span>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="segmentBarChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="interactive-card">
+                    <div class="card-header">
+                        <div>
+                            <h3>Customer Behavioral Persona Lookup</h3>
+                            <p class="card-sub">Instant scoring against RFM feature vectors and assigned marketing strategies</p>
+                        </div>
+                    </div>
+                    <div class="search-form">
+                        <input type="text" id="custSearchInput" placeholder="Enter Customer ID (e.g. 17850, 14646, 12352)..." value="17850">
+                        <button id="custSearchBtn" class="btn btn-primary">Analyze Account</button>
+                    </div>
+                    <div id="custSearchResult" class="lookup-result"></div>
+                </div>
+
+                <!-- Interactive Dynamic RFM Segment & Persona Builder -->
+                <div class="interactive-card" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <div>
+                            <h3>🎛️ Dynamic RFM Segment & Custom Audience Builder</h3>
+                            <p class="card-sub">Tune multidimensional threshold parameters to isolate custom micro-cohorts and calculate instantaneous revenue yield</p>
+                        </div>
+                        <span class="badge live-badge">Real-Time Vector Slicing</span>
+                    </div>
+                    <div class="simulator-controls-grid">
+                        <div class="sim-control-box">
+                            <label>Max Inactivity Recency: <strong id="lblDynRecency">&le; 60 Days</strong></label>
+                            <input type="range" id="sliderDynRecency" min="5" max="365" value="60" step="5">
+                            <small class="text-muted">Accounts purchasing within the last N days</small>
+                        </div>
+                        <div class="sim-control-box">
+                            <label>Min Completed Orders (Frequency): <strong id="lblDynFrequency">&ge; 5 Orders</strong></label>
+                            <input type="range" id="sliderDynFrequency" min="1" max="40" value="5" step="1">
+                            <small class="text-muted">Customer purchase cadence threshold</small>
+                        </div>
+                        <div class="sim-control-box">
+                            <label>Min Total Spend (Monetary): <strong id="lblDynSpend">&ge; £1,500</strong></label>
+                            <input type="range" id="sliderDynSpend" min="100" max="25000" value="1500" step="100">
+                            <small class="text-muted">High-yield customer lifetime value barrier</small>
+                        </div>
+                    </div>
+
+                    <div class="sim-outcome-panel" id="customSegmentOutcomePanel">
+                        <!-- Populated dynamically by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================= -->
+            <!-- TAB 3: DEMAND FORECASTING -->
+            <!-- ============================================================= -->
+            <section id="tab-forecasting" class="tab-pane">
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-label">Production Forecaster</div>
+                        <div class="kpi-value" style="font-size: 1.45rem;">Random Forest</div>
+                        <div class="kpi-subtext">100 Trees Ensemble (Trained)</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Out-of-Sample MAE</div>
+                        <div class="kpi-value">£12,464.66</div>
+                        <div class="kpi-trend positive">Beats Linear Baseline (£19.1k)</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">MAPE Accuracy</div>
+                        <div class="kpi-value">26.28%</div>
+                        <div class="kpi-subtext">On Peak Volatility Spike</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Coefficient R²</div>
+                        <div class="kpi-value">0.4281</div>
+                        <div class="kpi-trend positive">Unseen Chronological Split</div>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="card-header">
+                        <div>
+                            <h3>Chronological Demand Tracking: Actual vs Machine Learning Forecasts</h3>
+                            <p class="card-sub">Strict Out-of-Sample Validation Horizon: Oct 02 to Dec 09, 2011</p>
+                        </div>
+                    </div>
+                    <div class="chart-wrapper" style="height: 380px;">
+                        <canvas id="forecastChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="charts-row">
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <h3>Key Demand Drivers (Gini Importance)</h3>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="featureImpChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <h3>Supply Chain Operational Impact</h3>
+                        </div>
+                        <div class="decision-content">
+                            <div class="decision-bullet">
+                                <span class="bullet-icon">📦</span>
+                                <div>
+                                    <strong>18% Reduction in Safety Stock Holding</strong>
+                                    <p>Anchoring inventory procurement on the 7-day autoregressive lag curve frees working capital while maintaining a 98% order fulfillment rate.</p>
+                                </div>
+                            </div>
+                            <div class="decision-bullet">
+                                <span class="bullet-icon">🚚</span>
+                                <div>
+                                    <strong>Dynamic Warehouse Labor Scheduling</strong>
+                                    <p>With DayOfWeek accounting for 28.1% of forecast variance, warehouse picking crews are scaled up on peak Thursdays and scaled down on weekend lulls.</p>
+                                </div>
+                            </div>
+                <!-- Interactive What-If Scenario Simulator -->
+                <div class="interactive-card">
+                    <div class="card-header">
+                        <div>
+                            <h3>🔮 Interactive What-If Demand Scenario Simulator</h3>
+                            <p class="card-sub">Simulate marketing budget changes, promotional discount depths, and holiday surges to forecast projected sales</p>
+                        </div>
+                        <span class="badge live-badge">Live ML Sensitivity</span>
+                    </div>
+                    <div class="simulator-controls-grid">
+                        <div class="sim-control-box">
+                            <label>Promotional Price Discount: <strong id="lblPromoDiscount">15%</strong></label>
+                            <input type="range" id="sliderPromoDiscount" min="0" max="50" value="15" step="5">
+                            <small class="text-muted">Estimated price elasticity: -1.45</small>
+                        </div>
+                        <div class="sim-control-box">
+                            <label>Digital Ad Spend Expansion: <strong id="lblAdSpend">+20%</strong></label>
+                            <input type="range" id="sliderAdSpend" min="0" max="100" value="20" step="5">
+                            <small class="text-muted">Paid acquisition traffic multiplier</small>
+                        </div>
+                        <div class="sim-control-box">
+                            <label>Seasonal Demand Peak: <strong id="lblSeasonSurge">+25%</strong></label>
+                            <input type="range" id="sliderSeasonSurge" min="0" max="60" value="25" step="5">
+                            <small class="text-muted">Q4 holiday shopping baseline lift</small>
+                        </div>
+                        <div class="sim-control-box">
+                            <label>Simulated Target Day of Week:</label>
+                            <select id="selectSimDay" class="form-select-sm" style="width: 100%;">
+                                <option value="4" selected>Thursday (Peak Volume Day)</option>
+                                <option value="2">Tuesday (High Wholesale)</option>
+                                <option value="3">Wednesday (Mid-Week Steady)</option>
+                                <option value="1">Monday (Restock Start)</option>
+                                <option value="5">Friday (Late Invoicing)</option>
+                                <option value="0">Sunday (Retail Direct)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="sim-outcome-panel" id="simOutcomePanel">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================= -->
+            <!-- TAB 4: CHURN EARLY WARNING -->
+            <!-- ============================================================= -->
+            <section id="tab-churn" class="tab-pane">
+                <div class="kpi-grid">
+                    <div class="kpi-card red-border">
+                        <div class="kpi-label">High Churn Risk (P ≥ 70%)</div>
+                        <div class="kpi-value">725 Customers</div>
+                        <div class="kpi-subtext">21.5% of Active Cohort</div>
+                    </div>
+                    <div class="kpi-card gold-border">
+                        <div class="kpi-label">Medium Risk (35-70%)</div>
+                        <div class="kpi-value">1,652 Customers</div>
+                        <div class="kpi-subtext">49.0% Re-engagement Target</div>
+                    </div>
+                    <div class="kpi-card green-border">
+                        <div class="kpi-label">Low Risk (&lt; 35%)</div>
+                        <div class="kpi-value">991 Customers</div>
+                        <div class="kpi-subtext">29.4% Highly Retained</div>
+                    </div>
+                    <div class="kpi-card highlight-glow">
+                        <div class="kpi-label">VIP Capital Exposure</div>
+                        <div class="kpi-value">£191,892.72</div>
+                        <div class="kpi-trend alert">22 Whale Accounts at Risk</div>
+                    </div>
+                </div>
+
+                <div class="interactive-card">
+                    <div class="card-header">
+                        <div>
+                            <h3>Customer Churn Risk Scanner</h3>
+                            <p class="card-sub">Inference engine: Random Forest Classifier (75.86% Recall, 0.7163 ROC-AUC)</p>
+                        </div>
+                    </div>
+                    <div class="search-form">
+                        <input type="text" id="churnSearchInput" placeholder="Enter Customer ID..." value="12352">
+                        <button id="churnSearchBtn" class="btn btn-primary">Scan Churn Probability</button>
+                    </div>
+                    <div id="churnSearchResult" class="lookup-result"></div>
+                </div>
+
+                <div class="table-card">
+                    <div class="card-header">
+                        <div>
+                            <h3>Critical VIP Accounts at Immediate Risk (Historical Spend &gt; £1,000)</h3>
+                            <p class="card-sub">Immediate proactive win-back targets to protect bottom-line retail EBITDA</p>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table" id="vipChurnTable">
+                            <thead>
+                                <tr>
+                                    <th>Customer ID</th>
+                                    <th>Historical Spend (£)</th>
+                                    <th>Order Count</th>
+                                    <th>Days Inactive</th>
+                                    <th>Churn Risk</th>
+                                    <th>Prescribed Retention Workflow</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                <!-- Customer CLV & Retention ROI Calculator -->
+                <div class="interactive-card">
+                    <div class="card-header">
+                        <div>
+                            <h3>💰 Customer Lifetime Value (CLV) & Retention ROI Calculator</h3>
+                            <p class="card-sub">Simulate the financial return on investment of targeted retention spending vs customer churn loss</p>
+                        </div>
+                        <span class="badge live-badge">Financial Model</span>
+                    </div>
+                    <div class="simulator-controls-grid">
+                        <div class="sim-control-box">
+                            <label>Target Customer Historical Spend (£):</label>
+                            <input type="number" id="calcSpend" value="3850" min="100" max="100000" step="50" class="form-input-sm" style="width: 100%;">
+                        </div>
+                        <div class="sim-control-box">
+                            <label>Purchase Order Frequency (Annually):</label>
+                            <input type="number" id="calcFreq" value="9" min="1" max="100" class="form-input-sm" style="width: 100%;">
+                        </div>
+                        <div class="sim-control-box">
+                            <label>Gross Margin (%): <strong id="lblCalcMargin">42%</strong></label>
+                            <input type="range" id="sliderCalcMargin" min="15" max="75" value="42" step="1">
+                        </div>
+                        <div class="sim-control-box">
+                            <label>Retention Campaign Cost (£ / customer):</label>
+                            <input type="number" id="calcCost" value="35" min="5" max="500" step="5" class="form-input-sm" style="width: 100%;">
+                        </div>
+                    </div>
+                    <div class="sim-outcome-panel" id="clvOutcomePanel">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================= -->
+            <!-- TAB 5: PRODUCT RECOMMENDATION ENGINE -->
+            <!-- ============================================================= -->
+            <section id="tab-recommendations" class="tab-pane">
+                <div class="recs-control-bar">
+                    <div class="control-group">
+                        <label for="recModeSelect"><strong>Recommendation Mode:</strong></label>
+                        <select id="recModeSelect">
+                            <option value="item">Item-to-Item Cross-Sell ('Frequently Bought Together')</option>
+                            <option value="user">User-Personalized (Based on Lifetime Basket)</option>
+                        </select>
+                    </div>
+                    <div class="control-group" id="skuSelectorGroup">
+                        <label for="skuSelect"><strong>Select Base Product SKU:</strong></label>
+                        <select id="skuSelect">
+                            <option value="22423">[22423] Regency Cakestand 3 Tier (£10.95)</option>
+                            <option value="85123A">[85123A] White Hanging Heart T-Light Holder (£2.55)</option>
+                            <option value="47566">[47566] Party Bunting (£4.65)</option>
+                            <option value="85099B">[85099B] Jumbo Bag Red Retrospot (£1.79)</option>
+                            <option value="20725">[20725] Lunch Bag Red Retrospot (£1.65)</option>
+                        </select>
+                    </div>
+                    <div class="control-group" id="custSelectorGroup" style="display: none;">
+                        <label for="custSelect"><strong>Select Customer Account:</strong></label>
+                        <select id="custSelect">
+                            <option value="17850">Customer 17850 (Home Decor & Gift Buyer)</option>
+                            <option value="13089">Customer 13089 (High Frequency Wholesaler)</option>
+                            <option value="15311">Customer 15311 (Vintage Kitchen Enthusiast)</option>
+                            <option value="14646">Customer 14646 (Top Dutch VIP Buyer)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="recs-display-area">
+                    <div class="recs-header">
+                        <h3 id="recsTitle">Frequently Bought Together with: [22423] Regency Cakestand 3 Tier</h3>
+                        <p id="recsSubtitle">Derived via Sparse Item-Item Cosine Similarity matrix on 395,418 verified purchases.</p>
+                    </div>
+                    <div class="recs-grid" id="recsGrid"></div>
+                </div>
+
+                <!-- Interactive Live Cart Builder & Real-time Basket Affinity -->
+                <div class="cart-builder-card">
+                    <div class="card-header">
+                        <div>
+                            <h3>🛒 Interactive Shopping Basket & Live Cross-Sell Affinity Simulator</h3>
+                            <p class="card-sub">Add SKUs to your simulated basket to watch collaborative filtering dynamically generate real-time complementary cross-sells</p>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" id="clearCartBtn">Clear Cart</button>
+                    </div>
+                    <div class="cart-builder-layout">
+                        <!-- Active Cart Column -->
+                        <div class="cart-items-column">
+                            <h4>Active Basket Items (<span id="cartCount">0</span>)</h4>
+                            <div class="cart-items-list" id="cartItemsList">
+                                <p class="text-muted" style="font-size:0.85rem; padding:1rem 0;">Your simulated basket is empty. Click "+ Add to Cart" on any catalog item below.</p>
+                            </div>
+                            <div class="cart-total-bar">
+                                <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+                                    <strong>Basket Subtotal:</strong>
+                                    <span class="cart-total-amount" id="cartTotalAmount">£0.00</span>
+                                </div>
+                                <button class="btn btn-primary btn-sm" id="cartCheckoutBtn" style="width:100%;margin-top:0.65rem;">
+                                    ⚡ Instant POS Checkout & Pipeline Sync
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Live Cross-Sell Recommendations for the Basket -->
+                        <div class="cart-recs-column">
+                            <h4>✨ Recommended Add-ons for This Basket</h4>
+                            <div class="basket-recs-list" id="basketRecsList">
+                                <p class="text-muted" style="font-size:0.85rem; padding:1rem 0;">Add products to the basket to calculate composite vector affinities.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================= -->
+            <!-- TAB 6: MLOPS & MODEL REGISTRY (ADMIN NEW) -->
+            <!-- ============================================================= -->
+            <section id="tab-admin-ops" class="tab-pane">
+                <div class="admin-grid-top">
+                    <!-- Model Status Card -->
+                    <div class="admin-card">
+                        <div class="card-header">
+                            <div>
+                                <h3>Active Model Registry & Inference Status</h3>
+                                <p class="card-sub">Real-time health, drift metrics, and parameter checkpoints</p>
+                            </div>
+                            <span class="badge live-badge">Registry Online</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Model Name</th>
+                                        <th>Type</th>
+                                        <th>Algorithm</th>
+                                        <th>Primary Metric</th>
+                                        <th>Inference Latency</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Sales Forecaster</strong></td>
+                                        <td>Time-Series Regression</td>
+                                        <td>Random Forest (100 Trees)</td>
+                                        <td><span class="metric-chip green">MAPE 26.28%</span></td>
+                                        <td>4.2 ms</td>
+                                        <td><span class="status-pill active">Production</span></td>
+                                        <td><button class="btn btn-outline btn-xs retrain-btn" data-model="sales">Retrain</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Churn Classifier</strong></td>
+                                        <td>Binary Classification</td>
+                                        <td>Random Forest + Balanced</td>
+                                        <td><span class="metric-chip green">Recall 75.86%</span></td>
+                                        <td>6.8 ms</td>
+                                        <td><span class="status-pill active">Production</span></td>
+                                        <td><button class="btn btn-outline btn-xs retrain-btn" data-model="churn">Retrain</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Customer Segmentation</strong></td>
+                                        <td>Unsupervised Clustering</td>
+                                        <td>K-Means (K=4) + Log1p</td>
+                                        <td><span class="metric-chip blue">Silhouette 0.3375</span></td>
+                                        <td>2.1 ms</td>
+                                        <td><span class="status-pill active">Production</span></td>
+                                        <td><button class="btn btn-outline btn-xs retrain-btn" data-model="kmeans">Retrain</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Product Recommender</strong></td>
+                                        <td>Collaborative Filtering</td>
+                                        <td>Cosine Similarity Matrix</td>
+                                        <td><span class="metric-chip blue">3,182x4,333 Sparse</span></td>
+                                        <td>1.4 ms</td>
+                                        <td><span class="status-pill active">Production</span></td>
+                                        <td><button class="btn btn-outline btn-xs retrain-btn" data-model="recs">Rebuild</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Live Retraining Console -->
+                    <div class="admin-card">
+                        <div class="card-header">
+                            <div>
+                                <h3>Model Pipeline Execution Console</h3>
+                                <p class="card-sub">Trigger real-time retraining with progress telemetry</p>
+                            </div>
+                            <button id="triggerGlobalRetrainBtn" class="btn btn-primary btn-sm">⚡ Run Pipeline Ingest & Retrain</button>
+                        </div>
+                        <div class="terminal-window" id="terminalLogWindow">
+                            <div class="terminal-bar">
+                                <span class="term-dot red"></span>
+                                <span class="term-dot yellow"></span>
+                                <span class="term-dot green"></span>
+                                <span class="term-title">bash - pipeline-orchestrator.sh</span>
+                            </div>
+                            <pre class="terminal-body" id="terminalOutput">
+[System] MLOps pipeline initialized.
+[Check] Processed datasets verified in /data/processed/
+[Check] Feature stores (RFM, Lag_7, Churn) synced with ground truth.
+[Status] All 4 model services running on localhost daemon.
+> Ready for admin execution commands...
+                            </pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================= -->
+            <!-- TAB 7: CUSTOMER MANAGEMENT LEDGER (ADMIN NEW) -->
+            <!-- ============================================================= -->
+            <section id="tab-customer-mgmt" class="tab-pane">
+                <div class="table-card">
+                    <div class="card-header">
+                        <div>
+                            <h3>Enterprise Customer Account Ledger</h3>
+                            <p class="card-sub">Filterable, searchable master customer database with behavioral personas and churn probabilities</p>
+                        </div>
+                        <div class="filter-actions">
+                            <select id="customerSegmentFilter" class="form-select-sm">
+                                <option value="all">All Segments (4,334)</option>
+                                <option value="Champions (VIP)">Champions (VIP)</option>
+                                <option value="At-Risk / Lapsing">At-Risk / Lapsing</option>
+                                <option value="Loyal Customers">Loyal Customers</option>
+                                <option value="Occasional / Hibernating">Occasional / Hibernating</option>
+                            </select>
+                            <input type="text" id="custLedgerSearch" placeholder="Search Customer ID..." class="form-input-sm">
+                            <button class="btn btn-secondary btn-sm" id="exportCustLedgerBtn">📥 Export CSV</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
+                        <table class="data-table" id="customerLedgerTable">
+                            <thead>
+                                <tr>
+                                    <th>Customer ID</th>
+                                    <th>Segment Persona</th>
+                                    <th>Lifetime Spend (£)</th>
+                                    <th>Orders</th>
+                                    <th>AOV (£)</th>
+                                    <th>Last Purchase</th>
+                                    <th>Churn Risk</th>
+                                    <th>Status Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Populated dynamically by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================= -->
+            <!-- TAB 8: INVENTORY & CATALOG MART (ADMIN NEW) -->
+            <!-- ============================================================= -->
+            <section id="tab-inventory-mart" class="tab-pane">
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-label">Active SKUs in Catalog</div>
+                        <div class="kpi-value">3,660</div>
+                        <div class="kpi-subtext">3,182 Active in Recommender</div>
+                    </div>
+                    <div class="kpi-card red-border">
+                        <div class="kpi-label">Stockout Risk Alerts</div>
+                        <div class="kpi-value">14 SKUs</div>
+                        <div class="kpi-trend alert">Projected Runout &lt; 14 Days</div>
+                    </div>
+                    <div class="kpi-card gold-border">
+                        <div class="kpi-label">Slow-Moving Deadstock</div>
+                        <div class="kpi-value">482 SKUs</div>
+                        <div class="kpi-subtext">&lt; 3 purchases in 90 days</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Catalog Velocity Index</div>
+                        <div class="kpi-value">94.8%</div>
+                        <div class="kpi-trend positive">High Inventory Turnover</div>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="card-header">
+                        <div>
+                            <h3>SKU Velocity & Stock Reorder Intelligence</h3>
+                            <p class="card-sub">Combining historical order rates with predictive demand forecasting</p>
+                        </div>
+                        <button class="btn btn-primary btn-sm" id="addNewSkuModalBtn">+ Add New SKU</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table" id="inventoryTable">
+                            <thead>
+                                <tr>
+                                    <th>Stock Code</th>
+                                    <th>Product Name</th>
+                                    <th>Unit Price</th>
+                                    <th>Est. Units in Stock</th>
+                                    <th>Daily Burn Rate</th>
+                                    <th>Days of Inventory Remaining</th>
+                                    <th>Stockout Risk Status</th>
+                                    <th>Restock Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================= -->
+            <!-- TAB 9: RETENTION CAMPAIGN STUDIO (ADMIN NEW) -->
+            <!-- ============================================================= -->
+            <section id="tab-campaign-studio" class="tab-pane">
+                <div class="charts-row">
+                    <!-- Campaign Builder Form -->
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <div>
+                                <h3>Targeted Retention Campaign Studio</h3>
+                                <p class="card-sub">Trigger automated win-back workflows for high-risk cohorts</p>
+                            </div>
+                        </div>
+                        <form id="campaignBuilderForm" class="admin-form">
+                            <div class="form-group">
+                                <label>Target Cohort Segment:</label>
+                                <select id="campSegment">
+                                    <option value="At-Risk VIPs">At-Risk VIP Spenders (Spend &gt; £1k, Churn &ge; 70%)</option>
+                                    <option value="All At-Risk">All At-Risk / Lapsing Customers (1,180 accounts)</option>
+                                    <option value="Champions">Champions (VIPs) - Appreciation & Early Access</option>
+                                    <option value="Hibernating">Hibernating Win-Back (1,602 accounts)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Offer & Incentive Strategy:</label>
+                                <select id="campIncentive">
+                                    <option value="20_off_fav">20% Off Customer's Top Purchased Category</option>
+                                    <option value="free_express">Complimentary Priority Express Shipping</option>
+                                    <option value="vip_gift">Free Regency Gift Item with Re-order &gt; £100</option>
+                                    <option value="dedicated_call">Direct Senior Account Manager Phone Concierge</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Delivery Channel:</label>
+                                <div class="checkbox-row">
+                                    <label><input type="checkbox" checked> Personalized Email Sequence</label>
+                                    <label><input type="checkbox" checked> SMS Quick Trigger</label>
+                                    <label><input type="checkbox"> WhatsApp VIP Concierge</label>
+                                </div>
+                            </div>
+                            <div class="campaign-est-box">
+                                <div><strong>Target Audience Size:</strong> <span id="campAudienceSize">22 Accounts</span></div>
+                                <div><strong>Protected Gross Revenue Exposure:</strong> <span id="campRevenueProtected">£191,892.72</span></div>
+                                <div><strong>Projected Win-Back Rate:</strong> <span class="badge-tag green">28.5% Expected</span></div>
+                            </div>
+                            <button type="button" class="btn btn-primary" id="launchCampaignBtn" style="width: 100%; margin-top: 1rem;">
+                                🚀 Launch Automated Retention Campaign
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Live Active Campaigns -->
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <div>
+                                <h3>Active Marketing & Retention Campaigns</h3>
+                                <p class="card-sub">Real-time conversion tracking and preserved EBITDA</p>
+                            </div>
+                        </div>
+                        <div class="campaign-list" id="activeCampaignsList">
+                            <div class="campaign-item">
+                                <div class="camp-status-badge active">RUNNING</div>
+                                <h4>Q4 VIP Win-Back Acceleration</h4>
+                                <p>Target: 22 High-Value At-Risk VIPs (£1k+ historical spend)</p>
+                                <div class="camp-stats">
+                                    <div><small>Dispatched</small><strong>22 emails</strong></div>
+                                    <div><small>Opened</small><strong>19 (86.4%)</strong></div>
+                                    <div><small>Converted</small><strong>6 (27.3%)</strong></div>
+                                    <div><small>Preserved GMV</small><strong class="text-green">£48,210.00</strong></div>
+                                </div>
+                            </div>
+                            <div class="campaign-item">
+                                <div class="camp-status-badge active">RUNNING</div>
+                                <h4>Regency Teaware Cross-Sell Drip</h4>
+                                <p>Target: Customers who bought Regency Cakestand 3 Tier</p>
+                                <div class="camp-stats">
+                                    <div><small>Dispatched</small><strong>1,420 emails</strong></div>
+                                    <div><small>Opened</small><strong>612 (43.1%)</strong></div>
+                                    <div><small>Converted</small><strong>188 (13.2%)</strong></div>
+                                    <div><small>Generated GMV</small><strong class="text-green">£14,640.00</strong></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================= -->
+            <!-- TAB 10: LIVE POS & TRANSACTION SIMULATOR (ADMIN NEW) -->
+            <!-- ============================================================= -->
+            <section id="tab-transaction-simulator" class="tab-pane">
+                <div class="charts-row">
+                    <!-- Simulator Form -->
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <div>
+                                <h3>Live Transaction Injection Simulator</h3>
+                                <p class="card-sub">Simulate new real-time purchase orders and observe immediate recalculation of RFM, Churn Probability, and Recommender affinities</p>
+                            </div>
+                        </div>
+                        <form id="posSimulatorForm" class="admin-form">
+                            <div class="form-group">
+                                <label>Customer Account ID:</label>
+                                <input type="text" id="simCustId" value="12352" required>
+                                <small class="form-hint">Tip: Use 12352 (currently High Churn Risk) to see their probability drop in real-time!</small>
+                            </div>
+                            <div class="form-group">
+                                <label>Product SKU Code:</label>
+                                <select id="simSkuCode">
+                                    <option value="22423">[22423] Regency Cakestand 3 Tier (£10.95)</option>
+                                    <option value="22699">[22699] Roses Regency Teacup And Saucer (£2.95)</option>
+                                    <option value="85123A">[85123A] White Hanging Heart T-Light Holder (£2.55)</option>
+                                    <option value="47566">[47566] Party Bunting (£4.65)</option>
+                                    <option value="85099B">[85099B] Jumbo Bag Red Retrospot (£1.79)</option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group flex-1">
+                                    <label>Order Quantity:</label>
+                                    <input type="number" id="simQty" value="12" min="1" max="1000" required>
+                                </div>
+                                <div class="form-group flex-1">
+                                    <label>Unit Price (£):</label>
+                                    <input type="number" id="simPrice" value="10.95" step="0.01" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Destination Country:</label>
+                                <input type="text" id="simCountry" value="United Kingdom">
+                            </div>
+                            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
+                                ⚡ Inject Transaction & Recompute ML Engines
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Simulator Live Results -->
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <div>
+                                <h3>Real-Time ML Pipeline Reaction</h3>
+                                <p class="card-sub">Telemetry updates triggered by the ingested transaction</p>
+                            </div>
+                            <span class="badge live-badge">Live Reactive</span>
+                        </div>
+                        <div id="simFeedbackArea" class="sim-feedback-box">
+                            <div class="sim-empty-state">
+                                <span>🧪</span>
+                                <h4>No transaction injected yet</h4>
+                                <p>Fill the form on the left and submit to trigger instant real-time model inference updates.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================= -->
+            <!-- TAB 11: SECURITY & AUDIT LOGS (ADMIN NEW) -->
+            <!-- ============================================================= -->
+            <section id="tab-audit-logs" class="tab-pane">
+                <div class="table-card">
+                    <div class="card-header">
+                        <div>
+                            <h3>Enterprise Security, RBAC & Model Audit Stream</h3>
+                            <p class="card-sub">Immutable event stream tracking pipeline modifications, data exports, and retraining triggers</p>
+                        </div>
+                        <div class="filter-actions">
+                            <button class="btn btn-secondary btn-sm" id="clearAuditLogsBtn">Clear Session Logs</button>
+                            <button class="btn btn-outline btn-sm" id="exportAuditLogsBtn">📥 Export Audit JSON</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table" id="auditLogsTable">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Event Category</th>
+                                    <th>Actor Role</th>
+                                    <th>Action Description</th>
+                                    <th>IP / Source</th>
+                                    <th>Severity</th>
+                                </tr>
+                            </thead>
+                            <tbody id="auditLogsTbody">
+                                <!-- Populated dynamically by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================= -->
+            <!-- TAB 12: DEVELOPER API CONSOLE & REST ENDPOINT TESTER -->
+            <!-- ============================================================= -->
+            <section id="tab-api-console" class="tab-pane">
+                <div class="api-console-grid">
+                    <!-- Request Builder Card -->
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <div>
+                                <h3>⚡ Interactive Model REST API Playground</h3>
+                                <p class="card-sub">Test live microservices with custom payload vectors and observe sub-10ms response latencies</p>
+                            </div>
+                            <span class="badge live-badge">v1.2 REST Gateway</span>
+                        </div>
+                        <div class="api-controls-bar">
+                            <div class="endpoint-picker">
+                                <span class="method-badge post" id="apiMethodBadge">POST</span>
+                                <select id="apiEndpointSelect" class="form-select-sm" style="flex:1;">
+                                    <option value="churn">/api/v1/predict/churn (Customer Churn Risk)</option>
+                                    <option value="forecast">/api/v1/forecast/sales (Demand Forecaster)</option>
+                                    <option value="recommend">/api/v1/recommend/skus (Item-Item Affinity)</option>
+                                    <option value="segment">/api/v1/segment/classify (RFM Persona Classifier)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="api-editor-wrap">
+                            <div class="editor-header">
+                                <span>Request Body (JSON):</span>
+                                <button class="btn btn-xs btn-outline" id="apiResetPayloadBtn">Reset Payload</button>
+                            </div>
+                            <textarea id="apiRequestJson" class="code-textarea" rows="9" spellcheck="false"></textarea>
+                        </div>
+
+                        <div class="api-actions-bar">
+                            <button class="btn btn-primary" id="apiExecuteBtn">
+                                ▶️ Execute Live Endpoint
+                            </button>
+                            <button class="btn btn-secondary" id="apiCopyCurlBtn">
+                                📋 Copy cURL Request
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Response Viewer Card -->
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <div>
+                                <h3>Endpoint Response Telemetry</h3>
+                                <p class="card-sub">Real-time JSON serialization, HTTP status, and inference benchmark</p>
+                            </div>
+                            <div class="api-meta-chips">
+                                <span class="badge-tag green" id="apiStatusPill">200 OK</span>
+                                <span class="badge-tag blue" id="apiLatencyPill">Latency: 4.8 ms</span>
+                            </div>
+                        </div>
+
+                        <div class="api-response-window">
+                            <div class="terminal-bar">
+                                <span class="term-dot green"></span>
+                                <span class="term-title" id="apiResponseUrl">http://localhost:8080/api/v1/predict/churn</span>
+                                <button class="copy-btn-sm" id="apiCopyResponseBtn">Copy JSON</button>
+                            </div>
+                            <pre class="api-json-output" id="apiResponseJson"></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Slide-in Customer Detail Drawer Modal -->
+    <div class="drawer-backdrop" id="customerDrawerBackdrop">
+        <div class="customer-drawer" id="customerDrawer">
+            <div class="drawer-header">
+                <div>
+                    <h3 id="drawerCustTitle">Customer Account #17850</h3>
+                    <span class="badge-tag gold-border" id="drawerCustBadge">Champions (VIP)</span>
+                </div>
+                <button class="drawer-close-btn" id="drawerCloseBtn">✕</button>
+            </div>
+            <div class="drawer-body" id="drawerBody">
+                <!-- Populated dynamically by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Add New Product SKU -->
+    <div class="modal-backdrop" id="skuModalBackdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>📦 Register New Product SKU</h3>
+                <button class="modal-close-btn" id="closeSkuModalBtn">✕</button>
+            </div>
+            <form id="skuModalForm">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>StockCode (5-digit or alphanumeric):</label>
+                        <input type="text" id="modalSkuCode" placeholder="e.g. 23999" required class="form-input-sm" style="width:100%;">
+                    </div>
+                    <div class="form-group">
+                        <label>Product Description / Title:</label>
+                        <input type="text" id="modalSkuName" placeholder="e.g. Victorian Vintage Teacup Stand" required class="form-input-sm" style="width:100%;">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label>Unit Price (£):</label>
+                            <input type="number" id="modalSkuPrice" placeholder="4.95" step="0.01" min="0.10" required class="form-input-sm" style="width:100%;">
+                        </div>
+                        <div class="form-group flex-1">
+                            <label>Opening Stock Units:</label>
+                            <input type="number" id="modalSkuStock" placeholder="250" min="1" required class="form-input-sm" style="width:100%;">
+                        </div>
+                        <div class="form-group flex-1">
+                            <label>Est. Daily Burn:</label>
+                            <input type="number" id="modalSkuBurn" placeholder="10" min="1" required class="form-input-sm" style="width:100%;">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelSkuModalBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">+ Save SKU to Catalog</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Order Inbound Restock Shipment -->
+    <div class="modal-backdrop" id="restockModalBackdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>🚚 Inbound Purchase Order & Restock Dispatch</h3>
+                <button class="modal-close-btn" id="closeRestockModalBtn">✕</button>
+            </div>
+            <form id="restockModalForm">
+                <div class="modal-body">
+                    <input type="hidden" id="modalRestockSkuCode">
+                    <div class="form-group">
+                        <label>Target Catalog Product:</label>
+                        <input type="text" id="modalRestockSkuName" readonly class="form-input-sm" style="width:100%;background:var(--bg-surface-alt);cursor:not-allowed;">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label>Restock Units Qty:</label>
+                            <input type="number" id="modalRestockQty" value="500" min="50" step="50" required class="form-input-sm" style="width:100%;">
+                        </div>
+                        <div class="form-group flex-1">
+                            <label>Supplier Lead Time (Days):</label>
+                            <input type="number" id="modalRestockLeadDays" value="3" min="1" max="60" required class="form-input-sm" style="width:100%;">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Preferred Fulfillment Vendor:</label>
+                        <select id="modalRestockSupplier" class="form-select-sm" style="width:100%;">
+                            <option>Midlands UK Central Logistics Hub (Priority Air)</option>
+                            <option>Rotterdam Continental Sea Freight</option>
+                            <option>Direct Manufacturer Express Courier</option>
+                        </select>
+                    </div>
+                    <div class="campaign-est-box" style="margin-top:0.75rem;">
+                        <div><strong>New Inventory Projection:</strong> <span id="modalRestockProjectedStock">850 Units</span></div>
+                        <div><strong>Extended Days of Supply:</strong> <span id="modalRestockProjectedDays" class="text-green">+35 Days Coverage</span></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelRestockModalBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">⚡ Confirm Inbound PO</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Executive Board Briefing Report -->
+    <div class="modal-backdrop" id="reportModalBackdrop">
+        <div class="modal-card modal-large" id="printableReportCard">
+            <div class="modal-header">
+                <div>
+                    <div class="report-badge">NEXUS RETAIL AI | EXECUTIVE BRIEFING</div>
+                    <h2 style="font-size:1.35rem;margin-top:0.25rem;">Board of Directors E-Commerce Intelligence Summary</h2>
+                    <small class="text-muted" id="reportGeneratedDate">Generated: Real-time Snapshot</small>
+                </div>
+                <div style="display:flex;gap:0.5rem;align-items:center;">
+                    <button class="btn btn-primary btn-sm" id="printReportBtn">🖨️ Print / Save PDF</button>
+                    <button class="modal-close-btn" id="closeReportModalBtn">✕</button>
+                </div>
+            </div>
+            <div class="modal-body report-printable-body">
+                <!-- Section 1: Executive KPI Grid -->
+                <div class="report-kpi-row">
+                    <div class="report-kpi">
+                        <small>Total Retail GMV</small>
+                        <strong>£10,279,169.87</strong>
+                        <span>374 Operating Days</span>
+                    </div>
+                    <div class="report-kpi">
+                        <small>Orders Fulfilled</small>
+                        <strong>19,776</strong>
+                        <span>5,577,275 Units</span>
+                    </div>
+                    <div class="report-kpi">
+                        <small>Average Order Value</small>
+                        <strong>£519.78</strong>
+                        <span>Wholesale Skew</span>
+                    </div>
+                    <div class="report-kpi">
+                        <small>VIP Churn Exposure</small>
+                        <strong style="color:var(--danger);">£191,892.72</strong>
+                        <span>22 Whale Accounts</span>
+                    </div>
+                </div>
+
+                <!-- Section 2: Core Machine Learning Engine Health -->
+                <div class="report-section">
+                    <h3>1. Machine Learning Production Audit</h3>
+                    <table class="data-table" style="font-size:0.82rem;margin-top:0.5rem;">
+                        <thead>
+                            <tr>
+                                <th>Subsystem</th>
+                                <th>Deployed Architecture</th>
+                                <th>Benchmark Metric</th>
+                                <th>Business Impact</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Customer Segmentation</strong></td>
+                                <td>K-Means (K=4) + Log1p Transformed</td>
+                                <td>Silhouette 0.3375</td>
+                                <td>Champions (708 accounts) generate 64.55% of GMV</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Demand Forecaster</strong></td>
+                                <td>Random Forest Regressor (100 Trees)</td>
+                                <td>MAPE 26.28% | MAE £12,464</td>
+                                <td>18% Reduction in Warehouse Safety Buffer Stock</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Churn Early Warning</strong></td>
+                                <td>Balanced Random Forest Classifier</td>
+                                <td>Recall 75.86% | AUC 0.7163</td>
+                                <td>Protects £191.8k in VIP revenue before 90-day lapse</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Product Recommender</strong></td>
+                                <td>Item Collaborative Filtering (Cosine)</td>
+                                <td>3,182 x 4,333 Matrix</td>
+                                <td>+14.2% Cross-Sell Average Basket Size Uplift</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Section 3: Strategic Recommendations -->
+                <div class="report-section" style="margin-top:1.25rem;">
+                    <h3>2. Board Strategic Directives & Action Items</h3>
+                    <div class="report-directives">
+                        <div class="report-directive-item">
+                            <strong>🎯 VIP Concierge Intervention:</strong>
+                            <p>Activate Account Management phone outreach for the 22 At-Risk VIP accounts (led by #14096 and #12352) within 48 hours to preserve £191.8k annualized EBITDA.</p>
+                        </div>
+                        <div class="report-directive-item">
+                            <strong>📦 Inventory Procurement Restock:</strong>
+                            <p>Issue immediate purchase orders for Regency Cakestand (StockCode 22423) and Jumbo Bag Retrospot to preempt stockouts during projected Q4 peak demand.</p>
+                        </div>
+                        <div class="report-directive-item">
+                            <strong>📈 International Expansion:</strong>
+                            <p>Allocate 30% digital ad budget to Dutch and German wholesale channels, capitalizing on £280k+ Netherlands cluster spend velocity.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <small class="text-muted">Certified Production Telemetry from Nexus Retail AI Engine v2.4-prod</small>
+                <button class="btn btn-secondary btn-sm" id="closeReportModalBtn2">Close Briefing</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Toast Notification Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

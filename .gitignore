@@ -1,0 +1,26 @@
+# Virtual Environment
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.ipynb_checkpoints/
+
+# Data files (keep raw & large data out of git)
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Models & Artifacts
+models/*.pkl
+models/*.joblib
+!models/.gitkeep
+
+# OS & IDE
+.DS_Store
+.vscode/
+.idea/
+*.log
+.env
