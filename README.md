@@ -1,15 +1,23 @@
 # E-Commerce Customer Intelligence & Sales Prediction System
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Render_Web_App-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://e-commerce-insights.onrender.com/)
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/yoloaryan/E-COMMERCE-INSIGHTS)
+
 ![Python 3.11](https://img.shields.io/badge/Python-3.11-blue.svg)
 ![Scikit-Learn](https://img.shields.io/badge/scikit--learn-1.9.1-orange.svg)
 ![XGBoost](https://img.shields.io/badge/XGBoost-3.2.0-red.svg)
-![Streamlit](https://img.shields.io/badge/Streamlit-1.66-FF4B4B.svg)
-![Pandas](https://img.shields.io/badge/Pandas-2.2-150458.svg)
+![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E.svg?logo=javascript&logoColor=black)
+![HTML5 / CSS3](https://img.shields.io/badge/Frontend-HTML5_%2F_CSS3-E34F26.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
+
+> [!IMPORTANT]
+> 🚀 **Live Production Web Application:** **[https://e-commerce-insights.onrender.com/](https://e-commerce-insights.onrender.com/)**
+>
+> The full enterprise platform is deployed live on Render's global edge network as a responsive single-page web application (HTML5 / CSS3 / Vanilla JavaScript). Experience all 12 operational intelligence modules, real-time RFM segment lookups, interactive demand sensitivity simulators, VIP churn early warning, and one-click CSV export suites.
 
 An industry-grade Data Science, Machine Learning, and Business Intelligence platform built on **541,909 real-world transnational e-commerce records**. 
 
-This system integrates **Customer Behavioral Segmentation (RFM + K-Means)**, **Macro Demand & Sales Forecasting (Time-Series ML)**, **Customer Churn Early-Warning (Classification)**, and **Product Recommendation (Item-Item Collaborative Filtering)** into an interactive **Streamlit BI Command Center**.
+This system integrates **Customer Behavioral Segmentation (RFM + K-Means)**, **Macro Demand & Sales Forecasting (Time-Series ML)**, **Customer Churn Early-Warning (Classification)**, and **Product Recommendation (Item-Item Collaborative Filtering)** into an interactive **Enterprise Web Intelligence Suite**.
 
 ---
 
@@ -48,8 +56,10 @@ This system integrates **Customer Behavioral Segmentation (RFM + K-Means)**, **M
                 └──────────────────────────┼───────────────────────┘
                                            ▼
   ┌─────────────────────────────────────────────────────────────────────────────┐
-  │            STREAMLIT BUSINESS INTELLIGENCE DASHBOARD (`app/main.py`)         │
-  │   Executive KPIs • 3D Customer Clusters • Live Forecasts • Churn Scanner   │
+  │         NEXUS RETAIL AI WEB APPLICATION (`index.html`, `style.css`, `app.js`)│
+  │  🌐 Live at: https://e-commerce-insights.onrender.com/                       │
+  │  Executive KPIs • Customer Segmentation • Sales Forecaster • Churn Early   │
+  │  Warning • Recommender Mart • POS Simulator • MLOps Console • Audit Stream  │
   └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -204,40 +214,47 @@ python src/models/churn_prediction.py
 python src/models/recommender.py
 ```
 
-### 3. Launch the Interactive Web Applications
+### 3. Launch or Access the Web Application
 
-#### A. Streamlit BI Dashboard (Python ML Backend)
-```bash
-streamlit run app/main.py
-```
-Open your browser at `http://localhost:8501`.
+#### A. Live Production Cloud Deployment (Render)
+Directly test and explore the live hosted application:
+👉 **[https://e-commerce-insights.onrender.com/](https://e-commerce-insights.onrender.com/)**
 
-#### B. Standalone Static Web Dashboard (HTML / CSS / JS)
+#### B. Standalone Local Web Application (HTML5 / CSS3 / Vanilla JS)
 ```bash
 python3 -m http.server 8080
 ```
 Open your browser at `http://localhost:8080`.
 
+#### C. Optional Python ML Diagnostic Console
+```bash
+streamlit run app/main.py
+```
+Open your browser at `http://localhost:8501`.
+
 ---
 
-## 🌐 Cloud Deployment Guide (Vercel & Render)
+## 🌐 Cloud Deployment Guide (Render & Vercel)
 
-### 1. Deploying to Vercel (One-Click Static & Serverless)
-This repository includes a preconfigured [`vercel.json`](file:///Users/aryangupta/Desktop/e-commerce/vercel.json).
-1. Push your repository to GitHub.
-2. Go to [Vercel](https://vercel.com) and click **"Add New Project"**.
-3. Import your `ecommerce-customer-intelligence-ml` repository.
-4. Leave the default settings (Framework Preset: **Other**, Root Directory: `./`).
-5. Click **Deploy**. Vercel will instantly build and serve your interactive web dashboard on a global CDN edge URL (`https://your-project.vercel.app`).
+### 1. Live Deployment on Render (HTML / CSS / JavaScript)
+The live application is hosted at: **[https://e-commerce-insights.onrender.com/](https://e-commerce-insights.onrender.com/)**
 
-### 2. Deploying to Render (Python Streamlit or Static)
-This repository includes a Render Infrastructure Blueprint in [`render.yaml`](file:///Users/aryangupta/Desktop/e-commerce/render.yaml) and [`Procfile`](file:///Users/aryangupta/Desktop/e-commerce/Procfile).
-1. Push your repository to GitHub.
-2. Go to [Render](https://render.com) and click **"New"** ➔ **"Blueprint"**.
-3. Connect your GitHub repository. Render will automatically parse `render.yaml` and configure:
-   - **Service 1 (`ecommerce-ml-streamlit`)**: Full Python Web Service running Streamlit on port `10000` with all trained `.joblib` models.
-   - **Service 2 (`ecommerce-analytics-dashboard`)**: Ultra-fast Static Web site running the HTML/CSS/JS interface.
-4. Click **Apply**. Render will automatically provision and launch your live production services.
+This repository is configured specifically for Render Static Sites in [`render.yaml`](render.yaml) and [`Procfile`](Procfile):
+1. Push your repository to GitHub: `https://github.com/yoloaryan/E-COMMERCE-INSIGHTS`.
+2. Go to the [Render Dashboard](https://dashboard.render.com) and click **"New +"** ➔ **"Static Site"** (or **"Blueprint"**).
+3. Connect your GitHub repository: `yoloaryan/E-COMMERCE-INSIGHTS`.
+4. Configure:
+   - **Name**: `e-commerce-insights`
+   - **Build Command**: `echo 'Static assets ready'` (or leave blank)
+   - **Publish Directory**: `.`
+5. Click **Create Static Site**. Render deploys the platform with automatic HTTPS, zero cold starts, and global CDN acceleration.
+
+### 2. Deploying to Vercel (Edge CDN)
+This repository includes a preconfigured [`vercel.json`](vercel.json):
+1. Go to [Vercel](https://vercel.com) and click **"Add New Project"**.
+2. Import your `yoloaryan/E-COMMERCE-INSIGHTS` repository.
+3. Keep default settings (Framework Preset: **Other**, Root Directory: `./`).
+4. Click **Deploy**. Vercel will instantly serve the dashboard on an edge CDN URL.
 
 ---
 
