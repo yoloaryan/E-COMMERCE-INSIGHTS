@@ -4,11 +4,13 @@
  */
 
 document.addEventListener("DOMContentLoaded", () => {
+    initChartDefaults();
     initThemeManager();
     initRoleManager();
     initNotificationCenter();
     initOmniSearch();
     initNavigation();
+    initScrollToTop();
     initOverviewTab();
     initCohortHeatmap();
     initSegmentationTab();
@@ -32,20 +34,32 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // =============================================================================
-// GLOBAL STATE & AUDIT STORE
+// GLOBAL STATE & AUDIT STORE (PERSISTENT VIA LOCALSTORAGE)
 // =============================================================================
+const savedLogs = localStorage.getItem("nexus_audit_logs");
+let initialLogs = [
+    { time: "2026-11-02 14:51:29", cat: "MLOps", role: "Lead DS", action: "Rebuilt Item Cosine Similarity Matrix (3,182 SKUs)", ip: "127.0.0.1", sev: "INFO" },
+    { time: "2026-11-02 12:17:44", cat: "ModelRegistry", role: "Principal Admin", action: "Validated Random Forest Churn Classifier (AUC 0.7163)", ip: "127.0.0.1", sev: "INFO" },
+    { time: "2026-11-02 12:15:00", cat: "ModelRegistry", role: "Principal Admin", action: "Promoted Random Forest Forecaster to Production (MAPE 26.28%)", ip: "127.0.0.1", sev: "INFO" },
+    { time: "2026-11-02 11:19:29", cat: "Segmentation", role: "Growth Lead", action: "Executed K-Means (K=4) Persona Cluster Rebalance", ip: "127.0.0.1", sev: "INFO" },
+    { time: "2026-11-02 11:10:08", cat: "ETL", role: "System Daemon", action: "Ingested 541,909 raw UCI transactions into Clean Store Mart", ip: "127.0.0.1", sev: "INFO" }
+];
+if (savedLogs) {
+    try { initialLogs = JSON.parse(savedLogs); } catch (e) {}
+}
+
+let initialCart = [];
+const savedCart = localStorage.getItem("nexus_cart");
+if (savedCart) {
+    try { initialCart = JSON.parse(savedCart); } catch (e) {}
+}
+
 const APP_STATE = {
     theme: localStorage.getItem("nexus_theme") || "dark",
-    role: "admin",
-    cart: [],
-    dateRange: "all",
-    auditLogs: [
-        { time: "2026-11-02 14:51:29", cat: "MLOps", role: "Lead DS", action: "Rebuilt Item Cosine Similarity Matrix (3,182 SKUs)", ip: "127.0.0.1", sev: "INFO" },
-        { time: "2026-11-02 12:17:44", cat: "ModelRegistry", role: "Principal Admin", action: "Validated Random Forest Churn Classifier (AUC 0.7163)", ip: "127.0.0.1", sev: "INFO" },
-        { time: "2026-11-02 12:15:00", cat: "ModelRegistry", role: "Principal Admin", action: "Promoted Random Forest Forecaster to Production (MAPE 26.28%)", ip: "127.0.0.1", sev: "INFO" },
-        { time: "2026-11-02 11:19:29", cat: "Segmentation", role: "Growth Lead", action: "Executed K-Means (K=4) Persona Cluster Rebalance", ip: "127.0.0.1", sev: "INFO" },
-        { time: "2026-11-02 11:10:08", cat: "ETL", role: "System Daemon", action: "Ingested 541,909 raw UCI transactions into Clean Store Mart", ip: "127.0.0.1", sev: "INFO" }
-    ]
+    role: localStorage.getItem("nexus_role") || "admin",
+    cart: initialCart,
+    dateRange: localStorage.getItem("nexus_date_range") || "all",
+    auditLogs: initialLogs
 };
 
 // =============================================================================
@@ -119,8 +133,13 @@ function initRoleManager() {
     };
 
     if (roleSelect && badgeText) {
+        if (APP_STATE.role && roleMap[APP_STATE.role]) {
+            roleSelect.value = APP_STATE.role;
+            badgeText.textContent = roleMap[APP_STATE.role];
+        }
         roleSelect.addEventListener("change", () => {
             APP_STATE.role = roleSelect.value;
+            localStorage.setItem("nexus_role", APP_STATE.role);
             badgeText.textContent = roleMap[roleSelect.value];
             showToast("Role Context Switched", `Active permissions: ${roleMap[roleSelect.value]}`, "info");
             logAuditEvent("Auth/RBAC", `Switched active operational role to ${roleMap[roleSelect.value]}`);
@@ -200,7 +219,10 @@ function initOmniSearch() {
         { icon: "⚡", title: "Developer REST API Playground", sub: "Sub-10ms model execution tester with cURL generation", badge: "API Console", tab: "api-console", val: "" }
     ];
 
+    let selectedAutocompleteIndex = -1;
+
     function renderAutocomplete(filterText = "") {
+        selectedAutocompleteIndex = -1;
         if (!autocomplete) return;
         const q = filterText.toLowerCase().trim();
         const matches = SUGGESTIONS.filter(s => !q || s.title.toLowerCase().includes(q) || s.sub.toLowerCase().includes(q) || s.badge.toLowerCase().includes(q));
@@ -289,6 +311,34 @@ function initOmniSearch() {
         }
     });
 
+    searchInput.addEventListener("keydown", (e) => {
+        const items = autocomplete ? autocomplete.querySelectorAll(".search-item") : [];
+        if (autocomplete && autocomplete.classList.contains("show") && items.length > 0) {
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+                selectedAutocompleteIndex = (selectedAutocompleteIndex + 1) % items.length;
+                items.forEach((item, idx) => {
+                    item.classList.toggle("selected", idx === selectedAutocompleteIndex);
+                    if (idx === selectedAutocompleteIndex) item.scrollIntoView({ block: "nearest" });
+                });
+                return;
+            } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                selectedAutocompleteIndex = (selectedAutocompleteIndex - 1 + items.length) % items.length;
+                items.forEach((item, idx) => {
+                    item.classList.toggle("selected", idx === selectedAutocompleteIndex);
+                    if (idx === selectedAutocompleteIndex) item.scrollIntoView({ block: "nearest" });
+                });
+                return;
+            } else if (e.key === "Enter" && selectedAutocompleteIndex >= 0 && items[selectedAutocompleteIndex]) {
+                e.preventDefault();
+                items[selectedAutocompleteIndex].click();
+                selectedAutocompleteIndex = -1;
+                return;
+            }
+        }
+    });
+
     searchInput.addEventListener("keypress", (e) => {
         if (e.key === "Enter") {
             const query = searchInput.value.trim().toUpperCase();
@@ -363,10 +413,61 @@ function switchTab(targetTab) {
 
 function initNavigation() {
     const navItems = document.querySelectorAll(".nav-item");
+    const sidebar = document.getElementById("appSidebar");
+    const backdrop = document.getElementById("sidebarBackdrop");
+    const mobileToggle = document.getElementById("mobileSidebarToggle");
+
+    function closeMobileSidebar() {
+        if (sidebar) sidebar.classList.remove("open");
+        if (backdrop) backdrop.classList.remove("open");
+    }
+
+    function toggleMobileSidebar() {
+        if (sidebar) sidebar.classList.toggle("open");
+        if (backdrop) backdrop.classList.toggle("open");
+    }
+
+    if (mobileToggle) {
+        mobileToggle.addEventListener("click", toggleMobileSidebar);
+    }
+    if (backdrop) {
+        backdrop.addEventListener("click", closeMobileSidebar);
+    }
+
     navItems.forEach(item => {
         item.addEventListener("click", () => {
             switchTab(item.getAttribute("data-tab"));
+            if (window.innerWidth <= 1024) {
+                closeMobileSidebar();
+            }
         });
+    });
+
+    // Global Accessibility & Keyboard Shortcuts (Cmd+K and Escape)
+    window.addEventListener("keydown", (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+            e.preventDefault();
+            const searchInput = document.getElementById("globalOmniSearch");
+            if (searchInput) {
+                searchInput.focus();
+                searchInput.select();
+            }
+        }
+
+        if (e.key === "Escape") {
+            closeMobileSidebar();
+            closeCustomerDrawer();
+            const skuModal = document.getElementById("skuModalBackdrop");
+            if (skuModal) skuModal.classList.remove("open");
+            const restockModal = document.getElementById("restockModalBackdrop");
+            if (restockModal) restockModal.classList.remove("open");
+            const reportModal = document.getElementById("reportModalBackdrop");
+            if (reportModal) reportModal.classList.remove("open");
+            const autoDrop = document.getElementById("searchAutocomplete");
+            if (autoDrop) autoDrop.classList.remove("active");
+            const notifDrop = document.getElementById("notifDropdown");
+            if (notifDrop) notifDrop.classList.remove("open");
+        }
     });
 }
 
@@ -486,6 +587,8 @@ function initOverviewTab() {
             btn.classList.add("active");
 
             const range = btn.getAttribute("data-range");
+            APP_STATE.dateRange = range;
+            localStorage.setItem("nexus_date_range", range);
             const data = DATE_RANGE_DATA[range] || DATE_RANGE_DATA.all;
 
             // Update KPI values
@@ -508,6 +611,12 @@ function initOverviewTab() {
             logAuditEvent("Filter", `Applied analytical date filter range: ${range.toUpperCase()}`);
         });
     });
+
+    // Restore persistent date range if saved
+    if (APP_STATE.dateRange && APP_STATE.dateRange !== "all") {
+        const savedBtn = document.querySelector(`.date-preset-btn[data-range="${APP_STATE.dateRange}"]`);
+        if (savedBtn) savedBtn.click();
+    }
 
     // 3. Top Products Table
     const topProducts = [
@@ -900,6 +1009,16 @@ function initChurnTab() {
             });
         });
     }
+
+    const exportVipBtn = document.getElementById("exportVipChurnBtn");
+    if (exportVipBtn) {
+        exportVipBtn.addEventListener("click", () => {
+            const vipsAtRisk = MASTER_CUSTOMERS.filter(c => c.churnProb >= 0.70 && c.spend >= 1000);
+            downloadCSV("vip_churn_risk_accounts.csv", vipsAtRisk);
+            showToast("VIP Export Complete", "Downloaded 22 high-risk VIP accounts to CSV", "success");
+            logAuditEvent("Export", "Exported High-Risk VIP Accounts to CSV");
+        });
+    }
 }
 
 function initCLVCalculator() {
@@ -1123,6 +1242,7 @@ function addToCart(sku, desc, price) {
     } else {
         APP_STATE.cart.push({ sku, desc, price, qty: 1 });
     }
+    try { localStorage.setItem("nexus_cart", JSON.stringify(APP_STATE.cart)); } catch (e) {}
     showToast("Added to Basket", `[${sku}] ${desc} added to cart`, "success");
     renderCart();
     recalculateBasketCrossSell();
@@ -1130,6 +1250,7 @@ function addToCart(sku, desc, price) {
 
 function removeFromCart(sku) {
     APP_STATE.cart = APP_STATE.cart.filter(i => i.sku !== sku);
+    try { localStorage.setItem("nexus_cart", JSON.stringify(APP_STATE.cart)); } catch (e) {}
     renderCart();
     recalculateBasketCrossSell();
 }
@@ -1281,6 +1402,8 @@ function openCustomerDrawer(cid) {
         drawerBadge.className = `badge-tag ${cust.segment.includes("VIP") ? "gold-border" : cust.segment.includes("At-Risk") ? "red-border" : "green-border"}`;
     }
 
+    const savedNotes = localStorage.getItem(`nexus_notes_${cust.id}`) || "VIP wholesale client. High preference for Regency collection lines.";
+
     if (drawerBody) {
         drawerBody.innerHTML = `
             <div>
@@ -1317,7 +1440,7 @@ function openCustomerDrawer(cid) {
 
             <div>
                 <div class="drawer-section-title">Internal CRM Notes & Direct Actions</div>
-                <textarea id="drawerNotesInput" placeholder="Add executive notes for this account..." style="width:100%; height:70px; background:var(--bg-surface-alt); border:1px solid var(--border-color); color:var(--text-primary); padding:0.5rem; border-radius:6px; font-size:0.82rem; outline:none; resize:none;">VIP wholesale client. High preference for Regency collection lines.</textarea>
+                <textarea id="drawerNotesInput" placeholder="Add executive notes for this account..." style="width:100%; height:70px; background:var(--bg-surface-alt); border:1px solid var(--border-color); color:var(--text-primary); padding:0.5rem; border-radius:6px; font-size:0.82rem; outline:none; resize:none;">${savedNotes}</textarea>
                 <div style="display:flex; gap:0.5rem; margin-top:0.65rem;">
                     <button class="btn btn-primary btn-sm flex-1" onclick="triggerCustomerCoupon('${cust.id}')">✉️ Send 20% Retention Code</button>
                     <button class="btn btn-secondary btn-sm" onclick="saveCustomerNotes('${cust.id}')">Save Notes</button>
@@ -1341,6 +1464,10 @@ function triggerCustomerCoupon(cid) {
 }
 
 function saveCustomerNotes(cid) {
+    const input = document.getElementById("drawerNotesInput");
+    if (input) {
+        localStorage.setItem(`nexus_notes_${cid}`, input.value);
+    }
     showToast("Notes Saved", `CRM profile updated for Customer #${cid}`, "success");
     logAuditEvent("CRM", `Updated account notes for Customer #${cid}`);
 }
@@ -1479,6 +1606,16 @@ const INVENTORY_DATABASE = [
 
 function initInventoryMart() {
     const tbody = document.querySelector("#inventoryTable tbody");
+    const exportBtn = document.getElementById("exportInventoryBtn");
+
+    if (exportBtn) {
+        exportBtn.addEventListener("click", () => {
+            downloadCSV("inventory_sku_catalog.csv", INVENTORY_DATABASE);
+            showToast("Inventory Exported", "inventory_sku_catalog.csv downloaded", "success");
+            logAuditEvent("Export", "Exported SKU Inventory & Reorder Intelligence Catalog to CSV");
+        });
+    }
+
     if (!tbody) return;
 
     tbody.innerHTML = INVENTORY_DATABASE.map(item => {
@@ -1649,6 +1786,9 @@ function logAuditEvent(cat, action, sev = "INFO") {
     };
 
     APP_STATE.auditLogs.unshift(entry);
+    try {
+        localStorage.setItem("nexus_audit_logs", JSON.stringify(APP_STATE.auditLogs.slice(0, 100)));
+    } catch (e) {}
     renderAuditLogs();
 }
 
@@ -1673,12 +1813,22 @@ function initAuditLogger() {
 
     const clearBtn = document.getElementById("clearAuditLogsBtn");
     const exportBtn = document.getElementById("exportAuditLogsBtn");
+    const exportCsvBtn = document.getElementById("exportAuditCsvBtn");
 
     if (clearBtn) {
         clearBtn.addEventListener("click", () => {
             APP_STATE.auditLogs = [];
+            localStorage.removeItem("nexus_audit_logs");
             renderAuditLogs();
             showToast("Audit Log Cleared", "Session log buffer emptied", "info");
+        });
+    }
+
+    if (exportCsvBtn) {
+        exportCsvBtn.addEventListener("click", () => {
+            downloadCSV("security_audit_logs.csv", APP_STATE.auditLogs);
+            showToast("Audit CSV Exported", "security_audit_logs.csv downloaded", "success");
+            logAuditEvent("Export", "Exported Security Audit Stream to CSV");
         });
     }
 
@@ -2350,5 +2500,42 @@ function initExecutiveReportModal() {
             showToast("Print Triggered", "Prepared board briefing PDF / printer document", "info");
         });
     }
+}
+
+// =============================================================================
+// GLOBAL CHART STYLING DEFAULTS (EXECUTIVE DESIGN SYSTEM)
+// =============================================================================
+function initChartDefaults() {
+    if (window.Chart) {
+        Chart.defaults.font.family = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
+        Chart.defaults.color = "#94A3B8";
+        Chart.defaults.plugins.tooltip.backgroundColor = "rgba(15, 23, 42, 0.94)";
+        Chart.defaults.plugins.tooltip.titleColor = "#FFFFFF";
+        Chart.defaults.plugins.tooltip.bodyColor = "#F1F5F9";
+        Chart.defaults.plugins.tooltip.borderColor = "rgba(255, 255, 255, 0.12)";
+        Chart.defaults.plugins.tooltip.borderWidth = 1;
+        Chart.defaults.plugins.tooltip.padding = 10;
+        Chart.defaults.plugins.tooltip.cornerRadius = 8;
+    }
+}
+
+// =============================================================================
+// FLOATING BACK TO TOP INTERACTION
+// =============================================================================
+function initScrollToTop() {
+    const btn = document.getElementById("scrollToTopBtn");
+    if (!btn) return;
+
+    window.addEventListener("scroll", () => {
+        if (window.scrollY > 350) {
+            btn.classList.add("visible");
+        } else {
+            btn.classList.remove("visible");
+        }
+    }, { passive: true });
+
+    btn.addEventListener("click", () => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    });
 }
 

@@ -11,12 +11,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=3.5">
+    <link rel="stylesheet" href="style.css?v=4.1">
 </head>
 <body>
     <div class="app-layout">
         <!-- Sidebar Navigation -->
-        <aside class="sidebar" id="appSidebar">
+        <aside class="sidebar" id="appSidebar" role="navigation" aria-label="Main Navigation">
             <div class="brand">
                 <div class="brand-icon">
                     <span class="icon-pulse"></span>
@@ -111,11 +111,15 @@
                 </div>
             </div>
         </aside>
+        <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
 
         <!-- Main Workspace -->
         <main class="main-content">
             <!-- Global Top Bar -->
             <header class="top-header">
+                <button class="mobile-sidebar-toggle" id="mobileSidebarToggle" aria-label="Toggle navigation menu" title="Open Navigation Menu">
+                    <span>☰</span>
+                </button>
                 <div class="header-titles">
                     <div class="breadcrumbs">
                         <span>Portal</span> <span class="sep">/</span> <span id="crumbCurrent">Executive Overview</span>
@@ -625,6 +629,7 @@
                             <h3>Critical VIP Accounts at Immediate Risk (Historical Spend &gt; £1,000)</h3>
                             <p class="card-sub">Immediate proactive win-back targets to protect bottom-line retail EBITDA</p>
                         </div>
+                        <button class="btn btn-secondary btn-sm" id="exportVipChurnBtn">📥 Export CSV</button>
                     </div>
                     <div class="table-responsive">
                         <table class="data-table" id="vipChurnTable">
@@ -939,7 +944,10 @@
                             <h3>SKU Velocity & Stock Reorder Intelligence</h3>
                             <p class="card-sub">Combining historical order rates with predictive demand forecasting</p>
                         </div>
-                        <button class="btn btn-primary btn-sm" id="addNewSkuModalBtn">+ Add New SKU</button>
+                        <div class="filter-actions" style="display:flex;gap:0.5rem;align-items:center;">
+                            <button class="btn btn-secondary btn-sm" id="exportInventoryBtn">📥 Export CSV</button>
+                            <button class="btn btn-primary btn-sm" id="addNewSkuModalBtn">+ Add New SKU</button>
+                        </div>
                     </div>
                     <div class="table-responsive">
                         <table class="data-table" id="inventoryTable">
@@ -1131,6 +1139,7 @@
                         </div>
                         <div class="filter-actions">
                             <button class="btn btn-secondary btn-sm" id="clearAuditLogsBtn">Clear Session Logs</button>
+                            <button class="btn btn-secondary btn-sm" id="exportAuditCsvBtn">📥 Export CSV</button>
                             <button class="btn btn-outline btn-sm" id="exportAuditLogsBtn">📥 Export Audit JSON</button>
                         </div>
                     </div>
@@ -1432,9 +1441,12 @@
         </div>
     </div>
 
+    <!-- Scroll to Top Floating Action Button -->
+    <button class="scroll-to-top-btn" id="scrollToTopBtn" aria-label="Scroll to top" title="Back to top">↑</button>
+
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=3.5"></script>
+    <script src="app.js?v=4.1"></script>
 </body>
 </html>

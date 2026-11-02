@@ -532,15 +532,15 @@ body {
    -------------------------------------------------------------------------- */
 .tab-pane {
     display: none;
-    animation: fadeIn var(--transition-normal);
 }
 
 .tab-pane.active {
     display: block;
+    animation: tabSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(6px); }
+@keyframes tabSlideIn {
+    from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
@@ -2127,9 +2127,10 @@ input[type="range"]::-webkit-slider-thumb:hover {
     position: sticky;
     top: -0.5rem;
     z-index: 20;
-    background: var(--bg-main);
-    padding: 0.5rem 0;
-    backdrop-filter: blur(8px);
+    background: var(--bg-page);
+    padding: 0.65rem 0.25rem;
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .subnav-pill {
@@ -2267,7 +2268,238 @@ input[type="range"]::-webkit-slider-thumb:hover {
     font-weight: 600;
 }
 
+/* --------------------------------------------------------------------------
+   Mobile Navigation & Sidebar Overlay (Tier 1 Responsive)
+   -------------------------------------------------------------------------- */
+.mobile-sidebar-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    background: var(--bg-surface-alt);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 1.25rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all var(--transition-fast);
+}
 
+.mobile-sidebar-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--primary);
+}
 
+.sidebar-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 990;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
 
+.sidebar-backdrop.open {
+    display: block;
+    opacity: 1;
+    pointer-events: auto;
+}
 
+/* Skeleton Loading Animation */
+.skeleton-loading {
+    animation: skeletonPulse 1.5s ease-in-out infinite;
+    background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+    background-size: 200% 100%;
+}
+
+@keyframes skeletonPulse {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* --------------------------------------------------------------------------
+   Comprehensive Responsive Breakpoints (Tier 1 Polish)
+   -------------------------------------------------------------------------- */
+@media (max-width: 1024px) {
+    .mobile-sidebar-toggle {
+        display: flex;
+    }
+
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: 1000;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: 0 0 35px rgba(0, 0, 0, 0.8);
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .main-content {
+        width: 100%;
+        min-width: 0;
+        padding: 1.25rem;
+    }
+
+    .top-header {
+        flex-wrap: wrap;
+        gap: 0.85rem;
+    }
+
+    .header-tools {
+        flex-wrap: wrap;
+        width: 100%;
+        justify-content: flex-start;
+        gap: 0.65rem;
+    }
+
+    .global-search-box {
+        flex: 1;
+        min-width: 180px;
+    }
+
+    .global-search-box input {
+        width: 100% !important;
+    }
+
+    .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .charts-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        padding: 0.85rem;
+    }
+
+    .top-header {
+        padding-bottom: 0.75rem;
+    }
+
+    #page-title {
+        font-size: 1.25rem;
+    }
+
+    #page-subtitle {
+        font-size: 0.82rem;
+    }
+
+    .kpi-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .tab-subnav-bar {
+        overflow-x: auto;
+        white-space: nowrap;
+        padding: 0.4rem;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .tab-subnav-bar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .subnav-pill {
+        flex-shrink: 0;
+    }
+
+    .admin-user-chip .user-info-text {
+        display: none;
+    }
+
+    .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .filter-actions {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .filter-actions select,
+    .filter-actions input,
+    .filter-actions button {
+        width: 100%;
+    }
+
+    .sim-metric-row {
+        grid-template-columns: 1fr;
+    }
+
+    .drawer-content {
+        width: 100%;
+        max-width: 100%;
+    }
+}
+
+/* Tactile Button Feedback */
+.btn:active, .icon-tool-btn:active, .subnav-pill:active, .mobile-sidebar-toggle:active {
+    transform: scale(0.97) !important;
+}
+
+/* Autocomplete Arrow Key Highlight */
+.search-item.selected {
+    background: var(--bg-surface-alt);
+    border-left: 3px solid var(--primary);
+}
+
+/* Scroll to Top Floating Button */
+.scroll-to-top-btn {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-full);
+    background: var(--primary);
+    color: #FFFFFF;
+    border: none;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    font-weight: 700;
+    cursor: pointer;
+    z-index: 900;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(12px);
+    transition: all var(--transition-fast);
+}
+
+.scroll-to-top-btn.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.scroll-to-top-btn:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.65);
+}
+
+.scroll-to-top-btn:active {
+    transform: scale(0.95);
+}
