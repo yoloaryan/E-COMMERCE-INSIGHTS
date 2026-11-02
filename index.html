@@ -40,7 +40,7 @@
             </div>
 
             <nav class="nav-menu">
-                <div class="nav-section-title">BUSINESS INTELLIGENCE</div>
+                <div class="nav-section-title">ANALYTICS & INSIGHTS</div>
                 <button class="nav-item active" data-tab="overview">
                     <span class="nav-icon">📊</span>
                     <span class="nav-label">Executive Overview</span>
@@ -63,12 +63,7 @@
                     <span class="nav-label">Product Recommender</span>
                 </button>
 
-                <div class="nav-section-title">ADMIN CONTROL CENTER</div>
-                <button class="nav-item" data-tab="admin-ops">
-                    <span class="nav-icon">⚙️</span>
-                    <span class="nav-label">MLOps & Model Registry</span>
-                    <span class="menu-badge green">Healthy</span>
-                </button>
+                <div class="nav-section-title">COMMERCE OPERATIONS</div>
                 <button class="nav-item" data-tab="customer-mgmt">
                     <span class="nav-icon">🗂️</span>
                     <span class="nav-label">Customer Ledger</span>
@@ -76,6 +71,7 @@
                 <button class="nav-item" data-tab="inventory-mart">
                     <span class="nav-icon">📦</span>
                     <span class="nav-label">Inventory & SKU Mart</span>
+                    <span class="menu-badge alert">14 Alert</span>
                 </button>
                 <button class="nav-item" data-tab="campaign-studio">
                     <span class="nav-icon">🚀</span>
@@ -85,14 +81,21 @@
                     <span class="nav-icon">🧪</span>
                     <span class="nav-label">Live POS Simulator</span>
                 </button>
-                <button class="nav-item" data-tab="audit-logs">
-                    <span class="nav-icon">🛡️</span>
-                    <span class="nav-label">Security & Audit Logs</span>
+
+                <div class="nav-section-title">ENGINEERING & MLOPS</div>
+                <button class="nav-item" data-tab="admin-ops">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-label">MLOps & Model Registry</span>
+                    <span class="menu-badge green">Healthy</span>
                 </button>
                 <button class="nav-item" data-tab="api-console">
                     <span class="nav-icon">⚡</span>
                     <span class="nav-label">Developer API Console</span>
                     <span class="menu-badge blue">REST</span>
+                </button>
+                <button class="nav-item" data-tab="audit-logs">
+                    <span class="nav-icon">🛡️</span>
+                    <span class="nav-label">Security & Audit Logs</span>
                 </button>
             </nav>
 
@@ -121,10 +124,14 @@
                     <p id="page-subtitle">Macro store revenue velocity, customer acquisition, and transactional health metrics.</p>
                 </div>
                 <div class="header-tools">
-                    <!-- Live Search Bar -->
+                    <!-- Live Search Bar with Instant Autocomplete -->
                     <div class="global-search-box">
                         <span class="search-icon">🔍</span>
-                        <input type="text" id="globalOmniSearch" placeholder="Omni search SKU, Customer ID, or Segment...">
+                        <input type="text" id="globalOmniSearch" placeholder="Search SKU, Customer, or Segment..." autocomplete="off">
+                        <kbd class="search-kbd" id="searchKbdBadge">⌘K</kbd>
+                        <div class="search-autocomplete-dropdown" id="searchAutocomplete">
+                            <!-- Populated dynamically by JS -->
+                        </div>
                     </div>
 
                     <!-- Executive Briefing Report Generator -->
@@ -195,6 +202,17 @@
                         </div>
                     </div>
                     <div class="filter-status-tag" id="dateFilterStatus">Viewing: Full Historical Dataset</div>
+                </div>
+
+                <!-- Quick Navigation & Direct Actions Hub -->
+                <div class="quick-action-hub">
+                    <span class="hub-label">⚡ Direct Shortcuts:</span>
+                    <button class="quick-chip" onclick="switchTab('segmentation')"><span class="chip-icon">👥</span> Customer RFM</button>
+                    <button class="quick-chip" onclick="switchTab('forecasting')"><span class="chip-icon">📈</span> What-If Simulator</button>
+                    <button class="quick-chip alert" onclick="switchTab('churn')"><span class="chip-icon">⚠️</span> 22 VIP Churn</button>
+                    <button class="quick-chip" onclick="switchTab('recommendations')"><span class="chip-icon">🎯</span> Live Basket</button>
+                    <button class="quick-chip" onclick="switchTab('inventory-mart')"><span class="chip-icon">📦</span> Low Stock Alert</button>
+                    <button class="quick-chip" onclick="switchTab('api-console')"><span class="chip-icon">⚡</span> REST API Tester</button>
                 </div>
 
                 <div class="kpi-grid">

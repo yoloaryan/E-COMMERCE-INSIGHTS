@@ -1877,4 +1877,217 @@ body {
     }
 }
 
+/* --------------------------------------------------------------------------
+   Modern Custom Scrollbars
+   -------------------------------------------------------------------------- */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.25);
+    border-radius: var(--radius-full);
+    transition: background var(--transition-fast);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.45);
+}
+
+/* --------------------------------------------------------------------------
+   Quick Action Navigation Hub
+   -------------------------------------------------------------------------- */
+.quick-action-hub {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 1.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    flex-wrap: wrap;
+}
+
+.quick-action-hub .hub-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-right: 0.25rem;
+}
+
+.quick-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--bg-surface-alt);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 0.4rem 0.85rem;
+    border-radius: var(--radius-full);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.quick-chip:hover {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+}
+
+.quick-chip.alert {
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #EF4444;
+}
+
+.quick-chip.alert:hover {
+    background: #EF4444;
+    color: #ffffff;
+    border-color: #EF4444;
+}
+
+.quick-chip .chip-icon {
+    font-size: 0.9rem;
+}
+
+/* --------------------------------------------------------------------------
+   Search Keyboard Shortcut & Instant Autocomplete Dropdown
+   -------------------------------------------------------------------------- */
+.search-kbd {
+    position: absolute;
+    right: 0.75rem;
+    background: var(--bg-surface-alt);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    pointer-events: none;
+    line-height: 1.2;
+}
+
+.search-autocomplete-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    min-width: 340px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    display: none;
+    overflow: hidden;
+    animation: modalFadeIn 0.15s ease-out;
+}
+
+.search-autocomplete-dropdown.show {
+    display: block;
+}
+
+.search-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-color);
+    transition: background var(--transition-fast);
+}
+
+.search-item:last-child {
+    border-bottom: none;
+}
+
+.search-item:hover {
+    background: var(--bg-surface-alt);
+}
+
+.search-item-left {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.search-item-icon {
+    font-size: 1.1rem;
+}
+
+.search-item-text strong {
+    display: block;
+    font-size: 0.84rem;
+    color: var(--text-primary);
+}
+
+.search-item-text small {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.search-item-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: var(--radius-full);
+}
+
+/* --------------------------------------------------------------------------
+   Modern Range Slider Custom Styling
+   -------------------------------------------------------------------------- */
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    background: var(--bg-surface-alt);
+    border-radius: var(--radius-full);
+    outline: none;
+    margin: 0.65rem 0;
+    border: 1px solid var(--border-color);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--primary);
+    cursor: pointer;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    transition: transform var(--transition-fast), background-color var(--transition-fast);
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    background: var(--primary-hover);
+}
+
+/* Card Subtle Elevation */
+.kpi-card, .chart-card, .table-card, .interactive-card, .admin-card {
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+
 

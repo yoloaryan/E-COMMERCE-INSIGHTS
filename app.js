@@ -184,16 +184,116 @@ function initNotificationCenter() {
 }
 
 // =============================================================================
-// OMNI GLOBAL SEARCH
+// OMNI GLOBAL SEARCH & KEYBOARD COMMAND CENTER
 // =============================================================================
 function initOmniSearch() {
     const searchInput = document.getElementById("globalOmniSearch");
+    const autocomplete = document.getElementById("searchAutocomplete");
     if (!searchInput) return;
+
+    const SUGGESTIONS = [
+        { icon: "⚠️", title: "Customer #14096", sub: "At-Risk VIP (£65,164 Spend | 81.2% Churn Risk)", badge: "VIP Alert", tab: "churn", val: "14096" },
+        { icon: "👥", title: "Customer #17850", sub: "Champion Persona (£5,391 Spend | 35 Orders)", badge: "Champion", tab: "segmentation", val: "17850" },
+        { icon: "📦", title: "SKU 22423 - Regency Cakestand", sub: "Inventory: 420 units (11d left | Critical)", badge: "Stock Alert", tab: "inventory-mart", val: "22423" },
+        { icon: "🎯", title: "SKU 85123A - White Heart T-Light", sub: "Cross-Sell Catalog Affinity Leader", badge: "Cross-Sell", tab: "recommendations", val: "85123A" },
+        { icon: "📈", title: "Demand Forecasting Simulator", sub: "Interactive sensitivity sliders for promo & ad spend", badge: "ML Forecaster", tab: "forecasting", val: "" },
+        { icon: "⚡", title: "Developer REST API Playground", sub: "Sub-10ms model execution tester with cURL generation", badge: "API Console", tab: "api-console", val: "" }
+    ];
+
+    function renderAutocomplete(filterText = "") {
+        if (!autocomplete) return;
+        const q = filterText.toLowerCase().trim();
+        const matches = SUGGESTIONS.filter(s => !q || s.title.toLowerCase().includes(q) || s.sub.toLowerCase().includes(q) || s.badge.toLowerCase().includes(q));
+
+        if (matches.length === 0) {
+            autocomplete.innerHTML = `<div style="padding:1rem; font-size:0.8rem; color:var(--text-muted); text-align:center;">No direct entities found. Press Enter to search ledger.</div>`;
+        } else {
+            autocomplete.innerHTML = matches.map(m => `
+                <div class="search-item" data-tab="${m.tab}" data-val="${m.val}">
+                    <div class="search-item-left">
+                        <span class="search-item-icon">${m.icon}</span>
+                        <div class="search-item-text">
+                            <strong>${m.title}</strong>
+                            <small>${m.sub}</small>
+                        </div>
+                    </div>
+                    <span class="search-item-badge badge-tag ${m.badge.includes('Alert') ? 'red-border' : 'blue'}">${m.badge}</span>
+                </div>
+            `).join("");
+        }
+
+        autocomplete.classList.add("show");
+
+        autocomplete.querySelectorAll(".search-item").forEach(item => {
+            item.addEventListener("click", () => {
+                const targetTab = item.getAttribute("data-tab");
+                const targetVal = item.getAttribute("data-val");
+                autocomplete.classList.remove("show");
+                searchInput.value = "";
+
+                switchTab(targetTab);
+
+                if (targetTab === "churn" && targetVal) {
+                    const inp = document.getElementById("churnSearchInput");
+                    if (inp) {
+                        inp.value = targetVal;
+                        document.getElementById("churnSearchBtn")?.click();
+                    }
+                } else if (targetTab === "segmentation" && targetVal) {
+                    const inp = document.getElementById("custSearchInput");
+                    if (inp) {
+                        inp.value = targetVal;
+                        document.getElementById("custSearchBtn")?.click();
+                    }
+                } else if (targetTab === "recommendations" && targetVal) {
+                    const select = document.getElementById("skuSelect");
+                    if (select) {
+                        select.value = targetVal;
+                        select.dispatchEvent(new Event("change"));
+                    }
+                }
+
+                showToast("Navigation", `Navigated to ${targetTab.toUpperCase()}`, "info");
+                logAuditEvent("Search", `Selected search shortcut: "${item.querySelector('strong')?.textContent}"`);
+            });
+        });
+    }
+
+    searchInput.addEventListener("focus", () => renderAutocomplete(searchInput.value));
+    searchInput.addEventListener("input", () => renderAutocomplete(searchInput.value));
+
+    document.addEventListener("click", (e) => {
+        if (!searchInput.contains(e.target) && autocomplete && !autocomplete.contains(e.target)) {
+            autocomplete.classList.remove("show");
+        }
+    });
+
+    // Global Keyboard Shortcuts
+    document.addEventListener("keydown", (e) => {
+        // Pressing '/' or 'Cmd+K' / 'Ctrl+K' focuses search input
+        if ((e.key === "/" && document.activeElement !== searchInput && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA") ||
+            ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k")) {
+            e.preventDefault();
+            searchInput.focus();
+            searchInput.select();
+            renderAutocomplete(searchInput.value);
+        }
+
+        // Pressing 'Escape' closes all open modals, drawers, and popups
+        if (e.key === "Escape") {
+            if (autocomplete) autocomplete.classList.remove("show");
+            const notifDropdown = document.getElementById("notifDropdown");
+            if (notifDropdown) notifDropdown.classList.remove("show");
+            closeCustomerDrawer();
+            document.querySelectorAll(".modal-backdrop.open").forEach(m => m.classList.remove("open"));
+        }
+    });
 
     searchInput.addEventListener("keypress", (e) => {
         if (e.key === "Enter") {
             const query = searchInput.value.trim().toUpperCase();
             if (!query) return;
+            if (autocomplete) autocomplete.classList.remove("show");
 
             if (query.length >= 5 && (query.startsWith("2") || query.startsWith("8") || query.startsWith("4"))) {
                 switchTab("recommendations");
