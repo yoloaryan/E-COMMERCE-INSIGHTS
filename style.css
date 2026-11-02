@@ -299,16 +299,23 @@ body {
 .top-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1.75rem;
-    gap: 1.5rem;
-    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+    gap: 1.25rem;
+    flex-wrap: nowrap;
+}
+
+.header-titles {
+    flex: 1;
+    min-width: 0;
 }
 
 .breadcrumbs {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--text-muted);
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.2rem;
 }
 
 .breadcrumbs .sep {
@@ -317,21 +324,30 @@ body {
 
 .top-header h1 {
     font-family: var(--font-heading);
-    font-size: 1.75rem;
+    font-size: 1.45rem;
     font-weight: 700;
     color: var(--text-primary);
     letter-spacing: -0.02em;
+    margin-bottom: 0.15rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .top-header p {
     color: var(--text-secondary);
-    font-size: 0.92rem;
+    font-size: 0.82rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin: 0;
 }
 
 .header-tools {
     display: flex;
     align-items: center;
-    gap: 0.85rem;
+    gap: 0.65rem;
+    flex-shrink: 0;
 }
 
 .global-search-box {
@@ -342,8 +358,8 @@ body {
 
 .global-search-box .search-icon {
     position: absolute;
-    left: 0.85rem;
-    font-size: 0.9rem;
+    left: 0.75rem;
+    font-size: 0.85rem;
     pointer-events: none;
     opacity: 0.6;
 }
@@ -352,10 +368,10 @@ body {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     color: var(--text-primary);
-    padding: 0.55rem 1rem 0.55rem 2.2rem;
+    padding: 0.45rem 2.2rem 0.45rem 2.1rem;
     border-radius: var(--radius-full);
-    font-size: 0.85rem;
-    width: 280px;
+    font-size: 0.82rem;
+    width: 200px;
     outline: none;
     transition: all var(--transition-fast);
 }
@@ -363,7 +379,7 @@ body {
 .global-search-box input:focus {
     border-color: var(--primary);
     box-shadow: 0 0 0 3px var(--primary-light);
-    width: 330px;
+    width: 240px;
 }
 
 .icon-tool-btn {
@@ -540,19 +556,28 @@ body {
 
 .kpi-card {
     background: var(--bg-card);
-    padding: 1.25rem 1.35rem;
+    padding: 1.15rem 1.35rem;
     border-radius: var(--radius-md);
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-sm);
     display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-    transition: transform var(--transition-fast), border-color var(--transition-fast);
+    flex-direction: column !important;
+    justify-content: space-between;
+    min-height: 120px;
+    min-width: 0;
+    transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .kpi-card:hover {
     transform: translateY(-2px);
     border-color: var(--primary);
+    box-shadow: var(--shadow-md);
+}
+
+.kpi-card:has(.kpi-icon-wrap) {
+    flex-direction: row !important;
+    align-items: center;
+    gap: 1.15rem;
 }
 
 .kpi-icon-wrap {
@@ -581,30 +606,43 @@ body {
 .kpi-card.gray-border { border-left: 4px solid #94A3B8; }
 
 .kpi-label {
-    font-size: 0.76rem;
+    font-size: 0.72rem;
     text-transform: uppercase;
     font-weight: 700;
     color: var(--text-muted);
-    letter-spacing: 0.04em;
+    letter-spacing: 0.05em;
+    line-height: 1.35;
+    margin-bottom: 0.25rem;
+    display: block;
+    width: 100%;
 }
 
 .kpi-value {
     font-family: var(--font-heading);
-    font-size: 1.65rem;
-    font-weight: 700;
+    font-size: 1.6rem;
+    font-weight: 800;
     color: var(--text-primary);
-    margin: 0.2rem 0;
+    line-height: 1.15;
+    margin: 0.15rem 0 0.35rem;
     letter-spacing: -0.02em;
+    display: block;
+    width: 100%;
 }
 
 .kpi-meta, .kpi-subtext {
-    font-size: 0.78rem;
+    font-size: 0.76rem;
     color: var(--text-secondary);
+    line-height: 1.35;
+    display: block;
+    width: 100%;
 }
 
 .kpi-trend {
-    font-size: 0.78rem;
+    font-size: 0.76rem;
     font-weight: 600;
+    line-height: 1.35;
+    display: block;
+    width: 100%;
 }
 
 .kpi-trend.positive { color: var(--success); }
@@ -2079,15 +2117,157 @@ input[type="range"]::-webkit-slider-thumb:hover {
     background: var(--primary-hover);
 }
 
-/* Card Subtle Elevation */
-.kpi-card, .chart-card, .table-card, .interactive-card, .admin-card {
-    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+/* In-Page Subnav Pill Bar */
+.tab-subnav-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 1.35rem;
+    flex-wrap: wrap;
+    position: sticky;
+    top: -0.5rem;
+    z-index: 20;
+    background: var(--bg-main);
+    padding: 0.5rem 0;
+    backdrop-filter: blur(8px);
 }
 
-.kpi-card:hover {
-    transform: translateY(-2px);
+.subnav-pill {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 0.45rem 1rem;
+    border-radius: var(--radius-full);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.subnav-pill:hover {
+    background: var(--bg-surface-alt);
+    color: var(--text-primary);
+    border-color: var(--primary);
+    transform: translateY(-1px);
     box-shadow: var(--shadow-md);
 }
+
+.subnav-pill.active {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+    box-shadow: 0 2px 10px rgba(37, 99, 235, 0.35);
+}
+
+/* Customer Behavioral & Churn Scanner Lookup Result Cards */
+.lookup-result {
+    margin-top: 1.25rem;
+    background: var(--bg-surface-alt);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+}
+
+.result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.result-stat {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 0.85rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.result-stat:hover {
+    border-color: var(--primary);
+    transform: translateY(-1px);
+}
+
+.result-stat strong {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+    display: block;
+}
+
+.result-stat span {
+    font-family: var(--font-heading);
+    font-size: 1.22rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+}
+
+/* Dynamic RFM Slicer & Custom Audience Outcomes */
+.sim-metric-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+.sim-metric-card {
+    background: var(--bg-surface-alt);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1.15rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    transition: all var(--transition-fast);
+}
+
+.sim-metric-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+.sim-metric-card.highlight {
+    border-color: rgba(37, 99, 235, 0.4);
+    background: rgba(37, 99, 235, 0.05);
+}
+
+.sim-metric-card small {
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+}
+
+.sim-metric-card strong {
+    font-family: var(--font-heading);
+    font-size: 1.55rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.15;
+}
+
+.sim-metric-card span {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+
+.sim-metric-card .text-green {
+    color: var(--success);
+    font-weight: 600;
+}
+
+
 
 
 

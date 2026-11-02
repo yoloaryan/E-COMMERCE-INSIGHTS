@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=3.5">
 </head>
 <body>
     <div class="app-layout">
@@ -215,7 +215,16 @@
                     <button class="quick-chip" onclick="switchTab('api-console')"><span class="chip-icon">⚡</span> REST API Tester</button>
                 </div>
 
-                <div class="kpi-grid">
+                <!-- In-Page Section Subnav -->
+                <div class="tab-subnav-bar">
+                    <button class="subnav-pill active" onclick="jumpToSection('overviewKpis', this)">📊 Executive KPIs</button>
+                    <button class="subnav-pill" onclick="jumpToSection('monthlyRevenueCard', this)">📈 Revenue Velocity</button>
+                    <button class="subnav-pill" onclick="jumpToSection('countryShareCard', this)">🌍 Market Share</button>
+                    <button class="subnav-pill" onclick="jumpToSection('topSkusCard', this)">🏆 Top 10 SKUs</button>
+                    <button class="subnav-pill" onclick="jumpToSection('cohortRetentionCard', this)">🗓️ Cohort Heatmap</button>
+                </div>
+
+                <div class="kpi-grid" id="overviewKpis">
                     <div class="kpi-card highlight-glow">
                         <div class="kpi-icon-wrap bg-blue">💰</div>
                         <div>
@@ -251,7 +260,7 @@
                 </div>
 
                 <div class="charts-row">
-                    <div class="chart-card flex-2">
+                    <div class="chart-card flex-2" id="monthlyRevenueCard">
                         <div class="card-header">
                             <div>
                                 <h3>Monthly Gross Revenue Velocity (£)</h3>
@@ -262,7 +271,7 @@
                             <canvas id="monthlySalesChart"></canvas>
                         </div>
                     </div>
-                    <div class="chart-card flex-1">
+                    <div class="chart-card flex-1" id="countryShareCard">
                         <div class="card-header">
                             <div>
                                 <h3>Market Share by Country</h3>
@@ -275,7 +284,7 @@
                     </div>
                 </div>
 
-                <div class="table-card">
+                <div class="table-card" id="topSkusCard">
                     <div class="card-header">
                         <div>
                             <h3>Top 10 High-Velocity Revenue SKUs</h3>
@@ -303,7 +312,7 @@
                 </div>
 
                 <!-- Customer Monthly Cohort Retention Heatmap -->
-                <div class="table-card" style="margin-top: 1.5rem;">
+                <div class="table-card" id="cohortRetentionCard" style="margin-top: 1.5rem;">
                     <div class="card-header">
                         <div>
                             <h3>📊 Customer Monthly Cohort Retention Heatmap (12-Month Matrix)</h3>
@@ -340,7 +349,15 @@
             <!-- TAB 2: CUSTOMER SEGMENTS -->
             <!-- ============================================================= -->
             <section id="tab-segmentation" class="tab-pane">
-                <div class="kpi-grid">
+                <!-- In-Page Section Subnav -->
+                <div class="tab-subnav-bar">
+                    <button class="subnav-pill active" onclick="jumpToSection('segKpiGrid', this)">📊 Persona Clusters</button>
+                    <button class="subnav-pill" onclick="jumpToSection('segChartsRow', this)">📈 Spend vs Frequency</button>
+                    <button class="subnav-pill" onclick="jumpToSection('personaLookupCard', this)">👤 Account Lookup</button>
+                    <button class="subnav-pill" onclick="jumpToSection('rfmSlicerCard', this)">🎛️ Custom RFM Slicer</button>
+                </div>
+
+                <div class="kpi-grid" id="segKpiGrid">
                     <div class="kpi-card gold-border">
                         <div class="kpi-label">Champions (VIPs)</div>
                         <div class="kpi-value">708</div>
@@ -363,7 +380,7 @@
                     </div>
                 </div>
 
-                <div class="charts-row">
+                <div class="charts-row" id="segChartsRow">
                     <div class="chart-card flex-1">
                         <div class="card-header">
                             <h3>Segment Revenue Contribution</h3>
@@ -384,7 +401,7 @@
                     </div>
                 </div>
 
-                <div class="interactive-card">
+                <div class="interactive-card" id="personaLookupCard">
                     <div class="card-header">
                         <div>
                             <h3>Customer Behavioral Persona Lookup</h3>
@@ -399,7 +416,7 @@
                 </div>
 
                 <!-- Interactive Dynamic RFM Segment & Persona Builder -->
-                <div class="interactive-card" style="margin-top: 1.5rem;">
+                <div class="interactive-card" id="rfmSlicerCard" style="margin-top: 1.5rem;">
                     <div class="card-header">
                         <div>
                             <h3>🎛️ Dynamic RFM Segment & Custom Audience Builder</h3>
@@ -435,10 +452,18 @@
             <!-- TAB 3: DEMAND FORECASTING -->
             <!-- ============================================================= -->
             <section id="tab-forecasting" class="tab-pane">
-                <div class="kpi-grid">
+                <!-- In-Page Quick Navigation Pills -->
+                <div class="tab-subnav-bar">
+                    <button class="subnav-pill active" onclick="jumpToSection('forecastingKpiGrid', this)">🎯 Model Benchmarks</button>
+                    <button class="subnav-pill" onclick="jumpToSection('forecastTrackingCard', this)">📈 Chronological Tracking</button>
+                    <button class="subnav-pill" onclick="jumpToSection('driversCard', this)">⚡ Gini Drivers</button>
+                    <button class="subnav-pill" onclick="jumpToSection('whatIfSimCard', this)">🔮 What-If Simulator</button>
+                </div>
+
+                <div class="kpi-grid" id="forecastingKpiGrid">
                     <div class="kpi-card">
                         <div class="kpi-label">Production Forecaster</div>
-                        <div class="kpi-value" style="font-size: 1.45rem;">Random Forest</div>
+                        <div class="kpi-value">Random Forest</div>
                         <div class="kpi-subtext">100 Trees Ensemble (Trained)</div>
                     </div>
                     <div class="kpi-card">
@@ -458,7 +483,7 @@
                     </div>
                 </div>
 
-                <div class="chart-card">
+                <div class="chart-card" id="forecastTrackingCard">
                     <div class="card-header">
                         <div>
                             <h3>Chronological Demand Tracking: Actual vs Machine Learning Forecasts</h3>
@@ -470,7 +495,7 @@
                     </div>
                 </div>
 
-                <div class="charts-row">
+                <div class="charts-row" id="driversCard">
                     <div class="chart-card flex-1">
                         <div class="card-header">
                             <h3>Key Demand Drivers (Gini Importance)</h3>
@@ -498,8 +523,12 @@
                                     <p>With DayOfWeek accounting for 28.1% of forecast variance, warehouse picking crews are scaled up on peak Thursdays and scaled down on weekend lulls.</p>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Interactive What-If Scenario Simulator -->
-                <div class="interactive-card">
+                <div class="interactive-card" id="whatIfSimCard">
                     <div class="card-header">
                         <div>
                             <h3>🔮 Interactive What-If Demand Scenario Simulator</h3>
@@ -545,7 +574,15 @@
             <!-- TAB 4: CHURN EARLY WARNING -->
             <!-- ============================================================= -->
             <section id="tab-churn" class="tab-pane">
-                <div class="kpi-grid">
+                <!-- In-Page Section Subnav -->
+                <div class="tab-subnav-bar">
+                    <button class="subnav-pill active" onclick="jumpToSection('churnKpiGrid', this)">⚠️ Churn Distribution</button>
+                    <button class="subnav-pill" onclick="jumpToSection('churnScannerCard', this)">🔍 Account Risk Scanner</button>
+                    <button class="subnav-pill" onclick="jumpToSection('vipAccountsTableCard', this)">🚨 VIP Whale Accounts</button>
+                    <button class="subnav-pill" onclick="jumpToSection('clvRoiCalcCard', this)">💰 CLV & Retention ROI</button>
+                </div>
+
+                <div class="kpi-grid" id="churnKpiGrid">
                     <div class="kpi-card red-border">
                         <div class="kpi-label">High Churn Risk (P ≥ 70%)</div>
                         <div class="kpi-value">725 Customers</div>
@@ -568,7 +605,7 @@
                     </div>
                 </div>
 
-                <div class="interactive-card">
+                <div class="interactive-card" id="churnScannerCard">
                     <div class="card-header">
                         <div>
                             <h3>Customer Churn Risk Scanner</h3>
@@ -582,7 +619,7 @@
                     <div id="churnSearchResult" class="lookup-result"></div>
                 </div>
 
-                <div class="table-card">
+                <div class="table-card" id="vipAccountsTableCard">
                     <div class="card-header">
                         <div>
                             <h3>Critical VIP Accounts at Immediate Risk (Historical Spend &gt; £1,000)</h3>
@@ -606,8 +643,11 @@
                                 <!-- Populated by JS -->
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
                 <!-- Customer CLV & Retention ROI Calculator -->
-                <div class="interactive-card">
+                <div class="interactive-card" id="clvRoiCalcCard">
                     <div class="card-header">
                         <div>
                             <h3>💰 Customer Lifetime Value (CLV) & Retention ROI Calculator</h3>
@@ -643,7 +683,14 @@
             <!-- TAB 5: PRODUCT RECOMMENDATION ENGINE -->
             <!-- ============================================================= -->
             <section id="tab-recommendations" class="tab-pane">
-                <div class="recs-control-bar">
+                <!-- In-Page Section Subnav -->
+                <div class="tab-subnav-bar">
+                    <button class="subnav-pill active" onclick="jumpToSection('recsControlBar', this)">🎯 Recommendation Controls</button>
+                    <button class="subnav-pill" onclick="jumpToSection('recsDisplayArea', this)">✨ Discovery Grid</button>
+                    <button class="subnav-pill" onclick="jumpToSection('cartSimulatorCard', this)">🛒 Live Basket & Cross-Sell</button>
+                </div>
+
+                <div class="recs-control-bar" id="recsControlBar">
                     <div class="control-group">
                         <label for="recModeSelect"><strong>Recommendation Mode:</strong></label>
                         <select id="recModeSelect">
@@ -672,7 +719,7 @@
                     </div>
                 </div>
 
-                <div class="recs-display-area">
+                <div class="recs-display-area" id="recsDisplayArea">
                     <div class="recs-header">
                         <h3 id="recsTitle">Frequently Bought Together with: [22423] Regency Cakestand 3 Tier</h3>
                         <p id="recsSubtitle">Derived via Sparse Item-Item Cosine Similarity matrix on 395,418 verified purchases.</p>
@@ -681,7 +728,7 @@
                 </div>
 
                 <!-- Interactive Live Cart Builder & Real-time Basket Affinity -->
-                <div class="cart-builder-card">
+                <div class="cart-builder-card" id="cartSimulatorCard">
                     <div class="card-header">
                         <div>
                             <h3>🛒 Interactive Shopping Basket & Live Cross-Sell Affinity Simulator</h3>
@@ -1388,6 +1435,6 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=3.5"></script>
 </body>
 </html>

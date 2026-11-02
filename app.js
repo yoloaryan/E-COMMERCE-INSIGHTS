@@ -370,6 +370,16 @@ function initNavigation() {
     });
 }
 
+window.jumpToSection = function(elementId, btn) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (btn && btn.parentElement) {
+        btn.parentElement.querySelectorAll('.subnav-pill').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+    }
+};
+
 // =============================================================================
 // TAB 1: EXECUTIVE OVERVIEW WITH INTERACTIVE DATE FILTERING
 // =============================================================================
