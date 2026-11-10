@@ -1,0 +1,28 @@
+services:
+  # Python FastAPI Machine Learning Inference & Analytics Engine
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: nexus-retail-api
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # High-Performance Nginx Web Application with Reverse Proxy to API
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nexus-retail-web
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped

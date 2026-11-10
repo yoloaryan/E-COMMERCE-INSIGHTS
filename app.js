@@ -31,6 +31,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initAuditLogger();
     initApiConsole();
     initExecutiveReportModal();
+    initLivePipelineSync();
 });
 
 // =============================================================================
@@ -2538,4 +2539,90 @@ function initScrollToTop() {
         window.scrollTo({ top: 0, behavior: "smooth" });
     });
 }
+
+// =============================================================================
+// LIVE DATA HYDRATION & FASTAPI ML INFERENCE INTEGRATION
+// =============================================================================
+async function initLivePipelineSync() {
+    // 1. Hydrate UI with real pipeline JSON if available
+    try {
+        const resp = await fetch("data/nexus_data.json");
+        if (resp.ok) {
+            const data = await resp.json();
+            if (data && data.kpis) {
+                const revFormatted = "£" + Number(data.kpis.total_gross_revenue_gbp).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const ordersFormatted = Number(data.kpis.total_completed_orders).toLocaleString("en-GB");
+                const aovFormatted = "£" + Number(data.kpis.average_order_value_gbp).toFixed(2);
+                const cancelFormatted = Number(data.kpis.cancellation_rate_pct).toFixed(2) + "%";
+                const unitsFormatted = Number(data.kpis.total_units_sold).toLocaleString("en-GB");
+
+                // Update active date range cache
+                if (typeof DATE_RANGE_DATA !== "undefined" && DATE_RANGE_DATA.all) {
+                    DATE_RANGE_DATA.all.rev = revFormatted;
+                    DATE_RANGE_DATA.all.orders = ordersFormatted;
+                    DATE_RANGE_DATA.all.aov = aovFormatted;
+                    DATE_RANGE_DATA.all.cancel = cancelFormatted;
+                    DATE_RANGE_DATA.all.units = unitsFormatted;
+                }
+
+                // Update DOM KPI elements if on "all" range
+                const kpiRev = document.getElementById("kpi-revenue");
+                const kpiOrders = document.getElementById("kpi-orders");
+                const kpiAov = document.getElementById("kpi-aov");
+                const kpiCancel = document.getElementById("kpi-cancel");
+                const kpiUnits = document.getElementById("kpi-units");
+
+                if (kpiRev) kpiRev.textContent = revFormatted;
+                if (kpiOrders) kpiOrders.textContent = ordersFormatted;
+                if (kpiAov) kpiAov.textContent = aovFormatted;
+                if (kpiCancel) kpiCancel.textContent = cancelFormatted;
+                if (kpiUnits) kpiUnits.textContent = unitsFormatted;
+
+                // Update Top Products table with real data
+                if (data.top_products && data.top_products.length > 0) {
+                    const tbody = document.querySelector("#topProductsTable tbody");
+                    if (tbody) {
+                        const totalRev = data.kpis.total_gross_revenue_gbp || 1;
+                        tbody.innerHTML = data.top_products.map(p => {
+                            const sharePct = ((p.revenue / totalRev) * 100).toFixed(2) + "%";
+                            return `
+                                <tr>
+                                    <td><code>${p.stock_code}</code></td>
+                                    <td><strong>${p.description || "Product"}</strong></td>
+                                    <td>${Number(p.units_sold).toLocaleString("en-GB")}</td>
+                                    <td>${Number(p.order_count).toLocaleString("en-GB")}</td>
+                                    <td><strong>£${Number(p.revenue).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
+                                    <td><span class="badge-tag blue">${sharePct}</span></td>
+                                </tr>
+                            `;
+                        }).join("");
+                    }
+                }
+
+                console.log("[Nexus LiveSync] Hydrated dashboard with real pipeline data (data/nexus_data.json)");
+            }
+        }
+    } catch (e) {
+        console.warn("[Nexus LiveSync] Using offline defaults:", e.message);
+    }
+
+    // 2. Check if FastAPI ML Inference Server is online (localhost:8000)
+    try {
+        const apiCheck = await fetch("http://localhost:8000/health", { mode: "cors" });
+        if (apiCheck.ok) {
+            console.log("[Nexus LiveSync] Connected to FastAPI ML Inference Engine at http://localhost:8000");
+            const statusBadge = document.querySelector(".live-pill");
+            if (statusBadge) {
+                statusBadge.innerHTML = '<span class="status-dot"></span> LIVE: FASTAPI ML ENGINE CONNECTED';
+                statusBadge.style.background = "rgba(16, 185, 129, 0.15)";
+                statusBadge.style.color = "#10B981";
+                statusBadge.style.borderColor = "rgba(16, 185, 129, 0.3)";
+            }
+        }
+    } catch (e) {
+        // FastAPI server not reachable or offline; gracefully keep local mode
+        console.log("[Nexus LiveSync] FastAPI server offline; running in client simulation mode.");
+    }
+}
+
 
