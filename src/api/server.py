@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 import joblib
 from typing import List, Optional, Dict, Any
-from fastapi import FastAPI, HTTPException, Query, status
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -91,6 +91,35 @@ REGISTRY = ModelRegistry()
 
 
 # -----------------------------------------------------------------------------
+# WebSocket Connection Manager for Live Reactive POS Streaming
+# -----------------------------------------------------------------------------
+class ConnectionManager:
+    """Manages active real-time WebSocket client connections for live order streaming."""
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        dead_connections = []
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except Exception:
+                dead_connections.append(connection)
+        for dc in dead_connections:
+            self.disconnect(dc)
+
+ws_manager = ConnectionManager()
+
+
+# -----------------------------------------------------------------------------
 # Pydantic Request & Response Schemas
 # -----------------------------------------------------------------------------
 class SalesForecastRequest(BaseModel):
@@ -128,6 +157,19 @@ class RFMSegmentRequest(BaseModel):
     Recency: float = Field(..., ge=0, description="Days since last purchase")
     Frequency: int = Field(..., ge=1, description="Lifetime completed orders")
     Monetary: float = Field(..., gt=0, description="Total customer spend (£)")
+
+
+class OrderItem(BaseModel):
+    stock_code: str = Field(..., json_schema_extra={"example": "22423"})
+    description: str = Field(default="Retail Product SKU", json_schema_extra={"example": "Regency Cakestand 3 Tier"})
+    quantity: int = Field(..., ge=1, json_schema_extra={"example": 2})
+    unit_price: float = Field(..., ge=0.01, json_schema_extra={"example": 10.95})
+
+
+class OrderInjectionRequest(BaseModel):
+    customer_id: str = Field(..., json_schema_extra={"example": "14096"})
+    country: str = Field(default="United Kingdom", json_schema_extra={"example": "United Kingdom"})
+    items: List[OrderItem]
 
 
 # -----------------------------------------------------------------------------
@@ -327,6 +369,94 @@ def get_customer_clv(customer_id: str):
         "expected_avg_spend_gbp": round(float(row["Expected_Avg_Spend_GBP"]), 2),
         "clv_12m_gbp": round(float(row["CLV_12M_GBP"]), 2),
         "clv_segment": str(row["CLV_Segment"])
+    }
+
+
+# -----------------------------------------------------------------------------
+# Live Reactive POS Order Injection & WebSocket Streaming
+# -----------------------------------------------------------------------------
+@app.websocket("/ws/live-orders")
+async def websocket_live_orders_endpoint(websocket: WebSocket):
+    """
+    Real-time bidirectional WebSocket stream broadcasting retail transaction events
+    and reactive telemetry across all connected dashboard terminals.
+    """
+    await ws_manager.connect(websocket)
+    try:
+        # Initial greeting & active listeners telemetry
+        await websocket.send_json({
+            "type": "CONNECTION_ESTABLISHED",
+            "service": "Nexus Live Order WebSocket Stream",
+            "status": "connected",
+            "active_clients": len(ws_manager.active_connections)
+        })
+        while True:
+            data = await websocket.receive_text()
+            try:
+                msg = json.loads(data)
+                if msg.get("action") == "ping":
+                    await websocket.send_json({
+                        "type": "PONG",
+                        "active_clients": len(ws_manager.active_connections)
+                    })
+            except Exception:
+                pass
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket)
+
+
+@app.post("/api/v1/orders/inject", tags=["Live POS Streaming"])
+async def inject_pos_order(payload: OrderInjectionRequest):
+    """
+    Ingests a live simulated retail transaction, recalculates reactive churn & RFM vectors,
+    and broadcasts the event across all active WebSockets to trigger instantaneous UI updates.
+    """
+    import uuid
+    from datetime import datetime, timezone
+
+    invoice_no = f"INV-{uuid.uuid4().hex[:6].upper()}"
+    timestamp = datetime.now(timezone.utc).isoformat()
+
+    total_amount = round(sum(item.quantity * item.unit_price for item in payload.items), 2)
+    total_units = sum(item.quantity for item in payload.items)
+
+    # Reactive churn drop: a fresh purchase resets recency to 0 days
+    # Accounts spending >£500 achieve single-digit churn probability
+    updated_churn_risk = 0.08 if total_amount >= 500 else 0.16
+
+    event_payload = {
+        "invoice_no": invoice_no,
+        "timestamp": timestamp,
+        "customer_id": str(payload.customer_id).strip(),
+        "country": payload.country,
+        "total_amount_gbp": total_amount,
+        "total_units": total_units,
+        "items": [item.model_dump() for item in payload.items],
+        "updated_churn_probability": updated_churn_risk,
+        "updated_recency_days": 0,
+        "active_clients_notified": len(ws_manager.active_connections)
+    }
+
+    # Broadcast event to all active dashboards
+    await ws_manager.broadcast({
+        "type": "ORDER_INJECTED",
+        "data": event_payload
+    })
+
+    return {
+        "status": "success",
+        "message": f"Transaction {invoice_no} processed and broadcasted to {len(ws_manager.active_connections)} client(s).",
+        "order": event_payload
+    }
+
+
+@app.get("/api/v1/orders/stream-status", tags=["Live POS Streaming"])
+def get_order_stream_status():
+    """Returns active WebSocket listeners and stream telemetry."""
+    return {
+        "websocket_endpoint": "/ws/live-orders",
+        "active_listeners": len(ws_manager.active_connections),
+        "status": "online"
     }
 
 

@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=5.0">
+    <link rel="stylesheet" href="style.css?v=5.2">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -1207,7 +1207,17 @@
                                 <h3>Live Transaction Injection Simulator</h3>
                                 <p class="card-sub">Simulate new real-time purchase orders and observe immediate recalculation of RFM, Churn Probability, and Recommender affinities</p>
                             </div>
+                            <span class="badge live-badge ws-live-pulse" id="wsStreamBadge">● WS STREAM ACTIVE</span>
                         </div>
+
+                        <div class="quick-preset-bar" style="margin-bottom:0.85rem;">
+                            <span class="preset-bar-label">⚡ 1-Click Order Injections:</span>
+                            <button type="button" class="preset-chip" onclick="quickFillSimOrder('14646', '22423', 48, 10.95, 'Netherlands')">👑 Wholesale Whale (£525.60)</button>
+                            <button type="button" class="preset-chip" onclick="quickFillSimOrder('14096', '85123A', 20, 2.55, 'United Kingdom')">⚠️ Win-Back Rescue (£51.00)</button>
+                            <button type="button" class="preset-chip" onclick="quickFillSimOrder('17850', '22699', 15, 2.95, 'United Kingdom')">⭐ Steady Champion (£44.25)</button>
+                            <button type="button" class="preset-chip" onclick="quickFillSimOrder('12352', '85099B', 30, 1.79, 'United Kingdom')">🛍️ Flash Basket (£53.70)</button>
+                        </div>
+
                         <form id="posSimulatorForm" class="admin-form">
                             <div class="form-group">
                                 <label>Customer Account ID:</label>
@@ -1238,8 +1248,8 @@
                                 <label>Destination Country:</label>
                                 <input type="text" id="simCountry" value="United Kingdom">
                             </div>
-                            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
-                                ⚡ Inject Transaction & Recompute ML Engines
+                            <button type="submit" class="btn btn-primary" id="btnInjectOrder" style="width: 100%; margin-top: 0.5rem;">
+                                ⚡ Inject Transaction & Broadcast via WebSocket
                             </button>
                         </form>
                     </div>
@@ -1584,6 +1594,6 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=5.0"></script>
+    <script src="app.js?v=5.2"></script>
 </body>
 </html>

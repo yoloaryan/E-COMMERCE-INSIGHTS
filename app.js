@@ -30,6 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initSkuAndRestockModals();
     initCampaignStudio();
     initTransactionSimulator();
+    initLiveOrderWebSocket();
     initAuditLogger();
     initApiConsole();
     initExecutiveReportModal();
@@ -2111,50 +2112,78 @@ function initCampaignStudio() {
 }
 
 // =============================================================================
-// TAB 10: LIVE POS & TRANSACTION INJECTION SIMULATOR
+// TAB 10: LIVE POS & WEBSOCKET TRANSACTION STREAMING
 // =============================================================================
-function initTransactionSimulator() {
-    const form = document.getElementById("posSimulatorForm");
+let liveOrderSocket = null;
+let wsReconnectTimer = null;
+
+function handleLiveIncomingOrder(order) {
+    const amount = Number(order.total_amount_gbp) || 0;
+    const units = Number(order.total_units) || 1;
+    const cid = String(order.customer_id);
+    const invoiceNo = order.invoice_no || "INV-LIVE";
+
+    // 1. Reactive KPI Counters Update with glowing pulse animation
+    const kpiRev = document.getElementById("kpi-revenue");
+    if (kpiRev) {
+        const curText = kpiRev.textContent.replace(/[^0-9.]/g, "");
+        const curRev = parseFloat(curText) || 10279169.87;
+        const newRev = curRev + amount;
+        kpiRev.textContent = "£" + newRev.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        kpiRev.classList.remove("pulse-revenue");
+        void kpiRev.offsetWidth;
+        kpiRev.classList.add("pulse-revenue");
+    }
+
+    const kpiOrders = document.getElementById("kpi-orders");
+    if (kpiOrders) {
+        const curOrders = parseInt(kpiOrders.textContent.replace(/[^0-9]/g, ""), 10) || 19776;
+        kpiOrders.textContent = (curOrders + 1).toLocaleString("en-GB");
+    }
+
+    const kpiUnits = document.getElementById("kpi-units");
+    if (kpiUnits) {
+        const curUnits = parseInt(kpiUnits.textContent.replace(/[^0-9]/g, ""), 10) || 5577275;
+        kpiUnits.textContent = (curUnits + units).toLocaleString("en-GB");
+    }
+
+    // 2. Reactive Customer Ledger & Churn Probability Update
+    let cust = MASTER_CUSTOMERS.find(c => String(c.id) === cid);
+    const prevProb = cust ? cust.churnProb : 0.75;
+    const prevRecency = cust ? cust.recency : 65;
+
+    if (cust) {
+        cust.spend += amount;
+        cust.orders += 1;
+        cust.aov = cust.spend / cust.orders;
+        cust.recency = 0;
+        cust.churnProb = order.updated_churn_probability !== undefined ? order.updated_churn_probability : Math.max(0.04, cust.churnProb * 0.45);
+    } else {
+        cust = {
+            id: cid,
+            segment: "Champions (VIP)",
+            spend: amount,
+            orders: 1,
+            aov: amount,
+            recency: 0,
+            churnProb: order.updated_churn_probability || 0.12,
+            history: [`${units}x Live POS Item`]
+        };
+        MASTER_CUSTOMERS.unshift(cust);
+    }
+
+    // 3. Render Simulator Feedback Box
     const feedback = document.getElementById("simFeedbackArea");
-
-    if (!form || !feedback) return;
-
-    form.addEventListener("submit", (e) => {
-        e.preventDefault();
-
-        const cid = document.getElementById("simCustId").value.trim();
-        const skuSelect = document.getElementById("simSkuCode");
-        const sku = skuSelect.value;
-        const skuText = skuSelect.options[skuSelect.selectedIndex].text;
-        const qty = parseInt(document.getElementById("simQty").value, 10);
-        const price = parseFloat(document.getElementById("simPrice").value);
-        const total = qty * price;
-        const now = new Date().toISOString().replace("T", " ").substring(0, 19);
-
-        let cust = MASTER_CUSTOMERS.find(c => c.id === cid);
-        const prevProb = cust ? cust.churnProb : 0.75;
-        const prevRecency = cust ? cust.recency : 65;
-
-        if (cust) {
-            cust.spend += total;
-            cust.orders += 1;
-            cust.aov = cust.spend / cust.orders;
-            cust.recency = 0;
-            cust.churnProb = Math.max(0.04, cust.churnProb * 0.45);
-        } else {
-            cust = { id: cid, segment: "Loyal Customers", spend: total, orders: 1, aov: total, recency: 0, churnProb: 0.15, history: [`${qty}x ${skuText}`] };
-            MASTER_CUSTOMERS.unshift(cust);
-        }
-
+    if (feedback) {
         feedback.innerHTML = `
             <div class="sim-reaction-card" style="width: 100%;">
                 <div style="background:var(--success-light); border:1px solid var(--success); padding:1rem; border-radius:8px; margin-bottom:1rem;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <strong style="color:var(--success);">✓ TRANSACTION COMMITTED TO ANALYTICAL MART</strong>
-                        <small style="color:var(--text-muted); font-family:var(--font-mono);">${now}</small>
+                        <strong style="color:var(--success);">✓ WEBSOCKET LIVE STREAM: ORDER BROADCASTED</strong>
+                        <small style="color:var(--text-muted); font-family:var(--font-mono);">${order.timestamp ? order.timestamp.substring(11, 19) + ' UTC' : 'Live'}</small>
                     </div>
                     <div style="font-size:0.92rem; color:var(--text-primary); margin-top:0.35rem;">
-                        Customer <strong>#${cid}</strong> purchased <strong>${qty}x ${skuText}</strong> for <strong>£${total.toFixed(2)}</strong>.
+                        Invoice <code>${invoiceNo}</code>: Customer <strong>#${cid}</strong> purchased <strong>${units} units</strong> for <strong style="color:var(--success);">+£${amount.toFixed(2)}</strong>.
                     </div>
                 </div>
 
@@ -2172,19 +2201,169 @@ function initTransactionSimulator() {
                         <span>£${cust.spend.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                     </div>
                     <div class="result-stat" style="background:var(--bg-surface-alt); padding:0.75rem; border-radius:6px;">
-                        <strong>Updated Persona</strong>
-                        <span style="color:var(--primary);">${cust.segment}</span>
+                        <strong>WebSocket Broadcast</strong>
+                        <span style="color:var(--primary);">${order.active_clients_notified !== undefined ? order.active_clients_notified : 1} Client(s)</span>
                     </div>
                 </div>
             </div>
         `;
+    }
 
-        showToast("POS Transaction Injected", `£${total.toFixed(2)} recorded for Customer #${cid}. Recency reset to 0d.`, "success");
-        logAuditEvent("POS/Injection", `Simulated £${total.toFixed(2)} order for Customer #${cid} (SKU: ${sku}). Recency reset to 0d.`);
-        
-        initCustomerLedger();
-        initChurnTab();
+    // 4. UI Toast notification
+    showToast(
+        "⚡ Live POS Order Broadcast",
+        `${invoiceNo}: +£${amount.toFixed(2)} (${units} units) for Customer #${cid}`,
+        "success"
+    );
+
+    // 5. Audit Log Entry
+    logAuditEvent(
+        "POS/LiveStream",
+        `WebSocket Broadcast: Ingested ${invoiceNo} (+£${amount.toFixed(2)}) for #${cid}. Recency ➔ 0d.`
+    );
+
+    // 6. Refresh active views if visible
+    if (typeof initCustomerLedger === "function") initCustomerLedger();
+    if (typeof initChurnTab === "function") initChurnTab();
+}
+
+function initLiveOrderWebSocket() {
+    const wsBadge = document.getElementById("wsStreamBadge");
+
+    function connectWs() {
+        if (liveOrderSocket && (liveOrderSocket.readyState === WebSocket.OPEN || liveOrderSocket.readyState === WebSocket.CONNECTING)) {
+            return;
+        }
+
+        try {
+            liveOrderSocket = new WebSocket("ws://localhost:8000/ws/live-orders");
+
+            liveOrderSocket.onopen = () => {
+                console.log("[Nexus WebSocket] Connected to live retail order stream (ws://localhost:8000/ws/live-orders)");
+                if (wsBadge) {
+                    wsBadge.textContent = "● WS STREAM ACTIVE :8000";
+                    wsBadge.className = "badge green ws-live-pulse";
+                }
+            };
+
+            liveOrderSocket.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    if (msg.type === "ORDER_INJECTED" && msg.data) {
+                        handleLiveIncomingOrder(msg.data);
+                    }
+                } catch (e) {
+                    console.warn("[Nexus WebSocket] Inbound parse warning:", e);
+                }
+            };
+
+            liveOrderSocket.onclose = () => {
+                if (wsBadge) {
+                    wsBadge.textContent = "○ WS STREAM OFFLINE";
+                    wsBadge.className = "badge gray-border";
+                }
+                clearTimeout(wsReconnectTimer);
+                wsReconnectTimer = setTimeout(connectWs, 5000);
+            };
+
+            liveOrderSocket.onerror = () => {
+                liveOrderSocket?.close();
+            };
+        } catch (e) {
+            clearTimeout(wsReconnectTimer);
+            wsReconnectTimer = setTimeout(connectWs, 5000);
+        }
+    }
+
+    connectWs();
+}
+
+function initTransactionSimulator() {
+    const form = document.getElementById("posSimulatorForm");
+    const feedback = document.getElementById("simFeedbackArea");
+
+    if (!form || !feedback) return;
+
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const cid = document.getElementById("simCustId").value.trim();
+        const skuSelect = document.getElementById("simSkuCode");
+        const sku = skuSelect.value;
+        const skuText = skuSelect.options[skuSelect.selectedIndex].text;
+        const qty = parseInt(document.getElementById("simQty").value, 10);
+        const price = parseFloat(document.getElementById("simPrice").value);
+        const country = document.getElementById("simCountry") ? document.getElementById("simCountry").value.trim() : "United Kingdom";
+        const total = qty * price;
+
+        const payload = {
+            customer_id: cid,
+            country: country,
+            items: [
+                {
+                    stock_code: sku,
+                    description: skuText.split(" (")[0].replace(/^\[.*?\]\s*/, ""),
+                    quantity: qty,
+                    unit_price: price
+                }
+            ]
+        };
+
+        // 1. Attempt broadcast via FastAPI REST endpoint (which relays to all WebSockets)
+        let broadcasted = false;
+        try {
+            const res = await fetch("http://localhost:8000/api/v1/orders/inject", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                const resData = await res.json();
+                broadcasted = true;
+                // If this client isn't connected via WebSocket, handle directly
+                if (!liveOrderSocket || liveOrderSocket.readyState !== WebSocket.OPEN) {
+                    handleLiveIncomingOrder(resData.order);
+                }
+            }
+        } catch (err) {
+            console.log("[POS Simulator] FastAPI offline, processing local simulation...");
+        }
+
+        // 2. Offline fallback simulation
+        if (!broadcasted) {
+            const localOrder = {
+                invoice_no: `INV-${Math.random().toString(16).substring(2, 8).toUpperCase()}`,
+                timestamp: new Date().toISOString(),
+                customer_id: cid,
+                country: country,
+                total_amount_gbp: total,
+                total_units: qty,
+                updated_churn_probability: Math.max(0.04, (MASTER_CUSTOMERS.find(c => c.id === cid)?.churnProb || 0.75) * 0.45),
+                active_clients_notified: 1
+            };
+            handleLiveIncomingOrder(localOrder);
+        }
     });
+
+    window.quickFillSimOrder = function(cid, sku, qty, price, country) {
+        const inputCid = document.getElementById("simCustId");
+        const selectSku = document.getElementById("simSkuCode");
+        const inputQty = document.getElementById("simQty");
+        const inputPrice = document.getElementById("simPrice");
+        const inputCountry = document.getElementById("simCountry");
+
+        if (inputCid) inputCid.value = cid;
+        if (selectSku) selectSku.value = sku;
+        if (inputQty) inputQty.value = qty;
+        if (inputPrice) inputPrice.value = price;
+        if (inputCountry && country) inputCountry.value = country;
+
+        // Auto trigger submit
+        if (form) {
+            form.dispatchEvent(new Event("submit", { cancelable: true }));
+        }
+    };
 }
 
 // =============================================================================

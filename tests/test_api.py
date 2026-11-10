@@ -136,3 +136,48 @@ def test_clv_endpoints():
     assert cust_data["clv_12m_gbp"] > 10000.0
     assert "Platinum VIP" in cust_data["clv_segment"]
 
+
+def test_order_injection_and_streaming():
+    """Assert POS order injection calculates totals, reactive churn drop, and stream status."""
+    payload = {
+        "customer_id": "14096",
+        "country": "United Kingdom",
+        "items": [
+            {
+                "stock_code": "22423",
+                "description": "Regency Cakestand 3 Tier",
+                "quantity": 10,
+                "unit_price": 10.95
+            },
+            {
+                "stock_code": "85123A",
+                "description": "White Hanging Heart T-Light Holder",
+                "quantity": 20,
+                "unit_price": 2.55
+            }
+        ]
+    }
+    res = client.post("/api/v1/orders/inject", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "success"
+    order = data["order"]
+    assert order["customer_id"] == "14096"
+    assert order["total_amount_gbp"] == 160.50  # (10 * 10.95) + (20 * 2.55) = 109.50 + 51.00 = 160.50
+    assert order["total_units"] == 30
+    assert order["updated_churn_probability"] < 0.20
+    assert order["updated_recency_days"] == 0
+
+    # Stream Status
+    status_res = client.get("/api/v1/orders/stream-status")
+    assert status_res.status_code == 200
+    assert status_res.json()["status"] == "online"
+
+    # WebSocket connection test
+    with client.websocket_connect("/ws/live-orders") as websocket:
+        initial = websocket.receive_json()
+        assert initial["type"] == "CONNECTION_ESTABLISHED"
+        websocket.send_text('{"action": "ping"}')
+        pong = websocket.receive_json()
+        assert pong["type"] == "PONG"
+
