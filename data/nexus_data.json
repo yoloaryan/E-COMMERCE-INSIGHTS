@@ -1,0 +1,1207 @@
+{
+  "generated_at": "2026-11-08T13:03:35.653002+00:00",
+  "kpis": {
+    "total_gross_revenue_gbp": 10279169.87,
+    "total_completed_orders": 19776,
+    "total_units_sold": 5577275,
+    "average_order_value_gbp": 519.78,
+    "registered_customers": 4334,
+    "active_catalog_skus": 3804,
+    "cancellation_rate_pct": 0.0
+  },
+  "monthly_velocity": [
+    {
+      "month": "2010-12",
+      "revenue": 778608.36,
+      "orders": 1551
+    },
+    {
+      "month": "2011-01",
+      "revenue": 672192.41,
+      "orders": 1081
+    },
+    {
+      "month": "2011-02",
+      "revenue": 509167.87,
+      "orders": 1093
+    },
+    {
+      "month": "2011-03",
+      "revenue": 692015.94,
+      "orders": 1440
+    },
+    {
+      "month": "2011-04",
+      "revenue": 516709.79,
+      "orders": 1235
+    },
+    {
+      "month": "2011-05",
+      "revenue": 741711.74,
+      "orders": 1668
+    },
+    {
+      "month": "2011-06",
+      "revenue": 739426.88,
+      "orders": 1525
+    },
+    {
+      "month": "2011-07",
+      "revenue": 689947.74,
+      "orders": 1452
+    },
+    {
+      "month": "2011-08",
+      "revenue": 726005.16,
+      "orders": 1340
+    },
+    {
+      "month": "2011-09",
+      "revenue": 1031400.36,
+      "orders": 1819
+    },
+    {
+      "month": "2011-10",
+      "revenue": 1107386.49,
+      "orders": 2005
+    },
+    {
+      "month": "2011-11",
+      "revenue": 1458895.53,
+      "orders": 2751
+    },
+    {
+      "month": "2011-12",
+      "revenue": 615701.6,
+      "orders": 816
+    }
+  ],
+  "top_products": [
+    {
+      "stock_code": "22423",
+      "description": "Regency Cakestand 3 Tier",
+      "revenue": 174484.74,
+      "units_sold": 13879.0,
+      "order_count": 1988
+    },
+    {
+      "stock_code": "23843",
+      "description": "Paper Craft , Little Birdie",
+      "revenue": 168469.6,
+      "units_sold": 80995.0,
+      "order_count": 1
+    },
+    {
+      "stock_code": "85123A",
+      "description": "White Hanging Heart T-Light Holder",
+      "revenue": 106471.28,
+      "units_sold": 37952.0,
+      "order_count": 2265
+    },
+    {
+      "stock_code": "47566",
+      "description": "Party Bunting",
+      "revenue": 99504.33,
+      "units_sold": 18295.0,
+      "order_count": 1685
+    },
+    {
+      "stock_code": "85099B",
+      "description": "Jumbo Bag Red Retrospot",
+      "revenue": 94340.05,
+      "units_sold": 48474.0,
+      "order_count": 2089
+    },
+    {
+      "stock_code": "23166",
+      "description": "Medium Ceramic Top Storage Jar",
+      "revenue": 81700.92,
+      "units_sold": 78033.0,
+      "order_count": 247
+    },
+    {
+      "stock_code": "23084",
+      "description": "Rabbit Night Light",
+      "revenue": 66964.99,
+      "units_sold": 30788.0,
+      "order_count": 994
+    },
+    {
+      "stock_code": "22086",
+      "description": "Paper Chain Kit 50'S Christmas",
+      "revenue": 64952.29,
+      "units_sold": 19355.0,
+      "order_count": 1160
+    },
+    {
+      "stock_code": "84879",
+      "description": "Assorted Colour Bird Ornament",
+      "revenue": 59094.93,
+      "units_sold": 36461.0,
+      "order_count": 1455
+    },
+    {
+      "stock_code": "79321",
+      "description": "Chilli Lights",
+      "revenue": 54117.76,
+      "units_sold": 10306.0,
+      "order_count": 661
+    }
+  ],
+  "segments": [
+    {
+      "Segment_Name": "At-Risk / Lapsing",
+      "customer_count": 1180,
+      "avg_recency": 69.1,
+      "avg_frequency": 4.1,
+      "avg_monetary": 1784.53,
+      "total_revenue": 2105746.88,
+      "revenue_share_pct": 24.02
+    },
+    {
+      "Segment_Name": "Champions (VIP)",
+      "customer_count": 708,
+      "avg_recency": 11.9,
+      "avg_frequency": 13.7,
+      "avg_monetary": 7993.48,
+      "total_revenue": 5659383.81,
+      "revenue_share_pct": 64.55
+    },
+    {
+      "Segment_Name": "Loyal Customers",
+      "customer_count": 844,
+      "avg_recency": 19.0,
+      "avg_frequency": 2.1,
+      "avg_monetary": 530.01,
+      "total_revenue": 447326.54,
+      "revenue_share_pct": 5.1
+    },
+    {
+      "Segment_Name": "Occasional / Hibernating",
+      "customer_count": 1602,
+      "avg_recency": 184.7,
+      "avg_frequency": 1.3,
+      "avg_monetary": 346.63,
+      "total_revenue": 555295.42,
+      "revenue_share_pct": 6.33
+    }
+  ],
+  "at_risk_vips": [
+    {
+      "customer_id": "12346",
+      "historical_spend": 77183.6,
+      "churn_probability": 0.804,
+      "recency_days": 235,
+      "lifetime_orders": 1,
+      "retention_strategy": "CRITICAL INTERVENTION: Assign dedicated account manager; direct phone outreach; bespoke VIP discount."
+    },
+    {
+      "customer_id": "15749",
+      "historical_spend": 44534.3,
+      "churn_probability": 0.768,
+      "recency_days": 144,
+      "lifetime_orders": 3,
+      "retention_strategy": "CRITICAL INTERVENTION: Assign dedicated account manager; direct phone outreach; bespoke VIP discount."
+    },
+    {
+      "customer_id": "15098",
+      "historical_spend": 39916.5,
+      "churn_probability": 0.706,
+      "recency_days": 91,
+      "lifetime_orders": 3,
+      "retention_strategy": "CRITICAL INTERVENTION: Assign dedicated account manager; direct phone outreach; bespoke VIP discount."
+    },
+    {
+      "customer_id": "18087",
+      "historical_spend": 3202.92,
+      "churn_probability": 0.793,
+      "recency_days": 200,
+      "lifetime_orders": 1,
+      "retention_strategy": "CRITICAL INTERVENTION: Assign dedicated account manager; direct phone outreach; bespoke VIP discount."
+    },
+    {
+      "customer_id": "13135",
+      "historical_spend": 3096.0,
+      "churn_probability": 0.729,
+      "recency_days": 106,
+      "lifetime_orders": 1,
+      "retention_strategy": "CRITICAL INTERVENTION: Assign dedicated account manager; direct phone outreach; bespoke VIP discount."
+    },
+    {
+      "customer_id": "16754",
+      "historical_spend": 2002.4,
+      "churn_probability": 0.742,
+      "recency_days": 281,
+      "lifetime_orders": 1,
+      "retention_strategy": "CRITICAL INTERVENTION: Assign dedicated account manager; direct phone outreach; bespoke VIP discount."
+    },
+    {
+      "customer_id": "16698",
+      "historical_spend": 1998.0,
+      "churn_probability": 0.735,
+      "recency_days": 136,
+      "lifetime_orders": 2,
+      "retention_strategy": "CRITICAL INTERVENTION: Assign dedicated account manager; direct phone outreach; bespoke VIP discount."
+    },
+    {
+      "customer_id": "14935",
+      "historical_spend": 1784.71,
+      "churn_probability": 0.749,
+      "recency_days": 206,
+      "lifetime_orders": 1,
+      "retention_strategy": "CRITICAL INTERVENTION: Assign dedicated account manager; direct phone outreach; bespoke VIP discount."
+    },
+    {
+      "customer_id": "12764",
+      "historical_spend": 1693.88,
+      "churn_probability": 0.754,
+      "recency_days": 226,
+      "lifetime_orders": 1,
+      "retention_strategy": "CRITICAL INTERVENTION: Assign dedicated account manager; direct phone outreach; bespoke VIP discount."
+    },
+    {
+      "customer_id": "12967",
+      "historical_spend": 1660.9,
+      "churn_probability": 0.721,
+      "recency_days": 267,
+      "lifetime_orders": 2,
+      "retention_strategy": "CRITICAL INTERVENTION: Assign dedicated account manager; direct phone outreach; bespoke VIP discount."
+    },
+    {
+      "customer_id": "17553",
+      "historical_spend": 1487.6,
+      "churn_probability": 0.777,
+      "recency_days": 39,
+      "lifetime_orders": 1,
+      "retention_strategy": "CRITICAL INTERVENTION: Assign dedicated account manager; direct phone outreach; bespoke VIP discount."
+    },
+    {
+      "customer_id": "14566",
+      "historical_spend": 1432.0,
+      "churn_probability": 0.721,
+      "recency_days": 20,
+      "lifetime_orders": 1,
+      "retention_strategy": "CRITICAL INTERVENTION: Assign dedicated account manager; direct phone outreach; bespoke VIP discount."
+    },
+    {
+      "customer_id": "12770",
+      "historical_spend": 1351.45,
+      "churn_probability": 0.742,
+      "recency_days": 120,
+      "lifetime_orders": 1,
+      "retention_strategy": "CRITICAL INTERVENTION: Assign dedicated account manager; direct phone outreach; bespoke VIP discount."
+    },
+    {
+      "customer_id": "13328",
+      "historical_spend": 1308.48,
+      "churn_probability": 0.748,
+      "recency_days": 225,
+      "lifetime_orders": 1,
+      "retention_strategy": "CRITICAL INTERVENTION: Assign dedicated account manager; direct phone outreach; bespoke VIP discount."
+    },
+    {
+      "customer_id": "15171",
+      "historical_spend": 1289.5,
+      "churn_probability": 0.724,
+      "recency_days": 240,
+      "lifetime_orders": 1,
+      "retention_strategy": "CRITICAL INTERVENTION: Assign dedicated account manager; direct phone outreach; bespoke VIP discount."
+    },
+    {
+      "customer_id": "13151",
+      "historical_spend": 1257.87,
+      "churn_probability": 0.705,
+      "recency_days": 205,
+      "lifetime_orders": 1,
+      "retention_strategy": "CRITICAL INTERVENTION: Assign dedicated account manager; direct phone outreach; bespoke VIP discount."
+    },
+    {
+      "customer_id": "13848",
+      "historical_spend": 1255.0,
+      "churn_probability": 0.752,
+      "recency_days": 1,
+      "lifetime_orders": 3,
+      "retention_strategy": "CRITICAL INTERVENTION: Assign dedicated account manager; direct phone outreach; bespoke VIP discount."
+    },
+    {
+      "customer_id": "12818",
+      "historical_spend": 1182.08,
+      "churn_probability": 0.742,
+      "recency_days": 171,
+      "lifetime_orders": 1,
+      "retention_strategy": "CRITICAL INTERVENTION: Assign dedicated account manager; direct phone outreach; bespoke VIP discount."
+    },
+    {
+      "customer_id": "16692",
+      "historical_spend": 1126.0,
+      "churn_probability": 0.777,
+      "recency_days": 165,
+      "lifetime_orders": 2,
+      "retention_strategy": "CRITICAL INTERVENTION: Assign dedicated account manager; direct phone outreach; bespoke VIP discount."
+    },
+    {
+      "customer_id": "14411",
+      "historical_spend": 1063.0,
+      "churn_probability": 0.762,
+      "recency_days": 220,
+      "lifetime_orders": 1,
+      "retention_strategy": "CRITICAL INTERVENTION: Assign dedicated account manager; direct phone outreach; bespoke VIP discount."
+    }
+  ],
+  "forecast_timeline": [
+    {
+      "date": "2011-10-02",
+      "actual": 11634.53,
+      "rf_predicted": 25046.5,
+      "xgb_predicted": 22731.44,
+      "p10_lower": 12427.06,
+      "p90_upper": 39141.07
+    },
+    {
+      "date": "2011-10-03",
+      "actual": 61919.16,
+      "rf_predicted": 37550.19,
+      "xgb_predicted": 36514.95,
+      "p10_lower": 17924.03,
+      "p90_upper": 62932.95
+    },
+    {
+      "date": "2011-10-04",
+      "actual": 47755.79,
+      "rf_predicted": 44456.12,
+      "xgb_predicted": 47139.89,
+      "p10_lower": 26962.51,
+      "p90_upper": 65085.52
+    },
+    {
+      "date": "2011-10-05",
+      "actual": 74819.26,
+      "rf_predicted": 48658.92,
+      "xgb_predicted": 43943.38,
+      "p10_lower": 28695.18,
+      "p90_upper": 74693.47
+    },
+    {
+      "date": "2011-10-06",
+      "actual": 61978.58,
+      "rf_predicted": 46573.65,
+      "xgb_predicted": 46316.07,
+      "p10_lower": 28439.3,
+      "p90_upper": 64715.31
+    },
+    {
+      "date": "2011-10-07",
+      "actual": 53003.57,
+      "rf_predicted": 44443.24,
+      "xgb_predicted": 40928.63,
+      "p10_lower": 27447.05,
+      "p90_upper": 74693.47
+    },
+    {
+      "date": "2011-10-08",
+      "actual": 0.0,
+      "rf_predicted": 714.23,
+      "xgb_predicted": 12044.55,
+      "p10_lower": 0.0,
+      "p90_upper": 0.0
+    },
+    {
+      "date": "2011-10-09",
+      "actual": 12524.4,
+      "rf_predicted": 21462.29,
+      "xgb_predicted": 21954.14,
+      "p10_lower": 6943.15,
+      "p90_upper": 31174.66
+    },
+    {
+      "date": "2011-10-10",
+      "actual": 46350.22,
+      "rf_predicted": 57333.16,
+      "xgb_predicted": 41109.23,
+      "p10_lower": 26981.38,
+      "p90_upper": 108422.47
+    },
+    {
+      "date": "2011-10-11",
+      "actual": 51890.09,
+      "rf_predicted": 43815.14,
+      "xgb_predicted": 47697.8,
+      "p10_lower": 28495.09,
+      "p90_upper": 64715.31
+    },
+    {
+      "date": "2011-10-12",
+      "actual": 30939.05,
+      "rf_predicted": 49450.99,
+      "xgb_predicted": 49858.75,
+      "p10_lower": 28783.19,
+      "p90_upper": 61972.16
+    },
+    {
+      "date": "2011-10-13",
+      "actual": 35901.8,
+      "rf_predicted": 49194.91,
+      "xgb_predicted": 51164.96,
+      "p10_lower": 32144.47,
+      "p90_upper": 65085.52
+    },
+    {
+      "date": "2011-10-14",
+      "actual": 35165.48,
+      "rf_predicted": 44514.17,
+      "xgb_predicted": 39054.61,
+      "p10_lower": 28568.5,
+      "p90_upper": 61626.23
+    },
+    {
+      "date": "2011-10-15",
+      "actual": 0.0,
+      "rf_predicted": 0.0,
+      "xgb_predicted": 883.78,
+      "p10_lower": 0.0,
+      "p90_upper": 0.0
+    },
+    {
+      "date": "2011-10-16",
+      "actual": 22010.57,
+      "rf_predicted": 20054.48,
+      "xgb_predicted": 18764.51,
+      "p10_lower": 6600.28,
+      "p90_upper": 35259.67
+    },
+    {
+      "date": "2011-10-17",
+      "actual": 49483.34,
+      "rf_predicted": 47570.82,
+      "xgb_predicted": 46333.2,
+      "p10_lower": 26962.51,
+      "p90_upper": 74693.47
+    },
+    {
+      "date": "2011-10-18",
+      "actual": 44415.02,
+      "rf_predicted": 47733.82,
+      "xgb_predicted": 46766.78,
+      "p10_lower": 28568.5,
+      "p90_upper": 74693.47
+    },
+    {
+      "date": "2011-10-19",
+      "actual": 35038.21,
+      "rf_predicted": 45344.18,
+      "xgb_predicted": 49402.02,
+      "p10_lower": 30424.2,
+      "p90_upper": 74693.47
+    },
+    {
+      "date": "2011-10-20",
+      "actual": 60887.29,
+      "rf_predicted": 41924.36,
+      "xgb_predicted": 47174.62,
+      "p10_lower": 27283.39,
+      "p90_upper": 60422.13
+    },
+    {
+      "date": "2011-10-21",
+      "actual": 63031.64,
+      "rf_predicted": 38466.45,
+      "xgb_predicted": 33807.08,
+      "p10_lower": 26986.22,
+      "p90_upper": 46028.14
+    },
+    {
+      "date": "2011-10-22",
+      "actual": 0.0,
+      "rf_predicted": 0.0,
+      "xgb_predicted": 0.0,
+      "p10_lower": 0.0,
+      "p90_upper": 0.0
+    },
+    {
+      "date": "2011-10-23",
+      "actual": 12288.78,
+      "rf_predicted": 24799.1,
+      "xgb_predicted": 23389.51,
+      "p10_lower": 7578.91,
+      "p90_upper": 39040.95
+    },
+    {
+      "date": "2011-10-24",
+      "actual": 45006.16,
+      "rf_predicted": 43443.56,
+      "xgb_predicted": 32975.26,
+      "p10_lower": 23963.96,
+      "p90_upper": 74693.47
+    },
+    {
+      "date": "2011-10-25",
+      "actual": 40009.54,
+      "rf_predicted": 41214.05,
+      "xgb_predicted": 40549.74,
+      "p10_lower": 26971.99,
+      "p90_upper": 52761.7
+    },
+    {
+      "date": "2011-10-26",
+      "actual": 36308.8,
+      "rf_predicted": 42444.8,
+      "xgb_predicted": 42752.58,
+      "p10_lower": 30660.01,
+      "p90_upper": 58626.55
+    },
+    {
+      "date": "2011-10-27",
+      "actual": 48280.71,
+      "rf_predicted": 45137.5,
+      "xgb_predicted": 43925.59,
+      "p10_lower": 34330.6,
+      "p90_upper": 58626.55
+    },
+    {
+      "date": "2011-10-28",
+      "actual": 39956.39,
+      "rf_predicted": 46786.91,
+      "xgb_predicted": 40120.66,
+      "p10_lower": 28231.57,
+      "p90_upper": 65085.52
+    },
+    {
+      "date": "2011-10-29",
+      "actual": 0.0,
+      "rf_predicted": 0.0,
+      "xgb_predicted": 2657.38,
+      "p10_lower": 0.0,
+      "p90_upper": 0.0
+    },
+    {
+      "date": "2011-10-30",
+      "actual": 34154.69,
+      "rf_predicted": 22805.4,
+      "xgb_predicted": 20122.75,
+      "p10_lower": 9029.25,
+      "p90_upper": 35259.67
+    },
+    {
+      "date": "2011-10-31",
+      "actual": 52633.42,
+      "rf_predicted": 44162.86,
+      "xgb_predicted": 34188.09,
+      "p10_lower": 26918.98,
+      "p90_upper": 74693.47
+    },
+    {
+      "date": "2011-11-01",
+      "actual": 28873.15,
+      "rf_predicted": 44452.57,
+      "xgb_predicted": 46780.07,
+      "p10_lower": 26986.22,
+      "p90_upper": 74693.47
+    },
+    {
+      "date": "2011-11-02",
+      "actual": 45066.67,
+      "rf_predicted": 50778.77,
+      "xgb_predicted": 51973.77,
+      "p10_lower": 31626.78,
+      "p90_upper": 74693.47
+    },
+    {
+      "date": "2011-11-03",
+      "actual": 62726.98,
+      "rf_predicted": 45621.07,
+      "xgb_predicted": 45085.26,
+      "p10_lower": 27800.31,
+      "p90_upper": 64715.31
+    },
+    {
+      "date": "2011-11-04",
+      "actual": 62182.39,
+      "rf_predicted": 42971.42,
+      "xgb_predicted": 40664.38,
+      "p10_lower": 27266.99,
+      "p90_upper": 61626.23
+    },
+    {
+      "date": "2011-11-05",
+      "actual": 0.0,
+      "rf_predicted": 714.23,
+      "xgb_predicted": 12520.94,
+      "p10_lower": 0.0,
+      "p90_upper": 0.0
+    },
+    {
+      "date": "2011-11-06",
+      "actual": 42586.6,
+      "rf_predicted": 27077.76,
+      "xgb_predicted": 25480.67,
+      "p10_lower": 10708.0,
+      "p90_upper": 49224.02
+    },
+    {
+      "date": "2011-11-07",
+      "actual": 84476.52,
+      "rf_predicted": 48346.4,
+      "xgb_predicted": 39493.87,
+      "p10_lower": 26986.22,
+      "p90_upper": 108422.47
+    },
+    {
+      "date": "2011-11-08",
+      "actual": 54761.14,
+      "rf_predicted": 46689.51,
+      "xgb_predicted": 48760.5,
+      "p10_lower": 28457.35,
+      "p90_upper": 74693.47
+    },
+    {
+      "date": "2011-11-09",
+      "actual": 65112.73,
+      "rf_predicted": 47287.08,
+      "xgb_predicted": 47851.68,
+      "p10_lower": 29853.11,
+      "p90_upper": 74693.47
+    },
+    {
+      "date": "2011-11-10",
+      "actual": 68733.78,
+      "rf_predicted": 49503.84,
+      "xgb_predicted": 50156.23,
+      "p10_lower": 28532.64,
+      "p90_upper": 65085.52
+    },
+    {
+      "date": "2011-11-11",
+      "actual": 53062.74,
+      "rf_predicted": 50142.13,
+      "xgb_predicted": 39462.82,
+      "p10_lower": 29543.16,
+      "p90_upper": 65085.52
+    },
+    {
+      "date": "2011-11-12",
+      "actual": 0.0,
+      "rf_predicted": 714.23,
+      "xgb_predicted": 8267.6,
+      "p10_lower": 0.0,
+      "p90_upper": 0.0
+    },
+    {
+      "date": "2011-11-13",
+      "actual": 32858.46,
+      "rf_predicted": 28686.09,
+      "xgb_predicted": 30083.34,
+      "p10_lower": 9904.14,
+      "p90_upper": 53348.19
+    },
+    {
+      "date": "2011-11-14",
+      "actual": 111581.1,
+      "rf_predicted": 55259.86,
+      "xgb_predicted": 59841.92,
+      "p10_lower": 28566.09,
+      "p90_upper": 108422.47
+    },
+    {
+      "date": "2011-11-15",
+      "actual": 58521.65,
+      "rf_predicted": 52145.09,
+      "xgb_predicted": 54072.03,
+      "p10_lower": 28566.09,
+      "p90_upper": 108422.47
+    },
+    {
+      "date": "2011-11-16",
+      "actual": 62643.93,
+      "rf_predicted": 49431.05,
+      "xgb_predicted": 49810.53,
+      "p10_lower": 33945.67,
+      "p90_upper": 65085.52
+    },
+    {
+      "date": "2011-11-17",
+      "actual": 59023.47,
+      "rf_predicted": 49452.29,
+      "xgb_predicted": 49018.86,
+      "p10_lower": 28566.09,
+      "p90_upper": 65085.52
+    },
+    {
+      "date": "2011-11-18",
+      "actual": 49758.18,
+      "rf_predicted": 47841.49,
+      "xgb_predicted": 40583.32,
+      "p10_lower": 30281.19,
+      "p90_upper": 74693.47
+    },
+    {
+      "date": "2011-11-19",
+      "actual": 0.0,
+      "rf_predicted": 714.23,
+      "xgb_predicted": 8247.12,
+      "p10_lower": 0.0,
+      "p90_upper": 0.0
+    },
+    {
+      "date": "2011-11-20",
+      "actual": 33607.82,
+      "rf_predicted": 27802.73,
+      "xgb_predicted": 26737.51,
+      "p10_lower": 10740.78,
+      "p90_upper": 39040.95
+    },
+    {
+      "date": "2011-11-21",
+      "actual": 48669.88,
+      "rf_predicted": 54794.73,
+      "xgb_predicted": 54586.8,
+      "p10_lower": 28566.09,
+      "p90_upper": 108422.47
+    },
+    {
+      "date": "2011-11-22",
+      "actual": 62325.14,
+      "rf_predicted": 51108.12,
+      "xgb_predicted": 48317.23,
+      "p10_lower": 31104.37,
+      "p90_upper": 108422.47
+    },
+    {
+      "date": "2011-11-23",
+      "actual": 76341.63,
+      "rf_predicted": 47310.85,
+      "xgb_predicted": 41503.84,
+      "p10_lower": 34067.14,
+      "p90_upper": 58792.73
+    },
+    {
+      "date": "2011-11-24",
+      "actual": 49007.02,
+      "rf_predicted": 47595.8,
+      "xgb_predicted": 41997.04,
+      "p10_lower": 33868.08,
+      "p90_upper": 60731.04
+    },
+    {
+      "date": "2011-11-25",
+      "actual": 47091.85,
+      "rf_predicted": 47129.54,
+      "xgb_predicted": 37921.29,
+      "p10_lower": 31592.38,
+      "p90_upper": 74693.47
+    },
+    {
+      "date": "2011-11-26",
+      "actual": 0.0,
+      "rf_predicted": 0.0,
+      "xgb_predicted": 2286.86,
+      "p10_lower": 0.0,
+      "p90_upper": 0.0
+    },
+    {
+      "date": "2011-11-27",
+      "actual": 20604.8,
+      "rf_predicted": 27909.23,
+      "xgb_predicted": 29218.97,
+      "p10_lower": 12264.86,
+      "p90_upper": 40298.05
+    },
+    {
+      "date": "2011-11-28",
+      "actual": 54628.89,
+      "rf_predicted": 45151.26,
+      "xgb_predicted": 35656.56,
+      "p10_lower": 28288.77,
+      "p90_upper": 60731.04
+    },
+    {
+      "date": "2011-11-29",
+      "actual": 68359.52,
+      "rf_predicted": 48468.86,
+      "xgb_predicted": 51452.0,
+      "p10_lower": 29205.09,
+      "p90_upper": 65085.52
+    },
+    {
+      "date": "2011-11-30",
+      "actual": 56289.49,
+      "rf_predicted": 48355.6,
+      "xgb_predicted": 41411.66,
+      "p10_lower": 33429.42,
+      "p90_upper": 60768.06
+    },
+    {
+      "date": "2011-12-01",
+      "actual": 50883.77,
+      "rf_predicted": 49400.77,
+      "xgb_predicted": 47513.67,
+      "p10_lower": 31846.2,
+      "p90_upper": 74693.47
+    },
+    {
+      "date": "2011-12-02",
+      "actual": 56104.76,
+      "rf_predicted": 48290.27,
+      "xgb_predicted": 41815.51,
+      "p10_lower": 29543.16,
+      "p90_upper": 74693.47
+    },
+    {
+      "date": "2011-12-03",
+      "actual": 0.0,
+      "rf_predicted": 714.23,
+      "xgb_predicted": 12433.75,
+      "p10_lower": 0.0,
+      "p90_upper": 0.0
+    },
+    {
+      "date": "2011-12-04",
+      "actual": 24387.43,
+      "rf_predicted": 27684.56,
+      "xgb_predicted": 29354.0,
+      "p10_lower": 7578.91,
+      "p90_upper": 43352.26
+    },
+    {
+      "date": "2011-12-05",
+      "actual": 80182.35,
+      "rf_predicted": 62811.32,
+      "xgb_predicted": 47907.24,
+      "p10_lower": 28783.19,
+      "p90_upper": 108422.47
+    },
+    {
+      "date": "2011-12-06",
+      "actual": 55411.69,
+      "rf_predicted": 50316.67,
+      "xgb_predicted": 60234.28,
+      "p10_lower": 28566.09,
+      "p90_upper": 65085.52
+    },
+    {
+      "date": "2011-12-07",
+      "actual": 72922.7,
+      "rf_predicted": 50397.44,
+      "xgb_predicted": 51028.11,
+      "p10_lower": 30935.51,
+      "p90_upper": 66046.32
+    },
+    {
+      "date": "2011-12-08",
+      "actual": 77694.64,
+      "rf_predicted": 47312.12,
+      "xgb_predicted": 47203.82,
+      "p10_lower": 28566.09,
+      "p90_upper": 74693.47
+    },
+    {
+      "date": "2011-12-09",
+      "actual": 198114.26,
+      "rf_predicted": 49701.39,
+      "xgb_predicted": 42009.57,
+      "p10_lower": 28532.64,
+      "p90_upper": 65085.52
+    }
+  ],
+  "sample_catalog": [
+    {
+      "stock_code": "10002",
+      "description": "Inflatable Political Globe",
+      "unit_price": 0.85,
+      "orders": 49
+    },
+    {
+      "stock_code": "10080",
+      "description": "Groovy Cactus Inflatable",
+      "unit_price": 0.39,
+      "orders": 21
+    },
+    {
+      "stock_code": "10120",
+      "description": "Doggy Rubber",
+      "unit_price": 0.21,
+      "orders": 29
+    },
+    {
+      "stock_code": "10123C",
+      "description": "Hearts Wrapping Tape",
+      "unit_price": 0.65,
+      "orders": 3
+    },
+    {
+      "stock_code": "10124A",
+      "description": "Spots On Red Bookcover Tape",
+      "unit_price": 0.42,
+      "orders": 5
+    },
+    {
+      "stock_code": "10124G",
+      "description": "Army Camo Bookcover Tape",
+      "unit_price": 0.42,
+      "orders": 4
+    },
+    {
+      "stock_code": "10125",
+      "description": "Mini Funky Design Tapes",
+      "unit_price": 0.85,
+      "orders": 61
+    },
+    {
+      "stock_code": "10133",
+      "description": "Colouring Pencils Brown Tube",
+      "unit_price": 0.42,
+      "orders": 122
+    },
+    {
+      "stock_code": "10135",
+      "description": "Colouring Pencils Brown Tube",
+      "unit_price": 1.25,
+      "orders": 117
+    },
+    {
+      "stock_code": "11001",
+      "description": "Asstd Design Racing Car Pen",
+      "unit_price": 1.69,
+      "orders": 62
+    },
+    {
+      "stock_code": "15030",
+      "description": "Fan Black Frame",
+      "unit_price": 0.29,
+      "orders": 12
+    },
+    {
+      "stock_code": "15034",
+      "description": "Paper Pocket Traveling Fan",
+      "unit_price": 0.14,
+      "orders": 91
+    },
+    {
+      "stock_code": "15036",
+      "description": "Assorted Colours Silk Fan",
+      "unit_price": 0.83,
+      "orders": 324
+    },
+    {
+      "stock_code": "15039",
+      "description": "Sandalwood Fan",
+      "unit_price": 0.85,
+      "orders": 70
+    },
+    {
+      "stock_code": "15044A",
+      "description": "Pink Paper Parasol",
+      "unit_price": 2.95,
+      "orders": 78
+    },
+    {
+      "stock_code": "15044B",
+      "description": "Blue Paper Parasol",
+      "unit_price": 2.95,
+      "orders": 48
+    },
+    {
+      "stock_code": "15044C",
+      "description": "Purple Paper Parasol",
+      "unit_price": 2.95,
+      "orders": 60
+    },
+    {
+      "stock_code": "15044D",
+      "description": "Red Paper Parasol",
+      "unit_price": 2.95,
+      "orders": 73
+    },
+    {
+      "stock_code": "15056BL",
+      "description": "Edwardian Parasol Black",
+      "unit_price": 5.95,
+      "orders": 291
+    },
+    {
+      "stock_code": "15056N",
+      "description": "Edwardian Parasol Natural",
+      "unit_price": 5.95,
+      "orders": 378
+    },
+    {
+      "stock_code": "15056P",
+      "description": "Edwardian Parasol Pink",
+      "unit_price": 5.95,
+      "orders": 135
+    },
+    {
+      "stock_code": "15058A",
+      "description": "Blue Polkadot Garden Parasol",
+      "unit_price": 7.95,
+      "orders": 51
+    },
+    {
+      "stock_code": "15058B",
+      "description": "Pink Polkadot Garden Parasol",
+      "unit_price": 7.95,
+      "orders": 41
+    },
+    {
+      "stock_code": "15058C",
+      "description": "Ice Cream Design Garden Parasol",
+      "unit_price": 7.95,
+      "orders": 30
+    },
+    {
+      "stock_code": "15060B",
+      "description": "Fairy Cake Design Umbrella",
+      "unit_price": 3.75,
+      "orders": 95
+    },
+    {
+      "stock_code": "16008",
+      "description": "Small Folding Scissor(Pointed Edge)",
+      "unit_price": 0.12,
+      "orders": 70
+    },
+    {
+      "stock_code": "16010",
+      "description": "Folding Camping Scissor W/Knif & S",
+      "unit_price": 0.12,
+      "orders": 3
+    },
+    {
+      "stock_code": "16011",
+      "description": "Animal Stickers",
+      "unit_price": 0.21,
+      "orders": 46
+    },
+    {
+      "stock_code": "16012",
+      "description": "Food/Drink Sponge Stickers",
+      "unit_price": 0.21,
+      "orders": 35
+    },
+    {
+      "stock_code": "16014",
+      "description": "Small Chinese Style Scissor",
+      "unit_price": 0.42,
+      "orders": 54
+    },
+    {
+      "stock_code": "16015",
+      "description": "Medium Chinese Style Scissor",
+      "unit_price": 0.5,
+      "orders": 24
+    },
+    {
+      "stock_code": "16016",
+      "description": "Large Chinese Style Scissor",
+      "unit_price": 0.85,
+      "orders": 65
+    },
+    {
+      "stock_code": "16020C",
+      "description": "Clear Stationery Box Set",
+      "unit_price": 0.85,
+      "orders": 2
+    },
+    {
+      "stock_code": "16033",
+      "description": "Mini Highlighter Pens",
+      "unit_price": 0.12,
+      "orders": 4
+    },
+    {
+      "stock_code": "16043",
+      "description": "Pop Art Push Down Rubber",
+      "unit_price": 0.12,
+      "orders": 2
+    },
+    {
+      "stock_code": "16045",
+      "description": "Popart Wooden Pencils Asst",
+      "unit_price": 0.04,
+      "orders": 68
+    },
+    {
+      "stock_code": "16046",
+      "description": "Teatime Pen Case & Pens",
+      "unit_price": 0.85,
+      "orders": 13
+    },
+    {
+      "stock_code": "16048",
+      "description": "Teatime Round Pencil Sharpener",
+      "unit_price": 0.12,
+      "orders": 47
+    },
+    {
+      "stock_code": "16049",
+      "description": "Teatime Gel Pens Asst",
+      "unit_price": 0.12,
+      "orders": 5
+    },
+    {
+      "stock_code": "16052",
+      "description": "Teatime Push Down Rubber",
+      "unit_price": 0.3,
+      "orders": 6
+    },
+    {
+      "stock_code": "16054",
+      "description": "Popart Rect Pencil Sharpener Asst",
+      "unit_price": 0.12,
+      "orders": 33
+    },
+    {
+      "stock_code": "16151A",
+      "description": "Flowers Handbag Blue And Orange",
+      "unit_price": 1.25,
+      "orders": 3
+    },
+    {
+      "stock_code": "16156L",
+      "description": "Wrap, Carousel",
+      "unit_price": 0.42,
+      "orders": 18
+    },
+    {
+      "stock_code": "16156S",
+      "description": "Wrap Pink Fairy Cakes",
+      "unit_price": 0.42,
+      "orders": 167
+    },
+    {
+      "stock_code": "16161G",
+      "description": "Wrap Bad Hair Day",
+      "unit_price": 0.1,
+      "orders": 22
+    },
+    {
+      "stock_code": "16161M",
+      "description": "Wrap  Pink Flock",
+      "unit_price": 0.42,
+      "orders": 1
+    },
+    {
+      "stock_code": "16161P",
+      "description": "Wrap English Rose",
+      "unit_price": 0.42,
+      "orders": 248
+    },
+    {
+      "stock_code": "16161U",
+      "description": "Wrap Suki And Friends",
+      "unit_price": 0.42,
+      "orders": 134
+    },
+    {
+      "stock_code": "16162L",
+      "description": "The King Gift Bag",
+      "unit_price": 0.65,
+      "orders": 6
+    },
+    {
+      "stock_code": "16162M",
+      "description": "The King Gift Bag 25X24X12Cm",
+      "unit_price": 0.42,
+      "orders": 7
+    }
+  ]
+}
