@@ -6,7 +6,7 @@ notebooks/05_product_recommendation.ipynb
 import json
 from pathlib import Path
 
-NOTEBOOK_PATH = Path("/Users/aryangupta/Desktop/e-commerce/notebooks/05_product_recommendation.ipynb")
+NOTEBOOK_PATH = Path(__file__).resolve().parents[2] / "notebooks" / "05_product_recommendation.ipynb"
 
 def build_notebook():
     cells = []

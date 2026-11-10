@@ -212,6 +212,12 @@ python src/models/churn_prediction.py
 
 # Product Recommendation Engine (Collaborative Filtering)
 python src/models/recommender.py
+
+# In-Process SQL Analytics Mart (DuckDB)
+python src/data/run_queries.py
+
+# Execute Production Test Suite
+pytest tests/ -v
 ```
 
 ### 3. Launch or Access the Web Application
@@ -231,6 +237,25 @@ Open your browser at `http://localhost:8080`.
 streamlit run app/main.py
 ```
 Open your browser at `http://localhost:8501`.
+
+#### D. Production FastAPI ML Serving Layer
+```bash
+uvicorn src.api.server:app --host 0.0.0.0 --port 8000 --reload
+```
+Interactive Swagger OpenAPI documentation available at `http://localhost:8000/docs`.
+- `POST /api/v1/forecast/sales`: Time-series demand forecasting with Random Forest.
+- `POST /api/v1/churn/predict`: Real-time churn probability and risk tier scoring.
+- `GET  /api/v1/clv/summary`: BTYD 12-month expected Customer Lifetime Value metrics.
+- `GET  /api/v1/clv/customer/{id}`: Individual customer P(Alive) and CLV projections.
+- `GET  /api/v1/recommend/item/{stock_code}`: Real-time item-to-item cross-sell recommendations.
+- `POST /api/v1/segment/rfm`: Instant customer persona classification.
+- `GET  /api/v1/analytics/kpis`: In-memory DuckDB analytical metrics.
+
+#### E. One-Click Full-Stack Docker Compose
+```bash
+docker compose up --build
+```
+Spins up both the Python FastAPI backend (`http://localhost:8000`) and Nginx Web Dashboard (`http://localhost:8080`) with automated reverse proxy routing and container health checks.
 
 ---
 

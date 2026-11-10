@@ -6,7 +6,7 @@ notebooks/02_customer_segmentation.ipynb
 import json
 from pathlib import Path
 
-NOTEBOOK_PATH = Path("/Users/aryangupta/Desktop/e-commerce/notebooks/02_customer_segmentation.ipynb")
+NOTEBOOK_PATH = Path(__file__).resolve().parents[2] / "notebooks" / "02_customer_segmentation.ipynb"
 
 def build_notebook():
     cells = []
@@ -28,7 +28,7 @@ def build_notebook():
         }
 
     # Cell 1: Header
-    cells.append(md_cell("""
+    cells.append(md_cell(r"""
 # Module 2: Customer Segmentation using RFM Analysis & K-Means Clustering
 ### Senior Data Scientist & ML Engineering Portfolio
 ---
