@@ -184,8 +184,13 @@ body {
     box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
 }
 
-/* In Simple Mode, hide advanced modules */
+/* In Simple Mode, hide advanced modules across sidebar and quick actions */
+body.simple-view-active .advanced-module,
 .sidebar.simple-mode .advanced-module {
+    display: none !important;
+}
+
+body:not(.simple-view-active) .advanced-module-hint {
     display: none !important;
 }
 
@@ -517,6 +522,104 @@ body {
 @keyframes pulseApiDot {
     0%, 100% { opacity: 1; transform: scale(1); }
     50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+/* Header View Mode Segmented Control */
+.view-mode-toggle-header {
+    display: inline-flex;
+    align-items: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-full);
+    padding: 3px;
+    gap: 2px;
+}
+
+.view-mode-header-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.32rem 0.65rem;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-family: inherit;
+}
+
+.view-mode-header-btn:hover {
+    color: var(--text-primary);
+}
+
+.view-mode-header-btn.active {
+    background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+}
+
+/* Executive Simple View Banner */
+.simple-view-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.65rem 1rem;
+    margin-bottom: 1.25rem;
+    background: linear-gradient(90deg, rgba(37, 99, 235, 0.1) 0%, rgba(124, 58, 237, 0.08) 100%);
+    border: 1px solid rgba(37, 99, 235, 0.25);
+    border-radius: var(--radius-md);
+    font-size: 0.82rem;
+    animation: fadeIn 0.3s ease;
+}
+
+body:not(.simple-view-active) .simple-view-banner {
+    display: none !important;
+}
+
+.simple-banner-left {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.simple-banner-badge {
+    background: rgba(37, 99, 235, 0.2);
+    color: #38BDF8;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+}
+
+.simple-banner-text {
+    color: var(--text-primary);
+    font-size: 0.82rem;
+}
+
+.simple-banner-action {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 0.28rem 0.65rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.74rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    font-family: inherit;
+}
+
+.simple-banner-action:hover {
+    background: var(--bg-surface-alt);
+    color: var(--text-primary);
+    border-color: var(--primary);
 }
 
 /* 1-Click Interactive Preset Chips */

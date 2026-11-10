@@ -11,9 +11,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=4.1">
+    <link rel="stylesheet" href="style.css?v=4.5">
 </head>
-<body>
+<body class="simple-view-active">
     <div class="app-layout">
         <!-- Sidebar Navigation -->
         <aside class="sidebar simple-mode" id="appSidebar" role="navigation" aria-label="Main Navigation">
@@ -30,10 +30,10 @@
 
             <!-- Workspace View Mode Toggle (Simple Executive vs All Tools) -->
             <div class="view-mode-container">
-                <button class="view-mode-btn active" id="btnModeSimple" title="5 Core Business Intelligence Modules">
+                <button type="button" class="view-mode-btn active" id="btnModeSimple" onclick="window.setViewMode('simple')" title="5 Core Business Intelligence Modules">
                     <span>🌟</span> Simple View
                 </button>
-                <button class="view-mode-btn" id="btnModeAll" title="All 12 Operational & MLOps Tools">
+                <button type="button" class="view-mode-btn" id="btnModeAll" onclick="window.setViewMode('all')" title="All 12 Operational & MLOps Tools">
                     <span>⚙️</span> All Tools (12)
                 </button>
             </div>
@@ -152,6 +152,12 @@
                         </div>
                     </div>
 
+                    <!-- Workspace View Mode Toggle (Header) -->
+                    <div class="view-mode-toggle-header" title="Switch between Simple View and All Tools">
+                        <button type="button" class="view-mode-header-btn active" id="headerBtnModeSimple" onclick="window.setViewMode('simple')">🌟 Simple</button>
+                        <button type="button" class="view-mode-header-btn" id="headerBtnModeAll" onclick="window.setViewMode('all')">⚙️ All (12)</button>
+                    </div>
+
                     <!-- Live FastAPI Status Badge -->
                     <a href="http://localhost:8000/docs" target="_blank" rel="noopener noreferrer" class="api-live-pill" id="headerApiStatus" title="FastAPI ML Microservice Documentation">
                         <span class="api-live-dot"></span>
@@ -209,6 +215,15 @@
                 </div>
             </header>
 
+            <!-- Executive Simple View Banner -->
+            <div class="simple-view-banner" id="simpleViewBanner">
+                <div class="simple-banner-left">
+                    <span class="simple-banner-badge">🌟 SIMPLE VIEW</span>
+                    <span class="simple-banner-text">Displaying the 5 core business intelligence modules: Overview, RFM Segments, Demand Forecaster, Churn Scanner & Recommender.</span>
+                </div>
+                <button type="button" class="simple-banner-action" onclick="window.setViewMode('all')">Switch to Full Suite (12 Tools) ⚙️</button>
+            </div>
+
             <!-- ============================================================= -->
             <!-- TAB 1: EXECUTIVE OVERVIEW -->
             <!-- ============================================================= -->
@@ -235,8 +250,8 @@
                     <button class="quick-chip" onclick="switchTab('forecasting')"><span class="chip-icon">📈</span> What-If Simulator</button>
                     <button class="quick-chip alert" onclick="switchTab('churn')"><span class="chip-icon">⚠️</span> 22 VIP Churn</button>
                     <button class="quick-chip" onclick="switchTab('recommendations')"><span class="chip-icon">🎯</span> Live Basket</button>
-                    <button class="quick-chip" onclick="switchTab('inventory-mart')"><span class="chip-icon">📦</span> Low Stock Alert</button>
-                    <button class="quick-chip" onclick="switchTab('api-console')"><span class="chip-icon">⚡</span> REST API Tester</button>
+                    <button class="quick-chip advanced-module" onclick="switchTab('inventory-mart')"><span class="chip-icon">📦</span> Low Stock Alert</button>
+                    <button class="quick-chip advanced-module" onclick="switchTab('api-console')"><span class="chip-icon">⚡</span> REST API Tester</button>
                 </div>
 
                 <!-- In-Page Section Subnav -->
@@ -1495,6 +1510,6 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=4.1"></script>
+    <script src="app.js?v=4.5"></script>
 </body>
 </html>

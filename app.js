@@ -374,40 +374,73 @@ function initOmniSearch() {
 // =============================================================================
 // WORKSPACE VIEW MODE MANAGER (SIMPLE EXECUTIVE VIEW VS ALL TOOLS)
 // =============================================================================
-function initViewMode() {
+const ADVANCED_TABS = ["customer-mgmt", "inventory-mart", "campaign-studio", "transaction-simulator", "admin-ops", "api-console", "audit-logs"];
+
+function setViewMode(mode, silent = true) {
     const sidebar = document.getElementById("appSidebar");
+    const body = document.body;
     const btnSimple = document.getElementById("btnModeSimple");
     const btnAll = document.getElementById("btnModeAll");
-    const linkSwitch = document.getElementById("linkSwitchToAll");
+    const headerBtnSimple = document.getElementById("headerBtnModeSimple");
+    const headerBtnAll = document.getElementById("headerBtnModeAll");
 
-    const savedMode = localStorage.getItem("nexus_view_mode") || "simple";
-
-    function setViewMode(mode, silent = true) {
-        if (!sidebar) return;
-        if (mode === "simple") {
-            sidebar.classList.add("simple-mode");
-            btnSimple?.classList.add("active");
-            btnAll?.classList.remove("active");
-            localStorage.setItem("nexus_view_mode", "simple");
-            if (!silent) showToast("Simple View Active", "Displaying 5 core executive intelligence modules", "info");
-        } else {
-            sidebar.classList.remove("simple-mode");
-            btnAll?.classList.add("active");
-            btnSimple?.classList.remove("active");
-            localStorage.setItem("nexus_view_mode", "all");
-            if (!silent) showToast("All Tools Active", "Expanded all 12 operational, commerce & MLOps tools", "info");
+    if (mode === "simple") {
+        if (body) {
+            body.classList.add("simple-view-active");
+            body.classList.remove("all-tools-active");
         }
+        if (sidebar) sidebar.classList.add("simple-mode");
+        btnSimple?.classList.add("active");
+        btnAll?.classList.remove("active");
+        headerBtnSimple?.classList.add("active");
+        headerBtnAll?.classList.remove("active");
+        localStorage.setItem("nexus_view_mode", "simple");
+
+        // If currently on an advanced tab, switch to executive overview
+        const activeNav = document.querySelector(".nav-item.active");
+        const currentTab = activeNav?.getAttribute("data-tab");
+        if (currentTab && ADVANCED_TABS.includes(currentTab)) {
+            switchTab("overview");
+        }
+
+        if (!silent) showToast("🌟 Simple View Active", "Displaying 5 core executive intelligence modules", "info");
+    } else {
+        if (body) {
+            body.classList.remove("simple-view-active");
+            body.classList.add("all-tools-active");
+        }
+        if (sidebar) sidebar.classList.remove("simple-mode");
+        btnAll?.classList.add("active");
+        btnSimple?.classList.remove("active");
+        headerBtnAll?.classList.add("active");
+        headerBtnSimple?.classList.remove("active");
+        localStorage.setItem("nexus_view_mode", "all");
+
+        if (!silent) showToast("⚙️ All Tools Active", "Expanded all 12 operational, commerce & MLOps tools", "info");
     }
+}
+
+// Expose globally immediately
+window.setViewMode = setViewMode;
+
+function initViewMode() {
+    const btnSimple = document.getElementById("btnModeSimple");
+    const btnAll = document.getElementById("btnModeAll");
+    const headerBtnSimple = document.getElementById("headerBtnModeSimple");
+    const headerBtnAll = document.getElementById("headerBtnModeAll");
+    const linkSwitch = document.getElementById("linkSwitchToAll");
 
     btnSimple?.addEventListener("click", () => setViewMode("simple", false));
     btnAll?.addEventListener("click", () => setViewMode("all", false));
+    headerBtnSimple?.addEventListener("click", () => setViewMode("simple", false));
+    headerBtnAll?.addEventListener("click", () => setViewMode("all", false));
     linkSwitch?.addEventListener("click", (e) => {
         e.preventDefault();
         setViewMode("all", false);
     });
 
+    const savedMode = localStorage.getItem("nexus_view_mode") || "simple";
     setViewMode(savedMode, true);
-    window.setViewMode = setViewMode;
 }
 
 // =============================================================================
@@ -420,12 +453,11 @@ function switchTab(targetTab) {
     const pageTitle = document.getElementById("page-title");
     const pageSubtitle = document.getElementById("page-subtitle");
 
-    // Automatically expand sidebar to 'all' if user selected an advanced module
-    const advancedTabs = ["customer-mgmt", "inventory-mart", "campaign-studio", "transaction-simulator", "admin-ops", "api-console", "audit-logs"];
-    if (advancedTabs.includes(targetTab)) {
-        const sidebar = document.getElementById("appSidebar");
-        if (sidebar && sidebar.classList.contains("simple-mode") && typeof window.setViewMode === "function") {
-            window.setViewMode("all", true);
+    // Automatically expand workspace to 'all' if user selected an advanced module
+    if (ADVANCED_TABS.includes(targetTab)) {
+        const body = document.body;
+        if (body && body.classList.contains("simple-view-active")) {
+            setViewMode("all", true);
         }
     }
 
