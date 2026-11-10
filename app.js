@@ -6,6 +6,7 @@
 document.addEventListener("DOMContentLoaded", () => {
     initChartDefaults();
     initThemeManager();
+    initViewMode();
     initRoleManager();
     initNotificationCenter();
     initOmniSearch();
@@ -371,6 +372,45 @@ function initOmniSearch() {
 }
 
 // =============================================================================
+// WORKSPACE VIEW MODE MANAGER (SIMPLE EXECUTIVE VIEW VS ALL TOOLS)
+// =============================================================================
+function initViewMode() {
+    const sidebar = document.getElementById("appSidebar");
+    const btnSimple = document.getElementById("btnModeSimple");
+    const btnAll = document.getElementById("btnModeAll");
+    const linkSwitch = document.getElementById("linkSwitchToAll");
+
+    const savedMode = localStorage.getItem("nexus_view_mode") || "simple";
+
+    function setViewMode(mode, silent = true) {
+        if (!sidebar) return;
+        if (mode === "simple") {
+            sidebar.classList.add("simple-mode");
+            btnSimple?.classList.add("active");
+            btnAll?.classList.remove("active");
+            localStorage.setItem("nexus_view_mode", "simple");
+            if (!silent) showToast("Simple View Active", "Displaying 5 core executive intelligence modules", "info");
+        } else {
+            sidebar.classList.remove("simple-mode");
+            btnAll?.classList.add("active");
+            btnSimple?.classList.remove("active");
+            localStorage.setItem("nexus_view_mode", "all");
+            if (!silent) showToast("All Tools Active", "Expanded all 12 operational, commerce & MLOps tools", "info");
+        }
+    }
+
+    btnSimple?.addEventListener("click", () => setViewMode("simple", false));
+    btnAll?.addEventListener("click", () => setViewMode("all", false));
+    linkSwitch?.addEventListener("click", (e) => {
+        e.preventDefault();
+        setViewMode("all", false);
+    });
+
+    setViewMode(savedMode, true);
+    window.setViewMode = setViewMode;
+}
+
+// =============================================================================
 // NAVIGATION & WORKSPACE ROUTER
 // =============================================================================
 function switchTab(targetTab) {
@@ -379,6 +419,15 @@ function switchTab(targetTab) {
     const crumbCurrent = document.getElementById("crumbCurrent");
     const pageTitle = document.getElementById("page-title");
     const pageSubtitle = document.getElementById("page-subtitle");
+
+    // Automatically expand sidebar to 'all' if user selected an advanced module
+    const advancedTabs = ["customer-mgmt", "inventory-mart", "campaign-studio", "transaction-simulator", "admin-ops", "api-console", "audit-logs"];
+    if (advancedTabs.includes(targetTab)) {
+        const sidebar = document.getElementById("appSidebar");
+        if (sidebar && sidebar.classList.contains("simple-mode") && typeof window.setViewMode === "function") {
+            window.setViewMode("all", true);
+        }
+    }
 
     const tabMeta = {
         overview: { title: "Executive Business Intelligence Overview", sub: "Macro store revenue velocity, customer acquisition, and transactional health metrics." },
@@ -926,6 +975,16 @@ function initWhatIfSimulator() {
         if (el) el.addEventListener("input", computeScenario);
     });
 
+    window.applyForecastingScenario = function(disc, ad, surge, day) {
+        if (sliderDiscount) sliderDiscount.value = disc;
+        if (sliderAd) sliderAd.value = ad;
+        if (sliderSurge) sliderSurge.value = surge;
+        if (selectDay && day !== undefined) selectDay.value = String(day);
+        computeScenario();
+        showToast("Preset Loaded", `Applied demand scenario: Disc ${disc}%, Ad +${ad}%, Surge +${surge}%`, "info");
+        logAuditEvent("Simulator", `Applied What-If Preset: Disc ${disc}%, Ad +${ad}%, Surge +${surge}%`);
+    };
+
     computeScenario();
 }
 
@@ -982,6 +1041,13 @@ function initChurnTab() {
         churnBtn.addEventListener("click", () => renderChurnLookup(churnInput.value));
         renderChurnLookup(churnInput.value);
     }
+
+    window.quickScanChurn = function(cid) {
+        if (churnInput) churnInput.value = cid;
+        renderChurnLookup(cid);
+        showToast("VIP Account Diagnostic", `Loaded churn risk profile for Customer #${cid}`, "info");
+        logAuditEvent("Churn", `Executed quick scan diagnostic for Customer #${cid}`);
+    };
 
     const vipTbody = document.querySelector("#vipChurnTable tbody");
     if (vipTbody) {
@@ -1232,6 +1298,16 @@ function initRecommenderTab() {
     if (modeSelect) modeSelect.addEventListener("change", renderRecommendations);
     if (skuSelect) skuSelect.addEventListener("change", renderRecommendations);
     if (custSelect) custSelect.addEventListener("change", renderRecommendations);
+
+    window.quickSelectSku = function(sku) {
+        if (modeSelect) modeSelect.value = "item";
+        if (skuSelect) {
+            skuSelect.value = sku;
+            renderRecommendations();
+            showToast("Catalog Item", `Loaded collaborative cross-sell for SKU [${sku}]`, "info");
+            logAuditEvent("Recommender", `Quick-selected SKU [${sku}]`);
+        }
+    };
 
     renderRecommendations();
 }
@@ -2607,6 +2683,7 @@ async function initLivePipelineSync() {
     }
 
     // 2. Check if FastAPI ML Inference Server is online (localhost:8000)
+    const headerApi = document.getElementById("headerApiStatus");
     try {
         const apiCheck = await fetch("http://localhost:8000/health", { mode: "cors" });
         if (apiCheck.ok) {
@@ -2618,10 +2695,22 @@ async function initLivePipelineSync() {
                 statusBadge.style.color = "#10B981";
                 statusBadge.style.borderColor = "rgba(16, 185, 129, 0.3)";
             }
+            if (headerApi) {
+                headerApi.classList.remove("offline");
+                const text = headerApi.querySelector(".api-live-text");
+                if (text) text.textContent = "API Live :8000";
+            }
+        } else {
+            throw new Error("API non-200");
         }
     } catch (e) {
         // FastAPI server not reachable or offline; gracefully keep local mode
         console.log("[Nexus LiveSync] FastAPI server offline; running in client simulation mode.");
+        if (headerApi) {
+            headerApi.classList.add("offline");
+            const text = headerApi.querySelector(".api-live-text");
+            if (text) text.textContent = "API Offline (Mock)";
+        }
     }
 }
 

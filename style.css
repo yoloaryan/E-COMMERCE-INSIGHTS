@@ -146,9 +146,78 @@ body {
     letter-spacing: 0.05em;
 }
 
+/* View Mode Segmented Control (Simple View vs All Tools) */
+.view-mode-container {
+    margin: 0.75rem 0.25rem 0.5rem;
+    display: flex;
+    background: rgba(11, 15, 23, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 3px;
+}
+
+.view-mode-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #94A3B8;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.42rem 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+}
+
+.view-mode-btn:hover {
+    color: #FFFFFF;
+}
+
+.view-mode-btn.active {
+    background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+    color: #FFFFFF;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
+}
+
+/* In Simple Mode, hide advanced modules */
+.sidebar.simple-mode .advanced-module {
+    display: none !important;
+}
+
+.advanced-module-hint {
+    padding: 0.65rem 0.75rem;
+    margin: 0.75rem 0.25rem 0.25rem;
+    font-size: 0.72rem;
+    color: #64748B;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    text-align: center;
+}
+
+.advanced-module-hint a {
+    color: #38BDF8;
+    text-decoration: underline;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.advanced-module-hint a:hover {
+    color: #7DD3FC;
+}
+
+.sidebar:not(.simple-mode) .advanced-module-hint {
+    display: none;
+}
+
 /* Role Switcher */
 .role-switcher {
-    margin: 1rem 0.25rem;
+    margin: 0.5rem 0.25rem;
     padding: 0.65rem 0.75rem;
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -400,6 +469,104 @@ body {
 .icon-tool-btn:hover {
     background: var(--bg-surface-alt);
     border-color: var(--primary);
+}
+
+/* Live API Microservice Indicator Pill */
+.api-live-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.38rem 0.75rem;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: var(--radius-full);
+    color: #10B981;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all var(--transition-fast);
+}
+
+.api-live-pill:hover {
+    background: rgba(16, 185, 129, 0.22);
+    border-color: #10B981;
+    transform: translateY(-1px);
+}
+
+.api-live-pill.offline {
+    background: rgba(148, 163, 184, 0.1);
+    border-color: rgba(148, 163, 184, 0.25);
+    color: #94A3B8;
+}
+
+.api-live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10B981;
+    box-shadow: 0 0 8px #10B981;
+    animation: pulseApiDot 2s infinite ease-in-out;
+}
+
+.api-live-pill.offline .api-live-dot {
+    background: #94A3B8;
+    box-shadow: none;
+    animation: none;
+}
+
+@keyframes pulseApiDot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+/* 1-Click Interactive Preset Chips */
+.quick-preset-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 0.85rem;
+    background: var(--bg-surface-alt);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    margin-bottom: 1rem;
+}
+
+.preset-bar-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-right: 0.25rem;
+}
+
+.preset-chip {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 0.35rem 0.7rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: inherit;
+}
+
+.preset-chip:hover {
+    background: var(--primary);
+    color: #FFFFFF;
+    border-color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+}
+
+.preset-chip:active {
+    transform: translateY(0);
 }
 
 .notif-count {

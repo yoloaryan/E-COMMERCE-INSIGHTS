@@ -16,7 +16,7 @@
 <body>
     <div class="app-layout">
         <!-- Sidebar Navigation -->
-        <aside class="sidebar" id="appSidebar" role="navigation" aria-label="Main Navigation">
+        <aside class="sidebar simple-mode" id="appSidebar" role="navigation" aria-label="Main Navigation">
             <div class="brand">
                 <div class="brand-icon">
                     <span class="icon-pulse"></span>
@@ -26,6 +26,16 @@
                     <h2>Nexus Retail AI</h2>
                     <span class="brand-tag">Enterprise Admin Suite</span>
                 </div>
+            </div>
+
+            <!-- Workspace View Mode Toggle (Simple Executive vs All Tools) -->
+            <div class="view-mode-container">
+                <button class="view-mode-btn active" id="btnModeSimple" title="5 Core Business Intelligence Modules">
+                    <span>🌟</span> Simple View
+                </button>
+                <button class="view-mode-btn" id="btnModeAll" title="All 12 Operational & MLOps Tools">
+                    <span>⚙️</span> All Tools (12)
+                </button>
             </div>
 
             <!-- Role Indicator Switcher -->
@@ -63,40 +73,44 @@
                     <span class="nav-label">Product Recommender</span>
                 </button>
 
-                <div class="nav-section-title">COMMERCE OPERATIONS</div>
-                <button class="nav-item" data-tab="customer-mgmt">
+                <div class="nav-section-title advanced-module">COMMERCE OPERATIONS</div>
+                <button class="nav-item advanced-module" data-tab="customer-mgmt">
                     <span class="nav-icon">🗂️</span>
                     <span class="nav-label">Customer Ledger</span>
                 </button>
-                <button class="nav-item" data-tab="inventory-mart">
+                <button class="nav-item advanced-module" data-tab="inventory-mart">
                     <span class="nav-icon">📦</span>
                     <span class="nav-label">Inventory & SKU Mart</span>
                     <span class="menu-badge alert">14 Alert</span>
                 </button>
-                <button class="nav-item" data-tab="campaign-studio">
+                <button class="nav-item advanced-module" data-tab="campaign-studio">
                     <span class="nav-icon">🚀</span>
                     <span class="nav-label">Retention Campaigns</span>
                 </button>
-                <button class="nav-item" data-tab="transaction-simulator">
+                <button class="nav-item advanced-module" data-tab="transaction-simulator">
                     <span class="nav-icon">🧪</span>
                     <span class="nav-label">Live POS Simulator</span>
                 </button>
 
-                <div class="nav-section-title">ENGINEERING & MLOPS</div>
-                <button class="nav-item" data-tab="admin-ops">
+                <div class="nav-section-title advanced-module">ENGINEERING & MLOPS</div>
+                <button class="nav-item advanced-module" data-tab="admin-ops">
                     <span class="nav-icon">⚙️</span>
                     <span class="nav-label">MLOps & Model Registry</span>
                     <span class="menu-badge green">Healthy</span>
                 </button>
-                <button class="nav-item" data-tab="api-console">
+                <button class="nav-item advanced-module" data-tab="api-console">
                     <span class="nav-icon">⚡</span>
                     <span class="nav-label">Developer API Console</span>
                     <span class="menu-badge blue">REST</span>
                 </button>
-                <button class="nav-item" data-tab="audit-logs">
+                <button class="nav-item advanced-module" data-tab="audit-logs">
                     <span class="nav-icon">🛡️</span>
                     <span class="nav-label">Security & Audit Logs</span>
                 </button>
+
+                <div class="advanced-module-hint" id="simpleModeHint">
+                    Showing 5 core intelligence tools. <a href="javascript:void(0)" id="linkSwitchToAll">Show all 12 modules</a>
+                </div>
             </nav>
 
             <div class="sidebar-footer">
@@ -137,6 +151,12 @@
                             <!-- Populated dynamically by JS -->
                         </div>
                     </div>
+
+                    <!-- Live FastAPI Status Badge -->
+                    <a href="http://localhost:8000/docs" target="_blank" rel="noopener noreferrer" class="api-live-pill" id="headerApiStatus" title="FastAPI ML Microservice Documentation">
+                        <span class="api-live-dot"></span>
+                        <span class="api-live-text">API Online :8000</span>
+                    </a>
 
                     <!-- Executive Briefing Report Generator -->
                     <button class="btn btn-secondary btn-sm" id="boardReportBtn" title="Generate Executive Board Briefing Report" style="display:flex;align-items:center;gap:0.4rem;font-weight:600;">
@@ -540,6 +560,16 @@
                         </div>
                         <span class="badge live-badge">Live ML Sensitivity</span>
                     </div>
+
+                    <div class="quick-preset-bar">
+                        <span class="preset-bar-label">⚡ 1-Click Scenarios:</span>
+                        <button type="button" class="preset-chip" onclick="applyForecastingScenario(15, 30, 40, 4)">🎄 Q4 Holiday Peak (+40% Surge)</button>
+                        <button type="button" class="preset-chip" onclick="applyForecastingScenario(35, 50, 10, 4)">🏷️ Flash Promo (35% Disc, +50% Ad)</button>
+                        <button type="button" class="preset-chip" onclick="applyForecastingScenario(0, 80, 20, 2)">🚀 High Ad Growth (+80% Ad)</button>
+                        <button type="button" class="preset-chip" onclick="applyForecastingScenario(0, 0, -10, 1)">📉 Demand Slump (-10% Surge)</button>
+                        <button type="button" class="preset-chip" onclick="applyForecastingScenario(15, 20, 25, 4)">🔄 Reset Baseline</button>
+                    </div>
+
                     <div class="simulator-controls-grid">
                         <div class="sim-control-box">
                             <label>Promotional Price Discount: <strong id="lblPromoDiscount">15%</strong></label>
@@ -616,6 +646,15 @@
                             <p class="card-sub">Inference engine: Random Forest Classifier (75.86% Recall, 0.7163 ROC-AUC)</p>
                         </div>
                     </div>
+
+                    <div class="quick-preset-bar" style="margin-bottom:0.85rem;">
+                        <span class="preset-bar-label">⚡ 1-Click VIP Profiles:</span>
+                        <button type="button" class="preset-chip" onclick="quickScanChurn('14096')">👑 VIP #14096 (£65k Spend, 81% Risk)</button>
+                        <button type="button" class="preset-chip" onclick="quickScanChurn('17850')">⭐ Loyal #17850 (£5.3k Spend, 18% Risk)</button>
+                        <button type="button" class="preset-chip" onclick="quickScanChurn('14646')">🌍 Wholesaler #14646 (£280k Spend, 2% Risk)</button>
+                        <button type="button" class="preset-chip" onclick="quickScanChurn('12352')">⚠️ At-Risk #12352 (£2.5k Spend, 74% Risk)</button>
+                    </div>
+
                     <div class="search-form">
                         <input type="text" id="churnSearchInput" placeholder="Enter Customer ID..." value="12352">
                         <button id="churnSearchBtn" class="btn btn-primary">Scan Churn Probability</button>
@@ -693,6 +732,15 @@
                     <button class="subnav-pill active" onclick="jumpToSection('recsControlBar', this)">🎯 Recommendation Controls</button>
                     <button class="subnav-pill" onclick="jumpToSection('recsDisplayArea', this)">✨ Discovery Grid</button>
                     <button class="subnav-pill" onclick="jumpToSection('cartSimulatorCard', this)">🛒 Live Basket & Cross-Sell</button>
+                </div>
+
+                <div class="quick-preset-bar" style="margin-bottom:1rem;">
+                    <span class="preset-bar-label">⚡ 1-Click Catalog SKUs:</span>
+                    <button type="button" class="preset-chip" onclick="quickSelectSku('22423')">🧁 Regency Cakestand (22423)</button>
+                    <button type="button" class="preset-chip" onclick="quickSelectSku('85123A')">🕯️ Heart T-Light (85123A)</button>
+                    <button type="button" class="preset-chip" onclick="quickSelectSku('47566')">🎉 Party Bunting (47566)</button>
+                    <button type="button" class="preset-chip" onclick="quickSelectSku('85099B')">👜 Jumbo Bag Retro (85099B)</button>
+                    <button type="button" class="preset-chip" onclick="quickSelectSku('20725')">🍱 Lunch Bag Red (20725)</button>
                 </div>
 
                 <div class="recs-control-bar" id="recsControlBar">
