@@ -29,8 +29,9 @@ class ECommerceDataCleaner:
         "BANK CHARGES", "AMAZONFEE", "S", "B"
     }
 
-    def __init__(self, raw_csv_path: Path = CSV_PATH):
+    def __init__(self, raw_csv_path: Path = CSV_PATH, processed_dir: Path = PROCESSED_DATA_DIR):
         self.raw_csv_path = raw_csv_path
+        self.processed_dir = processed_dir
         self.df_raw: pd.DataFrame = None
         self.df_cleaned: pd.DataFrame = None
         self.df_customer_centric: pd.DataFrame = None
@@ -95,10 +96,12 @@ class ECommerceDataCleaner:
         self.df_cleaned = df
 
         # Save store-wide transactional dataset (includes guest checkouts for macro sales forecasting)
-        PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
-        store_csv_path = PROCESSED_DATA_DIR / "online_retail_cleaned.csv"
+        self.processed_dir.mkdir(parents=True, exist_ok=True)
+        store_csv_path = self.processed_dir / "online_retail_cleaned.csv"
+        store_pq_path = self.processed_dir / "online_retail_cleaned.parquet"
         df.to_csv(store_csv_path, index=False)
-        print(f"[Cleaner] Saved store-wide cleaned dataset ({len(df):,} rows) to: {store_csv_path}")
+        df.to_parquet(store_pq_path, engine="pyarrow", compression="snappy", index=False)
+        print(f"[Cleaner] Saved store-wide cleaned dataset ({len(df):,} rows) to: {store_csv_path} and {store_pq_path}")
 
         # 8. Customer-Centric Sub-dataset (Registered Customers Only, Non-Cancelled for RFM/Churn/RecSys)
         customer_df = df[
@@ -109,9 +112,11 @@ class ECommerceDataCleaner:
         customer_df["CustomerID"] = customer_df["CustomerID"].astype(float).astype(int).astype(str)
 
         self.df_customer_centric = customer_df
-        cust_csv_path = PROCESSED_DATA_DIR / "online_retail_customer_centric.csv"
+        cust_csv_path = self.processed_dir / "online_retail_customer_centric.csv"
+        cust_pq_path = self.processed_dir / "online_retail_customer_centric.parquet"
         customer_df.to_csv(cust_csv_path, index=False)
-        print(f"[Cleaner] Saved customer-centric dataset ({len(customer_df):,} rows, {customer_df['CustomerID'].nunique():,} unique customers) to: {cust_csv_path}")
+        customer_df.to_parquet(cust_pq_path, engine="pyarrow", compression="snappy", index=False)
+        print(f"[Cleaner] Saved customer-centric dataset ({len(customer_df):,} rows, {customer_df['CustomerID'].nunique():,} unique customers) to: {cust_csv_path} and {cust_pq_path}")
 
         return self.df_cleaned
 
