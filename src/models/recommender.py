@@ -125,7 +125,7 @@ class ProductRecommender:
         MODELS_DIR.mkdir(parents=True, exist_ok=True)
         sim_path = MODELS_DIR / "item_similarity_matrix.joblib"
         catalog_path = MODELS_DIR / "product_catalog.joblib"
-        joblib.dump(self.similarity_df, sim_path)
+        joblib.dump(self.similarity_df, sim_path, compress=3)
         joblib.dump(self.product_catalog, catalog_path)
         print(f"[Recommender] Serialized Item Similarity Matrix to: {sim_path}")
         print(f"[Recommender] Serialized Product Catalog to: {catalog_path}")

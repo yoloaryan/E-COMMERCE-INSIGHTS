@@ -206,6 +206,60 @@ class CustomerChurnPredictor:
         }).sort_values(by="Importance", ascending=False).reset_index(drop=True)
         return feat_df
 
+    def explain_customer_risk(self, customer_ids: list = None, top_k_features: int = 5) -> pd.DataFrame:
+        """
+        Uses SHAP (SHapley Additive exPlanations) to explain individual customer churn risk scores.
+        Identifies the exact behavioral drivers pushing a customer toward churning or staying.
+        """
+        import shap
+
+        if self.best_model is None:
+            self.train_and_evaluate()
+
+        # Target tree model for exact TreeExplainer
+        tree_model = self.best_model if hasattr(self.best_model, "feature_importances_") else self.models["Random Forest Classifier"]["model"]
+        explainer = shap.TreeExplainer(tree_model)
+
+        df_target = self.df.copy()
+        if customer_ids is not None:
+            df_target = df_target[df_target["CustomerID"].astype(str).isin([str(c) for c in customer_ids])].copy()
+
+        if len(df_target) == 0:
+            return pd.DataFrame()
+
+        X_target = df_target[self.FEATURE_COLS]
+        shap_values = explainer.shap_values(X_target)
+
+        # For binary classification with scikit-learn/xgboost, extract positive class (Churn=1)
+        if isinstance(shap_values, list) and len(shap_values) == 2:
+            shap_churn = shap_values[1]
+        elif len(shap_values.shape) == 3 and shap_values.shape[-1] == 2:
+            shap_churn = shap_values[:, :, 1]
+        else:
+            shap_churn = shap_values
+
+        explanations = []
+        for idx, (_, row) in enumerate(df_target.iterrows()):
+            c_shap = shap_churn[idx]
+            feature_impacts = sorted(
+                zip(self.FEATURE_COLS, row[self.FEATURE_COLS], c_shap),
+                key=lambda x: abs(x[2]),
+                reverse=True
+            )
+            top_drivers = [
+                f"{feat} ({val:.1f}): {'+' if impact > 0 else ''}{impact:.3f} SHAP"
+                for feat, val, impact in feature_impacts[:top_k_features]
+            ]
+            explanations.append({
+                "CustomerID": row["CustomerID"],
+                "HistoricalMonetary": round(row["HistoricalMonetary"], 2),
+                "Top_Risk_Drivers": "; ".join(top_drivers),
+                "Primary_Risk_Driver": feature_impacts[0][0],
+                "Primary_Driver_Direction": "Increases Churn" if feature_impacts[0][2] > 0 else "Reduces Churn"
+            })
+
+        return pd.DataFrame(explanations)
+
 
 if __name__ == "__main__":
     predictor = CustomerChurnPredictor()

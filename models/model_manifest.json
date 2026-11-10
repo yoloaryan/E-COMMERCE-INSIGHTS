@@ -1,0 +1,113 @@
+{
+  "project": "E-Commerce Customer Intelligence & Sales Prediction System",
+  "version": "1.0.0",
+  "generated_at": "2026-11-08T11:30:00Z",
+  "dataset": {
+    "source": "UCI Machine Learning Repository - Online Retail Dataset",
+    "total_records": 541909,
+    "cleaned_records": 536636,
+    "customer_centric_records": 396470,
+    "unique_registered_customers": 4334,
+    "unique_catalog_skus": 3182,
+    "temporal_horizon_days": 374,
+    "date_range": {
+      "start": "2010-12-01",
+      "end": "2011-12-09"
+    }
+  },
+  "models": {
+    "customer_segmentation": {
+      "task": "Unsupervised Behavioral Persona Clustering",
+      "algorithm": "K-Means (k-means++)",
+      "artifact": "kmeans_rfm_model.joblib",
+      "scaler_artifact": "rfm_scaler.joblib",
+      "hyperparameters": {
+        "n_clusters": 4,
+        "n_init": 15,
+        "max_iter": 300,
+        "random_state": 42
+      },
+      "features": ["Recency", "Frequency", "Monetary"],
+      "transformation": "Natural Log1p + Z-Score Standardization",
+      "metrics": {
+        "silhouette_score": 0.3375,
+        "optimal_k_selection": "Inertia Elbow inflection & Silhouette maximization"
+      },
+      "segments": [
+        {"name": "Champions (VIPs)", "count": 708, "revenue_share_pct": 64.55},
+        {"name": "At-Risk / Lapsing", "count": 1180, "revenue_share_pct": 24.02},
+        {"name": "Loyal Customers", "count": 844, "revenue_share_pct": 5.10},
+        {"name": "Occasional / Hibernating", "count": 1602, "revenue_share_pct": 6.33}
+      ]
+    },
+    "sales_forecasting": {
+      "task": "Time-Series Daily Revenue Forecasting",
+      "algorithm": "Random Forest Regressor",
+      "artifact": "best_sales_forecaster.joblib",
+      "validation_strategy": "Chronological Out-of-Sample Split (80% Train, 20% Test)",
+      "target": "DailyRevenue",
+      "features": [
+        "DayOfWeek", "DayOfMonth", "Month", "Quarter", "IsWeekend",
+        "Lag_1", "Lag_2", "Lag_7", "Lag_14", "Lag_30",
+        "RollingMean_7", "RollingStd_7", "RollingMean_14", "RollingMean_30",
+        "LagOrders_1", "LagOrders_7"
+      ],
+      "metrics": {
+        "mae_gbp": 12464.66,
+        "rmse_gbp": 22989.70,
+        "mape_pct": 26.28,
+        "r2_score": 0.4281
+      },
+      "top_predictors": ["DayOfWeek (28.06%)", "Lag_7 (22.06%)", "RollingMean_30 (7.37%)"]
+    },
+    "churn_prediction": {
+      "task": "Customer Inactivity & Churn Classification",
+      "algorithm": "Random Forest Classifier",
+      "artifact": "best_churn_classifier.joblib",
+      "scaler_artifact": "churn_scaler.joblib",
+      "target_definition": "0 orders placed within 90-day future observation window",
+      "validation_strategy": "Stratified Train-Test Split (80/20)",
+      "features": [
+        "Recency", "HistoricalFrequency", "HistoricalMonetary", "HistoricalUnits",
+        "UniqueSKUs", "Tenure", "AOV", "UnitsPerOrder", "PurchaseVelocity"
+      ],
+      "metrics": {
+        "roc_auc": 0.7163,
+        "recall": 0.7586,
+        "precision": 0.5729,
+        "f1_score": 0.6528,
+        "accuracy": 0.6528
+      },
+      "retention_impact": {
+        "flagged_vip_accounts": 22,
+        "revenue_exposure_gbp": 191892.72
+      }
+    },
+    "product_recommendation": {
+      "task": "Item-to-Item Cross-Sell & Personalized User Discovery",
+      "algorithm": "Item-Item Collaborative Filtering (Cosine Similarity)",
+      "artifact": "item_similarity_matrix.joblib",
+      "catalog_artifact": "product_catalog.joblib",
+      "interaction_metric": "Binary Implicit Feedback (Quantity > 0)",
+      "catalog_size": 3182,
+      "min_interactions_threshold": 5
+    },
+    "customer_lifetime_value_btyd": {
+      "task": "Probabilistic Customer Lifetime Value & Continuous Inactivity Modeling",
+      "algorithm": "BG/NBD (Beta-Geometric / Negative Binomial) + Gamma-Gamma Submodel",
+      "bgf_artifact": "bgf_model.pkl",
+      "ggf_artifact": "ggf_model.pkl",
+      "predictions_dataset": "customer_clv_predictions.parquet",
+      "time_horizon_months": 12,
+      "discount_rate": 0.01,
+      "frequency_unit": "Weekly (W)",
+      "metrics": {
+        "portfolio_projected_cashflow_gbp": 9631782.48,
+        "evaluated_accounts": 4334,
+        "returning_accounts": 2761,
+        "platinum_vip_share_pct": 77.15
+      }
+    }
+  }
+}
+

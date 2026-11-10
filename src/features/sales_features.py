@@ -26,8 +26,9 @@ class SalesFeatureEngineer:
     - Calendar Features: Day of week, Month, Day of month, IsWeekend, Quarter
     """
 
-    def __init__(self, data_path: Path = STORE_DATA_PATH):
+    def __init__(self, data_path: Path = STORE_DATA_PATH, output_dir: Path = PROCESSED_DATA_DIR):
         self.data_path = data_path
+        self.output_dir = output_dir
         self.df_raw: pd.DataFrame = None
         self.daily_df: pd.DataFrame = None
 
@@ -106,10 +107,15 @@ class SalesFeatureEngineer:
         # Drop initial rows with NaN from the 30-day lookback window
         df_clean = df.dropna().reset_index(drop=True)
 
-        # Save processed daily dataset for modeling
-        out_path = PROCESSED_DATA_DIR / "daily_sales_features.csv"
-        df_clean.to_csv(out_path, index=False)
-        print(f"[SalesFeatures] Saved {len(df_clean)} feature-ready daily records to {out_path}.")
+        # Save processed daily dataset for modeling if output_dir provided
+        if self.output_dir is not None:
+            self.output_dir.mkdir(parents=True, exist_ok=True)
+            out_path = self.output_dir / "daily_sales_features.csv"
+            out_pq = self.output_dir / "daily_sales_features.parquet"
+            df_clean.to_csv(out_path, index=False)
+            df_clean.to_parquet(out_pq, engine="pyarrow", compression="snappy", index=False)
+            print(f"[SalesFeatures] Saved {len(df_clean)} feature-ready daily records to {out_path} and {out_pq}.")
+
         return df_clean
 
 

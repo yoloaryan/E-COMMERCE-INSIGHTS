@@ -124,11 +124,18 @@ class SalesForecastingPipeline:
         self.best_model_name = best_row["Model"]
         self.best_model = self.models[self.best_model_name]
 
+        # Compute Ensemble Prediction Uncertainty Intervals (P10 & P90)
+        p10, p50, p90 = self.predict_with_intervals(self.X_test)
+        predictions_dict["P10_Lower_Bound"] = np.clip(p10, 0, None)
+        predictions_dict["P90_Upper_Bound"] = np.clip(p90, 0, None)
+
         # Save predictions dataframe for dashboard visualization
         preds_df = pd.DataFrame(predictions_dict)
         preds_path = PROCESSED_DATA_DIR / "sales_forecast_results.csv"
+        preds_pq_path = PROCESSED_DATA_DIR / "sales_forecast_results.parquet"
         preds_df.to_csv(preds_path, index=False)
-        print(f"[SalesForecaster] Saved evaluation predictions to: {preds_path}")
+        preds_df.to_parquet(preds_pq_path, engine="pyarrow", compression="snappy", index=False)
+        print(f"[SalesForecaster] Saved evaluation predictions to: {preds_path} and {preds_pq_path}")
 
         # Save best model binary
         MODELS_DIR.mkdir(parents=True, exist_ok=True)
@@ -137,6 +144,24 @@ class SalesForecastingPipeline:
         print(f"[SalesForecaster] Serialized Best Model ({self.best_model_name}) to: {best_model_path}")
 
         return eval_df
+
+    def predict_with_intervals(self, X: pd.DataFrame, lower_pct: float = 10.0, upper_pct: float = 90.0):
+        """
+        Calculates ensemble prediction uncertainty bands (P10, P50, P90) across
+        the Random Forest constituent trees to estimate inventory safety stock buffers.
+        """
+        if hasattr(self.best_model, "estimators_"):
+            tree_preds = np.array([tree.predict(X) for tree in self.best_model.estimators_])
+            p_lower = np.percentile(tree_preds, lower_pct, axis=0)
+            p_median = np.percentile(tree_preds, 50.0, axis=0)
+            p_upper = np.percentile(tree_preds, upper_pct, axis=0)
+        else:
+            base_pred = self.best_model.predict(X)
+            p_lower = base_pred * 0.85
+            p_median = base_pred
+            p_upper = base_pred * 1.15
+
+        return p_lower, p_median, p_upper
 
     def get_feature_importance(self) -> pd.DataFrame:
         """Extracts top predictive signals from the tree-based model."""
