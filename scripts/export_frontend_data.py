@@ -120,6 +120,60 @@ def export_dashboard_data():
         for k, v in list(catalog.items())[:50]
     ]
 
+    # 6. Probabilistic BTYD Customer Lifetime Value (BG/NBD & Gamma-Gamma)
+    clv_path = DATA_PROCESSED_DIR / "customer_clv_predictions.parquet"
+    clv_summary = {}
+    clv_sample_customers = []
+    if clv_path.exists():
+        clv_df = pd.read_parquet(clv_path)
+        seg_clv = clv_df.groupby("CLV_Segment").agg(
+            count=("CustomerID", "count"),
+            avg_p_alive=("P_Alive", "mean"),
+            total_clv=("CLV_12M_GBP", "sum"),
+            avg_clv=("CLV_12M_GBP", "mean")
+        ).reset_index()
+
+        total_portfolio_clv = float(clv_df["CLV_12M_GBP"].sum())
+        clv_summary = {
+            "total_portfolio_clv_gbp": round(total_portfolio_clv, 2),
+            "total_evaluated_customers": len(clv_df),
+            "avg_customer_clv_gbp": round(float(clv_df["CLV_12M_GBP"].mean()), 2),
+            "segments": [
+                {
+                    "segment": row["CLV_Segment"],
+                    "count": int(row["count"]),
+                    "avg_p_alive": round(float(row["avg_p_alive"]), 3),
+                    "total_clv_gbp": round(float(row["total_clv"]), 2),
+                    "avg_clv_gbp": round(float(row["avg_clv"]), 2),
+                    "clv_share_pct": round(float(row["total_clv"]) / total_portfolio_clv * 100, 2)
+                }
+                for _, row in seg_clv.iterrows()
+            ]
+        }
+
+        # Export top 50 accounts + sample benchmark IDs for instant client lookup
+        key_sample_ids = {"14646", "14096", "17850", "12347", "12352", "13089", "15311", "18102"}
+        top_clv_df = clv_df.sort_values(by="CLV_12M_GBP", ascending=False).head(50)
+        combined_clv_ids = set(top_clv_df["CustomerID"].astype(str)).union(key_sample_ids)
+        clv_filtered = clv_df[clv_df["CustomerID"].astype(str).isin(combined_clv_ids)]
+
+        clv_sample_customers = [
+            {
+                "customer_id": str(row["CustomerID"]),
+                "frequency": float(row["frequency"]),
+                "recency_weeks": round(float(row["recency"]), 1),
+                "tenure_weeks": round(float(row["T"]), 1),
+                "historical_avg_spend": round(float(row["monetary_value"]), 2),
+                "p_alive": round(float(row["P_Alive"]), 4),
+                "expected_orders_90d": round(float(row["Expected_Orders_90d"]), 2),
+                "expected_orders_365d": round(float(row["Expected_Orders_365d"]), 2),
+                "expected_avg_spend_gbp": round(float(row["Expected_Avg_Spend_GBP"]), 2),
+                "clv_12m_gbp": round(float(row["CLV_12M_GBP"]), 2),
+                "clv_segment": str(row["CLV_Segment"])
+            }
+            for _, row in clv_filtered.iterrows()
+        ]
+
     payload = {
         "generated_at": pd.Timestamp.utcnow().isoformat(),
         "kpis": {
@@ -146,7 +200,11 @@ def export_dashboard_data():
             for _, row in at_risk_vips.iterrows()
         ],
         "forecast_timeline": forecast_timeline,
-        "sample_catalog": sample_catalog
+        "sample_catalog": sample_catalog,
+        "clv_btyd": {
+            "summary": clv_summary,
+            "sample_customers": clv_sample_customers
+        }
     }
 
     OUTPUT_JSON_PATH.parent.mkdir(parents=True, exist_ok=True)

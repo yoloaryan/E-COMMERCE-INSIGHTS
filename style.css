@@ -672,6 +672,113 @@ body:not(.simple-view-active) .simple-view-banner {
     transform: translateY(0);
 }
 
+/* --------------------------------------------------------------------------
+   BTYD Probabilistic CLV Explorer Styling
+   -------------------------------------------------------------------------- */
+.btyd-portfolio-ribbon {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--bg-surface-alt);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    margin-bottom: 1rem;
+}
+
+.btyd-ribbon-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.btyd-ribbon-stat .ribbon-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.btyd-ribbon-stat .ribbon-val {
+    font-family: var(--font-heading);
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.btyd-ribbon-stat small {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+}
+
+.text-blue { color: #38BDF8 !important; }
+.text-green { color: #10B981 !important; }
+.text-gold { color: #F59E0B !important; }
+.text-red { color: #EF4444 !important; }
+
+.btyd-result-container {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: var(--bg-surface-alt);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    animation: fadeIn 0.3s ease;
+}
+
+.btyd-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 0.75rem;
+    margin: 1rem 0;
+}
+
+.btyd-stat-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.btyd-stat-box strong {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.btyd-stat-box .stat-val {
+    font-family: var(--font-heading);
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.p-alive-bar-wrap {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    margin-top: 0.35rem;
+}
+
+.p-alive-fill {
+    height: 100%;
+    border-radius: var(--radius-full);
+    transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btyd-chart-container {
+    background: var(--bg-surface-alt);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+}
+
 .notif-count {
     position: absolute;
     top: -4px;

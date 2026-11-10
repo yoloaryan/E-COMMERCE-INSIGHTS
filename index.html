@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=4.5">
+    <link rel="stylesheet" href="style.css?v=5.0">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -628,7 +628,8 @@
                     <button class="subnav-pill active" onclick="jumpToSection('churnKpiGrid', this)">⚠️ Churn Distribution</button>
                     <button class="subnav-pill" onclick="jumpToSection('churnScannerCard', this)">🔍 Account Risk Scanner</button>
                     <button class="subnav-pill" onclick="jumpToSection('vipAccountsTableCard', this)">🚨 VIP Whale Accounts</button>
-                    <button class="subnav-pill" onclick="jumpToSection('clvRoiCalcCard', this)">💰 CLV & Retention ROI</button>
+                    <button class="subnav-pill" onclick="jumpToSection('btydClvExplorerCard', this)">💎 BTYD CLV Explorer</button>
+                    <button class="subnav-pill" onclick="jumpToSection('clvRoiCalcCard', this)">💰 Retention ROI</button>
                 </div>
 
                 <div class="kpi-grid" id="churnKpiGrid">
@@ -702,6 +703,79 @@
                                 <!-- Populated by JS -->
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- Interactive Probabilistic BTYD CLV Explorer (BG/NBD & Gamma-Gamma) -->
+                <div class="interactive-card" id="btydClvExplorerCard" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <div>
+                            <h3>💎 Probabilistic Customer Lifetime Value (BTYD Engine)</h3>
+                            <p class="card-sub">Beta-Geometric / Negative Binomial Distribution (BG/NBD) + Gamma-Gamma Monetary Submodels</p>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:0.5rem;">
+                            <span class="badge live-badge">Continuous Time (Freq='W')</span>
+                            <span class="badge info-badge" id="btydApiBadge">API Ready</span>
+                        </div>
+                    </div>
+
+                    <!-- Portfolio CLV Macro Summary Ribbon -->
+                    <div class="btyd-portfolio-ribbon">
+                        <div class="btyd-ribbon-stat">
+                            <span class="ribbon-label">12-Month Portfolio CLV</span>
+                            <strong class="ribbon-val text-blue" id="btydTotalPortfolioClv">£9,631,782.48</strong>
+                            <small>Net Present Value (NPV @ 10% WACC)</small>
+                        </div>
+                        <div class="btyd-ribbon-stat">
+                            <span class="ribbon-label">Evaluated Active Cohort</span>
+                            <strong class="ribbon-val" id="btydEvaluatedCustomers">4,334 Accounts</strong>
+                            <small>Registered Customer Base</small>
+                        </div>
+                        <div class="btyd-ribbon-stat">
+                            <span class="ribbon-label">Average Forward CLV</span>
+                            <strong class="ribbon-val text-green" id="btydAvgCustomerClv">£2,222.33</strong>
+                            <small>Per Customer (12 Months)</small>
+                        </div>
+                        <div class="btyd-ribbon-stat">
+                            <span class="ribbon-label">Platinum VIP Share</span>
+                            <strong class="ribbon-val text-gold">70.8%</strong>
+                            <small>957 Accounts (£6.82M Yield)</small>
+                        </div>
+                    </div>
+
+                    <!-- 1-Click Interactive Sample Account Chips -->
+                    <div class="quick-preset-bar" style="margin: 1rem 0 0.75rem;">
+                        <span class="preset-bar-label">⚡ 1-Click BTYD Accounts:</span>
+                        <button type="button" class="preset-chip" onclick="quickInspectBtydClv('14646')">👑 Wholesaler #14646 (P(Alive) 99.8% | £236k CLV)</button>
+                        <button type="button" class="preset-chip" onclick="quickInspectBtydClv('14096')">⚠️ Lapsing Whale #14096 (P(Alive) 18.8% | £4.9k CLV)</button>
+                        <button type="button" class="preset-chip" onclick="quickInspectBtydClv('17850')">⭐ Steady Champion #17850 (P(Alive) 82.5% | £5.3k CLV)</button>
+                        <button type="button" class="preset-chip" onclick="quickInspectBtydClv('12347')">💎 Platinum #12347 (P(Alive) 97.5% | £3.5k CLV)</button>
+                        <button type="button" class="preset-chip" onclick="quickInspectBtydClv('12352')">📉 At-Risk Core #12352 (P(Alive) 25.8% | £405 CLV)</button>
+                    </div>
+
+                    <!-- Search / Direct Lookup Form -->
+                    <div class="search-form">
+                        <input type="text" id="btydSearchInput" placeholder="Enter Customer ID (e.g. 14646, 14096, 17850, 12347)..." value="14646">
+                        <button type="button" id="btydSearchBtn" class="btn btn-primary">Run BTYD Inference</button>
+                    </div>
+
+                    <!-- Dynamic BTYD Diagnostic Panel -->
+                    <div id="btydResultPanel" class="btyd-result-container">
+                        <!-- Populated by JS -->
+                    </div>
+
+                    <!-- 12-Month Projected Trajectory Chart -->
+                    <div class="btyd-chart-container" style="margin-top: 1.25rem;">
+                        <div class="card-header" style="padding: 0 0 0.5rem 0; border-bottom: 1px solid var(--border-color); margin-bottom: 0.75rem;">
+                            <div>
+                                <h4 style="font-size: 0.95rem; font-weight: 600;">12-Month Forward Cash Flow & Order Trajectory Forecast</h4>
+                                <p class="card-sub" style="font-size: 0.75rem;">Continuous BG/NBD Poisson purchase integration & Gamma-Gamma latent spend</p>
+                            </div>
+                            <span class="badge live-badge">Continuous Poisson Intensity</span>
+                        </div>
+                        <div style="height: 250px; position: relative;">
+                            <canvas id="btydProjectionChart"></canvas>
+                        </div>
                     </div>
                 </div>
 
@@ -1510,6 +1584,6 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=4.5"></script>
+    <script src="app.js?v=5.0"></script>
 </body>
 </html>
