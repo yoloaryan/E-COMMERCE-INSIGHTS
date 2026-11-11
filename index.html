@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=6.0">
+    <link rel="stylesheet" href="style.css?v=6.5">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -172,6 +172,11 @@
                     <!-- Dataset Ingestion Studio Trigger -->
                     <button class="btn btn-primary btn-sm" id="openImportModalBtn" title="Import CSV or Excel Dataset" style="display:flex;align-items:center;gap:0.4rem;font-weight:600;">
                         <span>📤</span> Import Data
+                    </button>
+
+                    <!-- AI Copilot Trigger -->
+                    <button class="btn btn-secondary btn-sm" id="openCopilotBtn" title="Launch AI Copilot & Text-to-SQL Assistant" style="display:flex;align-items:center;gap:0.4rem;font-weight:600;background:linear-gradient(135deg,rgba(99,102,241,0.2) 0%,rgba(168,85,247,0.2) 100%);border:1px solid rgba(168,85,247,0.4);color:#c084fc;">
+                        <span>✨</span> AI Copilot
                     </button>
 
                     <!-- Theme Toggle -->
@@ -1445,6 +1450,55 @@
         </div>
     </div>
 
+    <!-- Slide-in AI Copilot & Text-to-SQL Assistant Drawer -->
+    <div class="drawer-backdrop" id="copilotDrawerBackdrop" style="display: none;">
+        <div class="customer-drawer copilot-drawer" id="copilotDrawer">
+            <div class="drawer-header" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);">
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <span style="font-size: 1.3rem;">✨</span>
+                    <div>
+                        <h3 style="margin: 0; font-size: 1.15rem; color: #FFFFFF;">Nexus AI Copilot</h3>
+                        <span class="badge" style="background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); font-size: 0.7rem;">DUCKDB IN-MEMORY + ML INFERENCE</span>
+                    </div>
+                </div>
+                <button class="drawer-close-btn" id="copilotCloseBtn">✕</button>
+            </div>
+
+            <div class="copilot-body" id="copilotBody">
+                <!-- Preset Prompt Chips -->
+                <div class="copilot-presets-wrap">
+                    <span style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Suggested Questions:</span>
+                    <div class="copilot-chips-scroll">
+                        <button type="button" class="copilot-prompt-chip" data-prompt="What are our top 5 revenue products globally?">🏆 Top 5 Products</button>
+                        <button type="button" class="copilot-prompt-chip" data-prompt="Who are our top customers at risk of churn?">🚨 Churn VIP Accounts</button>
+                        <button type="button" class="copilot-prompt-chip" data-prompt="What is our revenue breakdown by country?">🌍 Country Breakdown</button>
+                        <button type="button" class="copilot-prompt-chip" data-prompt="What is our projected sales forecast for next week?">📈 Sales Forecast</button>
+                        <button type="button" class="copilot-prompt-chip" data-prompt="Check MLOps statistical drift status across features">📡 MLOps Drift Status</button>
+                    </div>
+                </div>
+
+                <!-- Messages Timeline -->
+                <div class="copilot-messages" id="copilotMessages">
+                    <div class="copilot-msg assistant">
+                        <div class="copilot-avatar">✨</div>
+                        <div class="copilot-bubble">
+                            <p style="margin: 0 0 0.5rem 0;">Hello! I'm your <strong>Nexus AI Retail Analyst</strong>. Ask me anything in plain English or write raw SQL queries against your 500k+ transaction records.</p>
+                            <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">I can query DuckDB in milliseconds, predict sales forecasts, identify churn risks, and check model drift.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Action Bar -->
+                <form class="copilot-input-bar" id="copilotForm">
+                    <input type="text" id="copilotInput" placeholder="Ask about sales, churn, SKUs, or type SQL..." autocomplete="off">
+                    <button type="submit" id="copilotSubmitBtn" title="Send Query">
+                        <span>⚡</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal: Add New Product SKU -->
     <div class="modal-backdrop" id="skuModalBackdrop">
         <div class="modal-card">
@@ -1781,6 +1835,6 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=6.0"></script>
+    <script src="app.js?v=6.5"></script>
 </body>
 </html>

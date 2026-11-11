@@ -26,6 +26,7 @@ from pydantic import BaseModel, Field
 
 from src.models.recommender import ProductRecommender
 from src.data.importer import DatasetImporter
+from src.api.copilot import RetailCopilot
 
 MODELS_DIR = ROOT_DIR / "models"
 MANIFEST_PATH = MODELS_DIR / "model_manifest.json"
@@ -607,6 +608,64 @@ async def ingest_dataset_upload(
         return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to ingest dataset '{file.filename}': {str(e)}")
+
+
+# -----------------------------------------------------------------------------
+# Retail AI Copilot & Text-to-SQL Analytics Endpoints
+# -----------------------------------------------------------------------------
+copilot_engine = None
+
+def get_copilot():
+    global copilot_engine
+    if copilot_engine is None:
+        copilot_engine = RetailCopilot()
+    return copilot_engine
+
+class CopilotQueryRequest(BaseModel):
+    query: str = Field(..., json_schema_extra={"example": "Show me top 5 revenue products in Germany"})
+
+@app.post("/api/v1/copilot/query", tags=["AI Copilot & Text-to-SQL"])
+async def query_retail_copilot(req: CopilotQueryRequest):
+    """
+    Translates natural language questions into optimized DuckDB SQL and ML insights.
+    """
+    engine = get_copilot()
+    res = engine.execute_query(req.query)
+    return res
+
+@app.get("/api/v1/copilot/sample-prompts", tags=["AI Copilot & Text-to-SQL"])
+async def get_copilot_sample_prompts():
+    """
+    Returns curated business intelligence prompt recommendations across categories.
+    """
+    return {
+        "categories": [
+            {
+                "category": "Revenue & Best Sellers",
+                "prompts": [
+                    "What are our top 5 revenue products globally?",
+                    "Show top 3 products in Germany",
+                    "Monthly sales velocity and order value trend"
+                ]
+            },
+            {
+                "category": "Customer Retention & VIPs",
+                "prompts": [
+                    "Who are our top customers at risk of churn?",
+                    "Lookup transaction history for customer #14096",
+                    "Show revenue breakdown by country"
+                ]
+            },
+            {
+                "category": "Predictive ML & MLOps",
+                "prompts": [
+                    "What is our projected sales forecast for next week?",
+                    "Check MLOps statistical drift status across features",
+                    "What is our model governance health?"
+                ]
+            }
+        ]
+    }
 
 
 if __name__ == "__main__":

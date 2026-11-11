@@ -13,7 +13,7 @@ help:
 	@echo "  make train      - Train and serialize all ML models"
 	@echo "  make clv        - Train BG/NBD and Gamma-Gamma Customer Lifetime Value models"
 	@echo "  make drift      - Run statistical data drift radar (KS test & PSI)"
-	@echo "  make test       - Run 36-test pytest suite"
+	@echo "  make test       - Run 44-test pytest suite"
 	@echo "  make sql        - Execute DuckDB in-memory SQL analytical queries"
 	@echo "  make export     - Sync pipeline and model predictions to data/nexus_data.json"
 	@echo "  make api        - Start FastAPI ML serving layer on http://localhost:8000"

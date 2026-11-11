@@ -35,6 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initApiConsole();
     initExecutiveReportModal();
     initDatasetImporter();
+    initAiCopilot();
     initLivePipelineSync();
 });
 
@@ -4149,6 +4150,233 @@ function initDatasetImporter() {
             }, 1200);
         });
     }
+}
+
+// =============================================================================
+// AI COPILOT & TEXT-TO-SQL ASSISTANT DRAWER
+// =============================================================================
+function initAiCopilot() {
+    const backdrop = document.getElementById("copilotDrawerBackdrop");
+    const openBtn = document.getElementById("openCopilotBtn");
+    const closeBtn = document.getElementById("copilotCloseBtn");
+    const messagesContainer = document.getElementById("copilotMessages");
+    const form = document.getElementById("copilotForm");
+    const input = document.getElementById("copilotInput");
+    const promptChips = document.querySelectorAll(".copilot-prompt-chip");
+
+    function openCopilot() {
+        if (!backdrop) return;
+        backdrop.style.display = "block";
+        if (input) {
+            setTimeout(() => input.focus(), 150);
+        }
+    }
+
+    function closeCopilot() {
+        if (!backdrop) return;
+        backdrop.style.display = "none";
+    }
+
+    if (openBtn) openBtn.addEventListener("click", openCopilot);
+    if (closeBtn) closeBtn.addEventListener("click", closeCopilot);
+
+    if (backdrop) {
+        backdrop.addEventListener("click", (e) => {
+            if (e.target === backdrop) closeCopilot();
+        });
+    }
+
+    // Preset Prompt chips click
+    promptChips.forEach(chip => {
+        chip.addEventListener("click", () => {
+            const prompt = chip.getAttribute("data-prompt") || chip.textContent;
+            submitCopilotQuery(prompt);
+        });
+    });
+
+    if (form) {
+        form.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const q = input.value.trim();
+            if (!q) return;
+            input.value = "";
+            submitCopilotQuery(q);
+        });
+    }
+
+    async function submitCopilotQuery(queryText) {
+        if (!messagesContainer) return;
+
+        // 1. Append User Message Bubble
+        appendUserMessage(queryText);
+
+        // 2. Append Loading / Thinking indicator
+        const thinkingId = "copilotThinking_" + Date.now();
+        appendThinkingIndicator(thinkingId);
+
+        let result = null;
+
+        // 3. Attempt query to FastAPI Copilot endpoint
+        try {
+            const resp = await fetch("http://localhost:8000/api/v1/copilot/query", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ query: queryText })
+            });
+            if (resp.ok) {
+                result = await resp.json();
+            }
+        } catch (err) {
+            console.warn("[Copilot] FastAPI backend unreachable, using client offline response:", err);
+        }
+
+        // 4. Remove thinking indicator
+        const thinkingEl = document.getElementById(thinkingId);
+        if (thinkingEl) thinkingEl.remove();
+
+        // 5. Render Response
+        if (result) {
+            appendAssistantResponse(result);
+        } else {
+            appendAssistantOfflineFallback(queryText);
+        }
+    }
+
+    function appendUserMessage(text) {
+        const msgDiv = document.createElement("div");
+        msgDiv.className = "copilot-msg user";
+        msgDiv.innerHTML = `<div class="copilot-bubble">${escapeHtml(text)}</div>`;
+        messagesContainer.appendChild(msgDiv);
+        scrollToBottom();
+    }
+
+    function appendThinkingIndicator(id) {
+        const msgDiv = document.createElement("div");
+        msgDiv.className = "copilot-msg assistant";
+        msgDiv.id = id;
+        msgDiv.innerHTML = `
+            <div class="copilot-avatar">✨</div>
+            <div class="copilot-bubble" style="color:var(--text-muted);font-style:italic;">
+                <span style="display:inline-block;animation:spin 1s linear infinite;">⚙️</span> Analyzing natural language, running DuckDB query in-memory...
+            </div>
+        `;
+        messagesContainer.appendChild(msgDiv);
+        scrollToBottom();
+    }
+
+    function appendAssistantResponse(res) {
+        const msgDiv = document.createElement("div");
+        msgDiv.className = "copilot-msg assistant";
+
+        let sqlHtml = "";
+        if (res.sql) {
+            sqlHtml = `
+                <div class="copilot-sql-box">
+                    <div class="copilot-sql-header">
+                        <span style="color:#60A5FA;font-weight:600;">⚡ DuckDB SQL [${res.execution_time_ms || 1.8}ms]</span>
+                        <button type="button" class="btn btn-outline btn-xs" style="font-size:0.65rem;padding:0.15rem 0.4rem;" onclick="navigator.clipboard.writeText(this.getAttribute('data-sql'));showToast('SQL Copied', 'Query copied to clipboard', 'info');" data-sql="${escapeHtml(res.sql)}">Copy SQL</button>
+                    </div>
+                    <code>${escapeHtml(res.sql)}</code>
+                </div>
+            `;
+        }
+
+        let tableHtml = "";
+        if (res.data && res.data.length > 0 && res.columns) {
+            const cols = res.columns.slice(0, 5);
+            tableHtml = `
+                <div class="copilot-table-wrap">
+                    <table class="copilot-table">
+                        <thead>
+                            <tr>${cols.map(c => `<th>${c}</th>`).join("")}</tr>
+                        </thead>
+                        <tbody>
+                            ${res.data.slice(0, 5).map(row => `
+                                <tr>${cols.map(c => `<td>${formatCellValue(row[c])}</td>`).join("")}</tr>
+                            `).join("")}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        let followupsHtml = "";
+        if (res.suggested_followups && res.suggested_followups.length > 0) {
+            followupsHtml = `
+                <div class="copilot-followups-row">
+                    ${res.suggested_followups.map(f => `
+                        <button type="button" class="copilot-followup-pill" onclick="window.askCopilotPrompt('${escapeHtml(f)}')">💡 ${f}</button>
+                    `).join("")}
+                </div>
+            `;
+        }
+
+        msgDiv.innerHTML = `
+            <div class="copilot-avatar">✨</div>
+            <div class="copilot-bubble">
+                <div style="font-size:0.86rem;line-height:1.5;">${formatMarkdown(res.summary || "Here are your analytical results:")}</div>
+                ${sqlHtml}
+                ${tableHtml}
+                ${followupsHtml}
+            </div>
+        `;
+        messagesContainer.appendChild(msgDiv);
+        scrollToBottom();
+    }
+
+    function appendAssistantOfflineFallback(queryText) {
+        const msgDiv = document.createElement("div");
+        msgDiv.className = "copilot-msg assistant";
+        msgDiv.innerHTML = `
+            <div class="copilot-avatar">✨</div>
+            <div class="copilot-bubble">
+                <p style="margin:0 0 0.5rem 0;">I've parsed your query: <em>"${escapeHtml(queryText)}"</em>.</p>
+                <div class="copilot-sql-box">
+                    <div class="copilot-sql-header">
+                        <span style="color:#60A5FA;font-weight:600;">⚡ DuckDB SQL (Local Mode)</span>
+                    </div>
+                    <code>SELECT stock_code, FIRST(description) AS item, SUM(total_price) AS revenue FROM ecommerce_transactions GROUP BY stock_code ORDER BY revenue DESC LIMIT 5;</code>
+                </div>
+                <p style="margin:0;font-size:0.8rem;color:var(--text-muted);">FastAPI server at :8000 is currently running offline, but client analytics and simulator tools remain active.</p>
+            </div>
+        `;
+        messagesContainer.appendChild(msgDiv);
+        scrollToBottom();
+    }
+
+    function formatCellValue(val) {
+        if (typeof val === "number") {
+            if (val > 1000) return Number(val).toLocaleString("en-GB", { maximumFractionDigits: 2 });
+            return Number(val).toFixed(2);
+        }
+        return escapeHtml(String(val ?? ""));
+    }
+
+    function formatMarkdown(text) {
+        return text
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>');
+    }
+
+    function escapeHtml(str) {
+        return (str || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function scrollToBottom() {
+        if (messagesContainer) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+    }
+
+    window.askCopilotPrompt = function(promptText) {
+        openCopilot();
+        submitCopilotQuery(promptText);
+    };
 }
 
 
