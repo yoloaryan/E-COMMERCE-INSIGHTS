@@ -152,7 +152,7 @@
       }
     }
   },
-  "last_retrained_at": "2026-11-11T06:30:57.198701+00:00",
-  "active_production_version": "v2.5.11111200",
+  "last_retrained_at": "2026-11-11T07:42:19.902455+00:00",
+  "active_production_version": "v2.5.11111312",
   "governance_status": "CERTIFIED_HEALTHY"
 }

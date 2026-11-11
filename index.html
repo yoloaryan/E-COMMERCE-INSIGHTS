@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=5.5">
+    <link rel="stylesheet" href="style.css?v=6.0">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -167,6 +167,11 @@
                     <!-- Executive Briefing Report Generator -->
                     <button class="btn btn-secondary btn-sm" id="boardReportBtn" title="Generate Executive Board Briefing Report" style="display:flex;align-items:center;gap:0.4rem;font-weight:600;">
                         <span>📄</span> Board Briefing
+                    </button>
+
+                    <!-- Dataset Ingestion Studio Trigger -->
+                    <button class="btn btn-primary btn-sm" id="openImportModalBtn" title="Import CSV or Excel Dataset" style="display:flex;align-items:center;gap:0.4rem;font-weight:600;">
+                        <span>📤</span> Import Data
                     </button>
 
                     <!-- Theme Toggle -->
@@ -1631,12 +1636,151 @@
         </div>
     </div>
 
+    <!-- ============================================================= -->
+    <!-- MODAL: DATASET INGESTION & IMPORT STUDIO (CSV / EXCEL) -->
+    <!-- ============================================================= -->
+    <div class="modal-backdrop" id="datasetImportModalBackdrop" style="display: none;">
+        <div class="modal-card modal-large" id="datasetImportModalCard" role="dialog" aria-labelledby="importModalTitle">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <span style="font-size: 1.5rem;">📤</span>
+                    <div>
+                        <h3 id="importModalTitle" style="margin: 0; font-size: 1.25rem;">Retail Dataset Ingestion Studio</h3>
+                        <p class="modal-sub" style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">Import CSV or Excel (.xlsx / .xls) transactional records into Nexus Retail AI</p>
+                    </div>
+                </div>
+                <button class="modal-close-btn" id="closeImportModalBtn">✕</button>
+            </div>
+
+            <div class="modal-body" style="padding: 1.25rem; max-height: calc(85vh - 120px); overflow-y: auto;">
+                <!-- Drag and Drop Dropzone -->
+                <div class="import-dropzone" id="importDropzone">
+                    <input type="file" id="importFileInput" accept=".csv, .xlsx, .xls, .tsv, text/csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display: none;">
+                    <div class="dropzone-icon">📁</div>
+                    <h4 style="margin: 0.5rem 0 0.25rem; font-weight: 700;">Drag & Drop CSV or Excel Spreadsheet</h4>
+                    <p style="margin: 0 0 1rem; color: var(--text-muted); font-size: 0.85rem;">Supports <code>.csv</code>, <code>.tsv</code>, <code>.xlsx</code>, and <code>.xls</code> files up to 50MB</p>
+                    <button type="button" class="btn btn-primary btn-sm" id="btnBrowseFiles">Browse Local Files</button>
+                </div>
+
+                <!-- Template Download & Demo Batch Bar -->
+                <div class="import-presets-bar">
+                    <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary);">⚡ Quick Templates:</span>
+                    <button type="button" class="preset-chip" id="btnDownloadCsvTemplate">📄 Download CSV Template</button>
+                    <button type="button" class="preset-chip" id="btnDownloadExcelTemplate">📊 Download Excel Template</button>
+                    <button type="button" class="preset-chip" id="btnLoadDemoBatch" style="border-color: rgba(59, 130, 246, 0.5); background: rgba(59, 130, 246, 0.1); color: #60a5fa;">🚀 Load Demo Batch (15 Orders)</button>
+                </div>
+
+                <!-- Validation & Inspection Panel (Hidden initially) -->
+                <div class="import-inspection-panel" id="importInspectionPanel" style="display: none; margin-top: 1.25rem;">
+                    <div class="inspection-header">
+                        <div style="display: flex; align-items: center; gap: 0.6rem;">
+                            <span style="font-size: 1.1rem;" id="importFileIcon">📄</span>
+                            <div>
+                                <strong id="importFileName" style="font-size: 0.95rem;">sample_orders.csv</strong>
+                                <span class="text-muted" id="importFileSize" style="font-size: 0.8rem; margin-left: 0.5rem;">(2.4 KB)</span>
+                            </div>
+                        </div>
+                        <span class="badge" id="importSchemaBadge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">🟢 SCHEMA VALIDATED</span>
+                    </div>
+
+                    <!-- Column Mapping Tags -->
+                    <div style="margin: 1rem 0;">
+                        <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Detected Column Mappings:</span>
+                        <div class="column-mapping-chips" id="columnMappingChips">
+                            <!-- Injected by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Telemetry Summary Cards -->
+                    <div class="kpi-mini-grid" id="importKpiGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; margin-top: 0.75rem;">
+                        <div class="kpi-card mini" style="padding: 0.75rem;">
+                            <div class="kpi-label">Commercial Records</div>
+                            <div class="kpi-value" id="importValidRows" style="font-size: 1.2rem;">--</div>
+                            <div class="kpi-subtext" id="importDiscardedRows">0 discarded</div>
+                        </div>
+                        <div class="kpi-card mini" style="padding: 0.75rem;">
+                            <div class="kpi-label">Batch Gross Revenue</div>
+                            <div class="kpi-value" id="importTotalRev" style="font-size: 1.2rem;">--</div>
+                            <div class="kpi-subtext" id="importAov">AOV: --</div>
+                        </div>
+                        <div class="kpi-card mini" style="padding: 0.75rem;">
+                            <div class="kpi-label">Inferred Date Range</div>
+                            <div class="kpi-value" id="importDateRange" style="font-size: 0.85rem; word-break: break-all;">--</div>
+                            <div class="kpi-subtext">Transaction timestamps</div>
+                        </div>
+                        <div class="kpi-card mini" style="padding: 0.75rem;">
+                            <div class="kpi-label">Unique Accounts & SKUs</div>
+                            <div class="kpi-value" id="importAccountsSkus" style="font-size: 1.2rem;">--</div>
+                            <div class="kpi-subtext">Commercial entities</div>
+                        </div>
+                    </div>
+
+                    <!-- Data Preview Table -->
+                    <div style="margin-top: 1.25rem;">
+                        <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Dataset Preview (First 5 Rows):</span>
+                        <div class="table-responsive" style="max-height: 200px; overflow-y: auto; margin-top: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                            <table class="data-table" id="importPreviewTable">
+                                <thead>
+                                    <tr>
+                                        <th>InvoiceNo</th>
+                                        <th>StockCode</th>
+                                        <th>Description</th>
+                                        <th>Quantity</th>
+                                        <th>InvoiceDate</th>
+                                        <th>UnitPrice</th>
+                                        <th>CustomerID</th>
+                                        <th>Country</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Ingestion Configuration Controls -->
+                    <div class="import-options-card" style="margin-top: 1.25rem; padding: 0.85rem 1rem; background: var(--bg-surface-alt); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; cursor: pointer; font-size: 0.85rem;">
+                            <input type="checkbox" id="chkMergeProduction" checked>
+                            <strong>Append and merge into active production data store (Parquet)</strong>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem;">
+                            <input type="checkbox" id="chkTriggerRetrain" checked>
+                            <span>Automatically re-fit RFM, Churn, and Sales Forecasting pipelines after ingestion</span>
+                        </label>
+                    </div>
+
+                    <!-- Action Execution Buttons -->
+                    <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                        <button type="button" class="btn btn-secondary btn-sm" id="btnCancelImport">Reset</button>
+                        <button type="button" class="btn btn-primary" id="btnExecuteIngest">🚀 Ingest Dataset into Pipeline</button>
+                    </div>
+                </div>
+
+                <!-- Live Ingestion Status Box (Shown during execution) -->
+                <div class="import-status-box" id="importStatusBox" style="display: none; margin-top: 1.25rem; padding: 1.25rem; border-radius: var(--radius-md); background: var(--bg-surface-alt); border: 1px solid var(--border-color); text-align: center;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem; display: inline-block; animation: spin 1.2s linear infinite;" id="importStatusSpinner">⚙️</div>
+                    <h4 id="importStatusHeading" style="margin: 0 0 0.5rem;">Ingesting & Processing Dataset...</h4>
+                    <p id="importStatusText" style="color: var(--text-muted); font-size: 0.85rem; margin: 0 0 1rem;">Executing schema normalization and merging records into production store...</p>
+                    <div class="drift-psi-bar-wrap" style="height: 6px; width: 100%; max-width: 400px; margin: 0 auto;">
+                        <div class="drift-psi-fill healthy" id="importProgressBar" style="width: 40%; transition: width 0.4s ease;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <small class="text-muted">Certified Schema Importer • Supports standard retail ERP & Shopify / WooCommerce CSV / Excel exports</small>
+                <button class="btn btn-secondary btn-sm" id="closeImportModalBtn2">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scroll to Top Floating Action Button -->
     <button class="scroll-to-top-btn" id="scrollToTopBtn" aria-label="Scroll to top" title="Back to top">↑</button>
 
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=5.5"></script>
+    <script src="app.js?v=6.0"></script>
 </body>
 </html>

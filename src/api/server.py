@@ -19,11 +19,13 @@ import numpy as np
 import pandas as pd
 import joblib
 from typing import List, Optional, Dict, Any
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect, status
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect, status, UploadFile, File, Form
+from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from src.models.recommender import ProductRecommender
+from src.data.importer import DatasetImporter
 
 MODELS_DIR = ROOT_DIR / "models"
 MANIFEST_PATH = MODELS_DIR / "model_manifest.json"
@@ -523,6 +525,88 @@ async def trigger_pipeline_retraining():
         "message": f"Automated pipeline retraining executed. Model checkpoint promoted to {version}.",
         "telemetry": event_payload
     }
+
+
+# -----------------------------------------------------------------------------
+# Data Ingestion & Flexible Schema Import Endpoints
+# -----------------------------------------------------------------------------
+@app.get("/api/v1/data/download-template", tags=["Data Import & Ingestion"])
+async def download_sample_template(format: str = Query("csv", description="File format: 'csv' or 'xlsx'")):
+    """
+    Generates and downloads a clean retail transaction starter template in CSV or Excel format.
+    """
+    file_bytes, media_type, filename = DatasetImporter.generate_template_bytes(format)
+    return Response(
+        content=file_bytes,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
+
+@app.get("/api/v1/data/demo-batch", tags=["Data Import & Ingestion"])
+async def get_demo_batch():
+    """
+    Returns synthetic demonstration transactions directly for 1-click in-browser validation testing.
+    """
+    df_sample = DatasetImporter.generate_sample_dataset(15)
+    return {
+        "status": "success",
+        "filename": "demo_retail_stream_q4.csv",
+        "data": df_sample.to_dict(orient="records")
+    }
+
+
+@app.post("/api/v1/data/validate-upload", tags=["Data Import & Ingestion"])
+async def validate_dataset_upload(file: UploadFile = File(...)):
+    """
+    Accepts CSV or Excel file, checks column schema against aliases, calculates preview metrics without writing.
+    """
+    try:
+        content = await file.read()
+        df = DatasetImporter.detect_and_parse(content, file.filename)
+        res = DatasetImporter.validate_and_normalize(df, file.filename)
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to parse upload file '{file.filename}': {str(e)}")
+
+
+@app.post("/api/v1/data/ingest-upload", tags=["Data Import & Ingestion"])
+async def ingest_dataset_upload(
+    file: UploadFile = File(...),
+    merge_to_production: bool = Form(True),
+    trigger_retrain: bool = Form(False)
+):
+    """
+    Validates and ingests CSV or Excel dataset, persists batch parquet, merges with production store,
+    optionally triggers automated model retraining, and broadcasts event over WebSocket.
+    """
+    try:
+        content = await file.read()
+        df = DatasetImporter.detect_and_parse(content, file.filename)
+        result = DatasetImporter.ingest_and_save_batch(df, file.filename, merge_to_production=merge_to_production)
+
+        if not result["valid"]:
+            return result
+
+        # Broadcast ingestion event over WebSocket
+        await ws_manager.broadcast({
+            "type": "DATASET_BATCH_INGESTED",
+            "data": {
+                "filename": file.filename,
+                "rows_added": result["rows_added"],
+                "total_revenue_gbp": result["metrics"]["total_revenue_gbp"],
+                "unique_orders": result["metrics"]["unique_orders"],
+                "timestamp": result["timestamp"]
+            }
+        })
+
+        if trigger_retrain:
+            retrain_res = await trigger_pipeline_retraining()
+            result["retraining_result"] = retrain_res
+
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to ingest dataset '{file.filename}': {str(e)}")
 
 
 if __name__ == "__main__":

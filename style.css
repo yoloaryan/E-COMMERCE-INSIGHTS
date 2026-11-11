@@ -3085,3 +3085,82 @@ input[type="range"]::-webkit-slider-thumb:hover {
     color: var(--text-secondary);
     margin: 0;
 }
+
+/* --------------------------------------------------------------------------
+   Dataset Ingestion & Import Studio (CSV / Excel)
+   -------------------------------------------------------------------------- */
+.import-dropzone {
+    border: 2px dashed rgba(59, 130, 246, 0.4);
+    background: rgba(59, 130, 246, 0.03);
+    border-radius: var(--radius-md);
+    padding: 2.25rem 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.import-dropzone:hover,
+.import-dropzone.dragover {
+    border-color: var(--primary);
+    background: rgba(59, 130, 246, 0.08);
+    transform: scale(1.005);
+}
+
+.dropzone-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.import-presets-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: center;
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg-surface-alt);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.import-inspection-panel {
+    background: var(--bg-surface);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    border: 1px solid var(--border-color);
+}
+
+.inspection-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.column-mapping-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.4rem;
+}
+
+.mapping-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.55rem;
+    font-size: 0.75rem;
+    background: var(--bg-surface-alt);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+}
+
+.mapping-chip strong {
+    color: #60A5FA;
+}
+
+.mapping-chip span.arrow {
+    color: var(--text-muted);
+}
