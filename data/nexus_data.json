@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-10T14:07:12.158738+00:00",
+  "generated_at": "2026-11-11T06:21:22.465596+00:00",
   "kpis": {
     "total_gross_revenue_gbp": 10279169.87,
     "total_completed_orders": 19776,
@@ -1925,6 +1925,67 @@
         "expected_avg_spend_gbp": 11903.34,
         "clv_12m_gbp": 197794.11,
         "clv_segment": "Platinum VIP (High CLV)"
+      }
+    ]
+  },
+  "drift_report": {
+    "scenario": "baseline",
+    "scenario_description": "Normal operational traffic matching training distribution.",
+    "evaluated_samples": 4000,
+    "baseline_samples": 4000,
+    "overall_status": "HEALTHY",
+    "system_action": "SYSTEM OPTIMAL: All production feature vectors match baseline training distribution.",
+    "features_monitored_count": 3,
+    "drift_detected_count": 0,
+    "warning_count": 0,
+    "features": [
+      {
+        "feature": "UnitPrice",
+        "label": "Unit Price (\u00a3)",
+        "unit": "\u00a3",
+        "baseline_mean": 3.36,
+        "baseline_std": 4.39,
+        "current_mean": 3.28,
+        "current_std": 5.01,
+        "psi_score": 0.0049,
+        "ks_statistic": 0.014,
+        "ks_p_value": 0.82802,
+        "status": "HEALTHY",
+        "badge": "Healthy",
+        "color": "green",
+        "recommendation": "Distribution is statistically consistent with baseline training data."
+      },
+      {
+        "feature": "Quantity",
+        "label": "Order Item Quantity",
+        "unit": "units",
+        "baseline_mean": 10.72,
+        "baseline_std": 39.07,
+        "current_mean": 10.59,
+        "current_std": 34.2,
+        "psi_score": 0.0075,
+        "ks_statistic": 0.0222,
+        "ks_p_value": 0.27537,
+        "status": "HEALTHY",
+        "badge": "Healthy",
+        "color": "green",
+        "recommendation": "Distribution is statistically consistent with baseline training data."
+      },
+      {
+        "feature": "TotalPrice",
+        "label": "Total Order Spend (\u00a3)",
+        "unit": "\u00a3",
+        "baseline_mean": 18.11,
+        "baseline_std": 40.14,
+        "current_mean": 19.13,
+        "current_std": 55.57,
+        "psi_score": 0.0044,
+        "ks_statistic": 0.0142,
+        "ks_p_value": 0.81149,
+        "status": "HEALTHY",
+        "badge": "Healthy",
+        "color": "green",
+        "recommendation": "Distribution is statistically consistent with baseline training data."
       }
     ]
   }

@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=5.2">
+    <link rel="stylesheet" href="style.css?v=5.5">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -911,9 +911,16 @@
             <!-- TAB 6: MLOPS & MODEL REGISTRY (ADMIN NEW) -->
             <!-- ============================================================= -->
             <section id="tab-admin-ops" class="tab-pane">
+                <!-- In-Page Section Subnav -->
+                <div class="tab-subnav-bar">
+                    <button class="subnav-pill active" onclick="jumpToSection('adminRegistryCard', this)">📋 Active Registry</button>
+                    <button class="subnav-pill" onclick="jumpToSection('adminConsoleCard', this)">💻 Retraining Console</button>
+                    <button class="subnav-pill" onclick="jumpToSection('driftRadarCard', this)">📡 Data Drift Radar</button>
+                </div>
+
                 <div class="admin-grid-top">
                     <!-- Model Status Card -->
-                    <div class="admin-card">
+                    <div class="admin-card" id="adminRegistryCard">
                         <div class="card-header">
                             <div>
                                 <h3>Active Model Registry & Inference Status</h3>
@@ -977,7 +984,7 @@
                     </div>
 
                     <!-- Live Retraining Console -->
-                    <div class="admin-card">
+                    <div class="admin-card" id="adminConsoleCard">
                         <div class="card-header">
                             <div>
                                 <h3>Model Pipeline Execution Console</h3>
@@ -1000,6 +1007,42 @@
 > Ready for admin execution commands...
                             </pre>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Phase 8: Statistical Data Drift & Model Decay Radar -->
+                <div class="admin-card" id="driftRadarCard" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <div>
+                            <h3>📡 Statistical Data Drift & Model Decay Radar</h3>
+                            <p class="card-sub">Continuous monitoring using Kolmogorov-Smirnov (KS) test & Population Stability Index (PSI) against training baseline</p>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                            <span class="badge" id="driftOverallBadge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">HEALTHY (PSI &lt; 0.10)</span>
+                            <span class="badge" id="driftApiBadge" style="background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3);">FASTAPI :8000 LIVE</span>
+                        </div>
+                    </div>
+
+                    <div class="drift-scenarios-bar">
+                        <span class="preset-bar-label">⚡ Simulate Production Drift:</span>
+                        <button type="button" class="preset-chip active" id="btnDriftBaseline" onclick="evaluateDriftScenario('baseline', this)">🟢 Normal Baseline (No Shift)</button>
+                        <button type="button" class="preset-chip" id="btnDriftBlackFriday" onclick="evaluateDriftScenario('black_friday', this)">🔥 Black Friday Surge (+180% Qty)</button>
+                        <button type="button" class="preset-chip" id="btnDriftInflation" onclick="evaluateDriftScenario('inflation', this)">📈 Price Inflation (+45% Unit Price)</button>
+                        <button type="button" class="preset-chip" id="btnDriftDormancy" onclick="evaluateDriftScenario('dormancy_surge', this)">💤 Churn Dormancy (+60d Inactivity)</button>
+                    </div>
+
+                    <!-- Telemetry Summary Grid -->
+                    <div class="drift-grid" id="driftGrid">
+                        <!-- Populated dynamically by app.js -->
+                    </div>
+
+                    <!-- Dynamic Action Banner -->
+                    <div class="drift-action-banner" id="driftActionBanner" style="display: none;">
+                        <div class="drift-banner-text">
+                            <h4 id="driftBannerTitle">⚠️ Automated Pipeline Retraining Triggered</h4>
+                            <p id="driftBannerDesc">Severe population drift detected in production feature vectors exceeding PSI threshold (0.25). Re-fitting models on the latest dataset is strongly recommended.</p>
+                        </div>
+                        <button class="btn btn-primary" id="btnBannerRetrain" onclick="document.getElementById('triggerGlobalRetrainBtn')?.click()">⚡ Run Automated Pipeline Retrain</button>
                     </div>
                 </div>
             </section>
@@ -1594,6 +1637,6 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=5.2"></script>
+    <script src="app.js?v=5.5"></script>
 </body>
 </html>

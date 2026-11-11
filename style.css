@@ -2902,3 +2902,186 @@ input[type="range"]::-webkit-slider-thumb:hover {
     0%, 100% { opacity: 1; transform: scale(1); }
     50% { opacity: 0.6; transform: scale(0.94); }
 }
+
+/* --------------------------------------------------------------------------
+   Phase 8: Statistical Data Drift & Model Decay Radar
+   -------------------------------------------------------------------------- */
+.drift-scenarios-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: center;
+    margin: 1.25rem 0 1.5rem 0;
+    padding: 0.75rem 1rem;
+    background: var(--bg-surface-alt);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.drift-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+}
+
+.drift-card {
+    background: var(--bg-surface-alt);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.drift-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.drift-card.drift-alert {
+    border-color: rgba(239, 68, 68, 0.6);
+    background: linear-gradient(180deg, rgba(239, 68, 68, 0.05) 0%, var(--bg-surface-alt) 100%);
+}
+
+.drift-card.drift-warning {
+    border-color: rgba(245, 158, 11, 0.6);
+    background: linear-gradient(180deg, rgba(245, 158, 11, 0.05) 0%, var(--bg-surface-alt) 100%);
+}
+
+.drift-card.drift-healthy {
+    border-color: rgba(16, 185, 129, 0.4);
+}
+
+.drift-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.drift-card-title {
+    font-family: var(--font-heading);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.drift-card-code {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.drift-metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.drift-metric-label {
+    color: var(--text-secondary);
+}
+
+.drift-metric-val {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.drift-psi-section {
+    margin-top: 0.25rem;
+}
+
+.drift-psi-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    margin-bottom: 0.35rem;
+}
+
+.drift-psi-bar-wrap {
+    height: 8px;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    position: relative;
+}
+
+.drift-psi-fill {
+    height: 100%;
+    border-radius: var(--radius-full);
+    transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.4s ease;
+}
+
+.drift-psi-fill.healthy {
+    background: #10B981;
+}
+
+.drift-psi-fill.warning {
+    background: #F59E0B;
+}
+
+.drift-psi-fill.alert {
+    background: #EF4444;
+}
+
+.drift-rec-box {
+    font-size: 0.82rem;
+    line-height: 1.45;
+    padding: 0.65rem 0.85rem;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.03);
+    border-left: 3px solid var(--border-color);
+}
+
+.drift-rec-box.healthy {
+    border-left-color: #10B981;
+    color: var(--text-secondary);
+}
+
+.drift-rec-box.warning {
+    border-left-color: #F59E0B;
+    color: #FCD34D;
+    background: rgba(245, 158, 11, 0.08);
+}
+
+.drift-rec-box.alert {
+    border-left-color: #EF4444;
+    color: #FCA5A5;
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.drift-action-banner {
+    padding: 1.25rem 1.5rem;
+    border-radius: var(--radius-md);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.15) 0%, rgba(245, 158, 11, 0.12) 100%);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    box-shadow: 0 4px 20px rgba(239, 68, 68, 0.15);
+}
+
+.drift-banner-text h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #EF4444;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.drift-banner-text p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin: 0;
+}

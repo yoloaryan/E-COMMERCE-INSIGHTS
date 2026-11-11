@@ -174,6 +174,11 @@ def export_dashboard_data():
             for _, row in clv_filtered.iterrows()
         ]
 
+    # 7. Baseline Statistical Data Drift Report
+    from src.models.drift_monitor import DataDriftMonitor
+    drift_monitor = DataDriftMonitor()
+    drift_baseline_report = drift_monitor.generate_drift_report("baseline")
+
     payload = {
         "generated_at": pd.Timestamp.utcnow().isoformat(),
         "kpis": {
@@ -204,7 +209,8 @@ def export_dashboard_data():
         "clv_btyd": {
             "summary": clv_summary,
             "sample_customers": clv_sample_customers
-        }
+        },
+        "drift_report": drift_baseline_report
     }
 
     OUTPUT_JSON_PATH.parent.mkdir(parents=True, exist_ok=True)

@@ -27,17 +27,37 @@
         "max_iter": 300,
         "random_state": 42
       },
-      "features": ["Recency", "Frequency", "Monetary"],
+      "features": [
+        "Recency",
+        "Frequency",
+        "Monetary"
+      ],
       "transformation": "Natural Log1p + Z-Score Standardization",
       "metrics": {
         "silhouette_score": 0.3375,
         "optimal_k_selection": "Inertia Elbow inflection & Silhouette maximization"
       },
       "segments": [
-        {"name": "Champions (VIPs)", "count": 708, "revenue_share_pct": 64.55},
-        {"name": "At-Risk / Lapsing", "count": 1180, "revenue_share_pct": 24.02},
-        {"name": "Loyal Customers", "count": 844, "revenue_share_pct": 5.10},
-        {"name": "Occasional / Hibernating", "count": 1602, "revenue_share_pct": 6.33}
+        {
+          "name": "Champions (VIPs)",
+          "count": 708,
+          "revenue_share_pct": 64.55
+        },
+        {
+          "name": "At-Risk / Lapsing",
+          "count": 1180,
+          "revenue_share_pct": 24.02
+        },
+        {
+          "name": "Loyal Customers",
+          "count": 844,
+          "revenue_share_pct": 5.1
+        },
+        {
+          "name": "Occasional / Hibernating",
+          "count": 1602,
+          "revenue_share_pct": 6.33
+        }
       ]
     },
     "sales_forecasting": {
@@ -47,18 +67,34 @@
       "validation_strategy": "Chronological Out-of-Sample Split (80% Train, 20% Test)",
       "target": "DailyRevenue",
       "features": [
-        "DayOfWeek", "DayOfMonth", "Month", "Quarter", "IsWeekend",
-        "Lag_1", "Lag_2", "Lag_7", "Lag_14", "Lag_30",
-        "RollingMean_7", "RollingStd_7", "RollingMean_14", "RollingMean_30",
-        "LagOrders_1", "LagOrders_7"
+        "DayOfWeek",
+        "DayOfMonth",
+        "Month",
+        "Quarter",
+        "IsWeekend",
+        "Lag_1",
+        "Lag_2",
+        "Lag_7",
+        "Lag_14",
+        "Lag_30",
+        "RollingMean_7",
+        "RollingStd_7",
+        "RollingMean_14",
+        "RollingMean_30",
+        "LagOrders_1",
+        "LagOrders_7"
       ],
       "metrics": {
         "mae_gbp": 12464.66,
-        "rmse_gbp": 22989.70,
+        "rmse_gbp": 22989.7,
         "mape_pct": 26.28,
         "r2_score": 0.4281
       },
-      "top_predictors": ["DayOfWeek (28.06%)", "Lag_7 (22.06%)", "RollingMean_30 (7.37%)"]
+      "top_predictors": [
+        "DayOfWeek (28.06%)",
+        "Lag_7 (22.06%)",
+        "RollingMean_30 (7.37%)"
+      ]
     },
     "churn_prediction": {
       "task": "Customer Inactivity & Churn Classification",
@@ -68,8 +104,15 @@
       "target_definition": "0 orders placed within 90-day future observation window",
       "validation_strategy": "Stratified Train-Test Split (80/20)",
       "features": [
-        "Recency", "HistoricalFrequency", "HistoricalMonetary", "HistoricalUnits",
-        "UniqueSKUs", "Tenure", "AOV", "UnitsPerOrder", "PurchaseVelocity"
+        "Recency",
+        "HistoricalFrequency",
+        "HistoricalMonetary",
+        "HistoricalUnits",
+        "UniqueSKUs",
+        "Tenure",
+        "AOV",
+        "UnitsPerOrder",
+        "PurchaseVelocity"
       ],
       "metrics": {
         "roc_auc": 0.7163,
@@ -108,6 +151,8 @@
         "platinum_vip_share_pct": 77.15
       }
     }
-  }
+  },
+  "last_retrained_at": "2026-11-11T06:30:57.198701+00:00",
+  "active_production_version": "v2.5.11111200",
+  "governance_status": "CERTIFIED_HEALTHY"
 }
-
