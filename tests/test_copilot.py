@@ -96,3 +96,4 @@ def test_api_copilot_sample_prompts_endpoint():
     data = res.json()
     assert "categories" in data
     assert len(data["categories"]) >= 3
+

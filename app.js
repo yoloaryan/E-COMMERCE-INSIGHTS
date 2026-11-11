@@ -453,7 +453,8 @@ function initViewMode() {
 function switchTab(targetTab) {
     const navItems = document.querySelectorAll(".nav-item");
     const tabPanes = document.querySelectorAll(".tab-pane");
-    const crumbCurrent = document.getElementById("crumbCurrent");
+    const crumbCurrent = document.getElementById("breadcrumb-current") || document.getElementById("crumbCurrent");
+    const crumbSection = document.getElementById("breadcrumb-section");
     const pageTitle = document.getElementById("page-title");
     const pageSubtitle = document.getElementById("page-subtitle");
 
@@ -492,6 +493,9 @@ function switchTab(targetTab) {
 
     if (tabMeta[targetTab]) {
         if (crumbCurrent) crumbCurrent.textContent = tabMeta[targetTab].title.split(" &")[0];
+        if (crumbSection) {
+            crumbSection.textContent = ADVANCED_TABS.includes(targetTab) ? "Operations & MLOps" : "Enterprise Intelligence";
+        }
         if (pageTitle) pageTitle.textContent = tabMeta[targetTab].title;
         if (pageSubtitle) pageSubtitle.textContent = tabMeta[targetTab].sub;
     }
@@ -549,6 +553,13 @@ function initNavigation() {
             if (restockModal) restockModal.classList.remove("open");
             const reportModal = document.getElementById("reportModalBackdrop");
             if (reportModal) reportModal.classList.remove("open");
+            const copilotDrawer = document.getElementById("copilotDrawerBackdrop");
+            if (copilotDrawer) copilotDrawer.classList.remove("open");
+            const importModal = document.getElementById("datasetImportModalBackdrop");
+            if (importModal) {
+                importModal.classList.remove("open");
+                document.body.style.overflow = "";
+            }
             const autoDrop = document.getElementById("searchAutocomplete");
             if (autoDrop) autoDrop.classList.remove("active");
             const notifDrop = document.getElementById("notifDropdown");
@@ -3791,13 +3802,13 @@ function initDatasetImporter() {
 
     function openModal() {
         if (!modalBackdrop) return;
-        modalBackdrop.style.display = "flex";
+        modalBackdrop.classList.add("open");
         document.body.style.overflow = "hidden";
     }
 
     function closeModal() {
         if (!modalBackdrop) return;
-        modalBackdrop.style.display = "none";
+        modalBackdrop.classList.remove("open");
         document.body.style.overflow = "";
         resetState();
     }
@@ -4166,7 +4177,8 @@ function initAiCopilot() {
 
     function openCopilot() {
         if (!backdrop) return;
-        backdrop.style.display = "block";
+        backdrop.classList.add("open");
+        document.body.style.overflow = "hidden";
         if (input) {
             setTimeout(() => input.focus(), 150);
         }
@@ -4174,7 +4186,8 @@ function initAiCopilot() {
 
     function closeCopilot() {
         if (!backdrop) return;
-        backdrop.style.display = "none";
+        backdrop.classList.remove("open");
+        document.body.style.overflow = "";
     }
 
     if (openBtn) openBtn.addEventListener("click", openCopilot);

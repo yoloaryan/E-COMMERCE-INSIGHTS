@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=6.5">
+    <link rel="stylesheet" href="style.css?v=7.0">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -164,20 +164,18 @@
                         <span class="api-live-text">API Online :8000</span>
                     </a>
 
-                    <!-- Executive Briefing Report Generator -->
-                    <button class="btn btn-secondary btn-sm" id="boardReportBtn" title="Generate Executive Board Briefing Report" style="display:flex;align-items:center;gap:0.4rem;font-weight:600;">
-                        <span>📄</span> Board Briefing
-                    </button>
-
-                    <!-- Dataset Ingestion Studio Trigger -->
-                    <button class="btn btn-primary btn-sm" id="openImportModalBtn" title="Import CSV or Excel Dataset" style="display:flex;align-items:center;gap:0.4rem;font-weight:600;">
-                        <span>📤</span> Import Data
-                    </button>
-
-                    <!-- AI Copilot Trigger -->
-                    <button class="btn btn-secondary btn-sm" id="openCopilotBtn" title="Launch AI Copilot & Text-to-SQL Assistant" style="display:flex;align-items:center;gap:0.4rem;font-weight:600;background:linear-gradient(135deg,rgba(99,102,241,0.2) 0%,rgba(168,85,247,0.2) 100%);border:1px solid rgba(168,85,247,0.4);color:#c084fc;">
-                        <span>✨</span> AI Copilot
-                    </button>
+                    <!-- Unified Action Toolbar -->
+                    <div class="header-action-group">
+                        <button type="button" class="btn btn-secondary btn-sm" id="boardReportBtn" title="Generate Executive Board Briefing Report">
+                            <span>📄</span> Briefing
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" id="openImportModalBtn" title="Import CSV or Excel Dataset">
+                            <span>📤</span> Import
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm header-copilot-pill" id="openCopilotBtn" title="Launch AI Copilot & Text-to-SQL Assistant">
+                            <span>✨</span> Copilot
+                        </button>
+                    </div>
 
                     <!-- Theme Toggle -->
                     <button class="icon-tool-btn" id="themeToggleBtn" title="Toggle Theme (Dark/Light)">
@@ -1451,7 +1449,7 @@
     </div>
 
     <!-- Slide-in AI Copilot & Text-to-SQL Assistant Drawer -->
-    <div class="drawer-backdrop" id="copilotDrawerBackdrop" style="display: none;">
+    <div class="drawer-backdrop" id="copilotDrawerBackdrop">
         <div class="customer-drawer copilot-drawer" id="copilotDrawer">
             <div class="drawer-header" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);">
                 <div style="display: flex; align-items: center; gap: 0.6rem;">
@@ -1693,7 +1691,7 @@
     <!-- ============================================================= -->
     <!-- MODAL: DATASET INGESTION & IMPORT STUDIO (CSV / EXCEL) -->
     <!-- ============================================================= -->
-    <div class="modal-backdrop" id="datasetImportModalBackdrop" style="display: none;">
+    <div class="modal-backdrop" id="datasetImportModalBackdrop">
         <div class="modal-card modal-large" id="datasetImportModalCard" role="dialog" aria-labelledby="importModalTitle">
             <div class="modal-header">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
@@ -1835,6 +1833,6 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=6.5"></script>
+    <script src="app.js?v=7.0"></script>
 </body>
 </html>
