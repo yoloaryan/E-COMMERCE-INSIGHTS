@@ -1,4 +1,4 @@
-.PHONY: help setup ingest clean features train test sql export api web all drift clv
+.PHONY: help setup ingest clean features train test sql export api web all drift clv docker-up docker-down lint ci
 
 VENV := ./venv
 PYTHON := $(shell if [ -f $(VENV)/bin/python ]; then echo $(VENV)/bin/python; else which python3 || echo python; fi)
@@ -13,7 +13,9 @@ help:
 	@echo "  make train      - Train and serialize all ML models"
 	@echo "  make clv        - Train BG/NBD and Gamma-Gamma Customer Lifetime Value models"
 	@echo "  make drift      - Run statistical data drift radar (KS test & PSI)"
+	@echo "  make lint       - Validate Python syntax across src and test suites"
 	@echo "  make test       - Run 44-test pytest suite"
+	@echo "  make ci         - Execute full local CI check (lint + test + manifest)"
 	@echo "  make sql        - Execute DuckDB in-memory SQL analytical queries"
 	@echo "  make export     - Sync pipeline and model predictions to data/nexus_data.json"
 	@echo "  make api        - Start FastAPI ML serving layer on http://localhost:8000"
@@ -50,8 +52,14 @@ clv:
 drift:
 	$(PYTHON) src/models/drift_monitor.py
 
+lint:
+	$(PYTHON) -m compileall -q src/ tests/
+
 test:
 	$(PYTEST) tests/ -v
+
+ci: lint test
+	@$(PYTHON) -c "import json; m = json.load(open('models/model_manifest.json')); assert len(m['models']) == 5; assert m['governance_status'] in ['CERTIFIED_HEALTHY', 'PASS']; print('Local CI Verification: ALL 5 ENGINES CERTIFIED HEALTHY')"
 
 sql:
 	$(PYTHON) src/data/run_queries.py

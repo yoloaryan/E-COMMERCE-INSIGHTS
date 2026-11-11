@@ -8,11 +8,21 @@ services:
     ports:
       - "8000:8000"
     restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    volumes:
+      - ./data/processed:/app/data/processed
+      - ./data/raw:/app/data/raw
+      - ./models:/app/models
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 15s
       timeout: 5s
       retries: 3
+      start_period: 10s
+    networks:
+      - nexus-network
 
   # High-Performance Nginx Web Application with Reverse Proxy to API
   web:
@@ -26,4 +36,15 @@ services:
       api:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80/"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+    networks:
+      - nexus-network
+
+networks:
+  nexus-network:
+    driver: bridge
 

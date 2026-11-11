@@ -16,4 +16,8 @@ COPY data/nexus_data.json /usr/share/nginx/html/data/nexus_data.json
 # Expose HTTP port
 EXPOSE 80
 
+# Health check
+HEALTHCHECK --interval=15s --timeout=3s --retries=3 \
+  CMD wget -q --spider http://localhost:80/ || exit 1
+
 CMD ["nginx", "-g", "daemon off;"]
