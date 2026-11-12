@@ -24,7 +24,7 @@ import pandas as pd
 import joblib
 from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect, status, UploadFile, File, Form, Request, Header, Depends
-from fastapi.responses import Response
+from fastapi.responses import Response, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -47,6 +47,7 @@ from src.models.customer_360 import get_customer_360_engine
 from src.data.warehouse import get_warehouse
 from src.models.causal_uplift import get_causal_engine
 from src.models.survival_xai import get_survival_xai_engine
+from src.api.invoices import get_invoice_engine
 
 MODELS_DIR = ROOT_DIR / "models"
 MANIFEST_PATH = MODELS_DIR / "model_manifest.json"
@@ -410,6 +411,24 @@ class SimulateSurvivalInterventionRequest(BaseModel):
     recency_reduction_days: int = Field(default=45, ge=0, le=180)
     frequency_boost_orders: int = Field(default=2, ge=0, le=20)
     aov_boost_pct: float = Field(default=15.0, ge=0.0, le=100.0)
+
+
+class InvoiceLineItemRequest(BaseModel):
+    stock_code: str = Field(default="22423")
+    description: str = Field(default="REGENCY CAKESTAND 3 TIER")
+    quantity: int = Field(default=12)
+    unit_price: float = Field(default=10.95, ge=0.0)
+
+
+class GenerateTaxInvoiceRequest(BaseModel):
+    customer_id: str = Field(default="12352")
+    country: str = Field(default="India")
+    tax_regime: str = Field(default="GST")
+    buyer_tax_id: Optional[str] = Field(default=None)
+    seller_state: str = Field(default="Karnataka")
+    supply_state: str = Field(default="Karnataka")
+    is_credit_note: bool = Field(default=False)
+    items: List[InvoiceLineItemRequest] = Field(..., min_length=1)
 
 
 # -----------------------------------------------------------------------------
@@ -2311,6 +2330,79 @@ def simulate_survival_retention_intervention(
         frequency_boost_orders=payload.frequency_boost_orders,
         aov_boost_pct=payload.aov_boost_pct,
     )
+
+
+# -----------------------------------------------------------------------------
+# Phase 28: Indian GST (CGST/SGST/IGST + HSN) & VAT Tax Invoice Engine
+# -----------------------------------------------------------------------------
+@app.get("/api/v1/invoices/recent", tags=["Tax Invoicing & Compliance"])
+def list_recent_tax_invoices(
+    limit: int = Query(default=15, ge=1, le=50),
+    country: Optional[str] = Query(default=None),
+):
+    """Lists recent regular invoices and C-prefixed cancellation credit notes."""
+    return get_invoice_engine().list_recent_invoices(limit=limit, country=country)
+
+
+@app.post("/api/v1/invoices/generate", tags=["Tax Invoicing & Compliance"])
+def generate_statutory_tax_invoice(
+    payload: GenerateTaxInvoiceRequest,
+    _principal: Dict[str, Any] = Depends(require_permission("predict:execute")),
+):
+    """Issues a statutory Indian GST (CGST/SGST/IGST + HSN) or VAT tax invoice."""
+    return get_invoice_engine().generate_invoice(
+        customer_id=payload.customer_id,
+        country=payload.country,
+        items=[item.model_dump() for item in payload.items],
+        tax_regime=payload.tax_regime,
+        buyer_tax_id=payload.buyer_tax_id,
+        seller_state=payload.seller_state,
+        supply_state=payload.supply_state,
+        is_credit_note=payload.is_credit_note,
+    )
+
+
+@app.get("/api/v1/invoices/{invoice_no}/html", response_class=HTMLResponse, tags=["Tax Invoicing & Compliance"])
+def get_tax_invoice_printable_html(
+    invoice_no: str,
+    tax_regime: str = Query(default="GST"),
+    buyer_tax_id: Optional[str] = Query(default=None),
+    seller_state: str = Query(default="Karnataka"),
+    supply_state: str = Query(default="Karnataka"),
+):
+    """Returns print/PDF-ready statutory HTML5 Tax Invoice or Credit Note."""
+    engine = get_invoice_engine()
+    inv = engine.get_invoice(
+        invoice_no=invoice_no,
+        tax_regime=tax_regime,
+        buyer_tax_id=buyer_tax_id,
+        seller_state=seller_state,
+        supply_state=supply_state,
+    )
+    if inv is None:
+        raise HTTPException(status_code=404, detail=f"Invoice '{invoice_no}' not found.")
+    return HTMLResponse(content=engine.render_invoice_html(inv), status_code=200)
+
+
+@app.get("/api/v1/invoices/{invoice_no}", tags=["Tax Invoicing & Compliance"])
+def get_tax_invoice_json(
+    invoice_no: str,
+    tax_regime: str = Query(default="GST"),
+    buyer_tax_id: Optional[str] = Query(default=None),
+    seller_state: str = Query(default="Karnataka"),
+    supply_state: str = Query(default="Karnataka"),
+):
+    """Computes itemized HSN/GST (CGST/SGST/IGST) or VAT breakdown for an invoice."""
+    inv = get_invoice_engine().get_invoice(
+        invoice_no=invoice_no,
+        tax_regime=tax_regime,
+        buyer_tax_id=buyer_tax_id,
+        seller_state=seller_state,
+        supply_state=supply_state,
+    )
+    if inv is None:
+        raise HTTPException(status_code=404, detail=f"Invoice '{invoice_no}' not found.")
+    return inv
 
 
 if __name__ == "__main__":

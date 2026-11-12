@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=7.19">
+    <link rel="stylesheet" href="style.css?v=7.20">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -2043,6 +2043,64 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Phase 28: Statutory Indian GST (CGST/SGST/IGST + HSN) & VAT Tax Invoice Studio -->
+                <div class="interactive-card" id="taxInvoiceStudioCard" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <div>
+                            <h3>🧾 Indian GST (CGST / SGST / IGST + HSN) &amp; Tax Invoice Studio</h3>
+                            <p class="card-sub">Inspect real DuckDB invoices or C-prefixed Credit Notes with multi-slab HSN breakdown, or issue live invoices from simulated POS orders</p>
+                        </div>
+                        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-secondary btn-sm" id="taxPrintInvoiceBtn">🖨️ Print / Save PDF</button>
+                            <button type="button" class="btn btn-outline btn-sm" id="taxDownloadJsonBtn">📥 Export JSON</button>
+                        </div>
+                    </div>
+
+                    <div class="quick-preset-bar" style="margin-bottom:0.85rem;">
+                        <span class="preset-bar-label">⚡ Quick Invoice Presets:</span>
+                        <button type="button" class="preset-chip" onclick="loadTaxInvoicePreset('536365', 'GST', 'Karnataka')">🏛️ #536365 Intra-State GST</button>
+                        <button type="button" class="preset-chip" onclick="loadTaxInvoicePreset('536365', 'GST', 'Maharashtra')">🚚 #536365 Inter-State IGST</button>
+                        <button type="button" class="preset-chip" onclick="loadTaxInvoicePreset('C536379', 'GST', 'Karnataka')">↩️ #C536379 Return Credit Note</button>
+                        <button type="button" class="preset-chip" onclick="loadTaxInvoicePreset('536370', 'VAT', 'Karnataka')">🇪🇺 #536370 EU VAT Export</button>
+                    </div>
+
+                    <div class="invoice-controls-grid">
+                        <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                            <label for="taxInvoiceLookupInput" style="font-size:0.78rem; color:var(--text-secondary);">Invoice / Credit Note No:</label>
+                            <input type="text" id="taxInvoiceLookupInput" value="536365" placeholder="e.g. 536365, C536379">
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                            <label for="taxRegimeSelect" style="font-size:0.78rem; color:var(--text-secondary);">Tax Regime:</label>
+                            <select id="taxRegimeSelect" class="form-input-sm">
+                                <option value="GST" selected>Indian GST (CGST/SGST/IGST + HSN)</option>
+                                <option value="VAT">UK / EU VAT (Reverse Charge &amp; Zero-Rate)</option>
+                            </select>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                            <label for="taxSupplyStateSelect" style="font-size:0.78rem; color:var(--text-secondary);">Place of Supply (Seller: Karnataka 29):</label>
+                            <select id="taxSupplyStateSelect" class="form-input-sm">
+                                <option value="Karnataka" selected>Karnataka (29) — Intra-State CGST+SGST</option>
+                                <option value="Maharashtra">Maharashtra (27) — Inter-State IGST</option>
+                                <option value="Delhi">Delhi (07) — Inter-State IGST</option>
+                                <option value="Tamil Nadu">Tamil Nadu (33) — Inter-State IGST</option>
+                                <option value="Export">Export / LUT (96) — 0% Zero-Rated</option>
+                            </select>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                            <label for="taxBuyerIdInput" style="font-size:0.78rem; color:var(--text-secondary);">Buyer GSTIN / VAT ID (Optional):</label>
+                            <input type="text" id="taxBuyerIdInput" placeholder="e.g. 29AABCU9603R1ZM">
+                        </div>
+                        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                            <button type="button" id="taxInvoiceLookupBtn" class="btn btn-primary btn-sm">Fetch Tax Invoice</button>
+                            <button type="button" id="taxIssueFromPosBtn" class="btn btn-secondary btn-sm">⚡ Issue from POS Form</button>
+                        </div>
+                    </div>
+
+                    <div id="taxInvoicePreviewBox" class="invoice-sheet" aria-live="polite">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
             </section>
 
             <!-- ============================================================= -->
@@ -2260,6 +2318,7 @@
                                     <option value="warehouse_dq">/api/v1/warehouse/data-quality (7-Rule Star Schema DQ)</option>
                                     <option value="causal">/api/v1/causal/uplift-report (T-Learner Uplift &amp; DiD)</option>
                                     <option value="survival_xai">/api/v1/survival/kaplan-meier-report (Kaplan-Meier &amp; XAI)</option>
+                                    <option value="tax_invoice">/api/v1/invoices/536365 (Indian GST &amp; VAT Invoice)</option>
                                     <option value="rbac">/api/v1/auth/rbac-matrix (RBAC &amp; Tenant Governance)</option>
                                 </select>
                             </div>
@@ -3571,6 +3630,6 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=7.19"></script>
+    <script src="app.js?v=7.20"></script>
 </body>
 </html>
