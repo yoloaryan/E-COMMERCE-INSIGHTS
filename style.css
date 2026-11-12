@@ -1869,6 +1869,8 @@ body:not(.simple-view-active) .simple-view-banner {
 
 .toast.success { border-left-color: var(--success); }
 .toast.alert { border-left-color: var(--danger); }
+.toast.danger { border-left-color: var(--danger); }
+.toast.warning { border-left-color: var(--warning); }
 .toast.info { border-left-color: var(--primary); }
 
 .toast-icon { font-size: 1.2rem; }

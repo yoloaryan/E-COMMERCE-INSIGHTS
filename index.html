@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=7.5">
+    <link rel="stylesheet" href="style.css?v=7.6">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -133,7 +133,7 @@
                         <span class="status-beacon live"></span>
                         <div>
                             <strong>Engine Online</strong>
-                            <small id="telemetryLatency">Latency: 18ms | v2.4-prod</small>
+                            <small id="telemetryLatency">Latency: 18ms | v3.2-prod</small>
                         </div>
                     </div>
                 </div>
@@ -279,6 +279,9 @@
                     <button class="quick-chip alert" onclick="switchTab('churn')"><span class="chip-icon">⚠️</span> 22 VIP Churn</button>
                     <button class="quick-chip" onclick="switchTab('recommendations')"><span class="chip-icon">🎯</span> Live Basket</button>
                     <button class="quick-chip advanced-module" onclick="switchTab('inventory-mart')"><span class="chip-icon">📦</span> Low Stock Alert</button>
+                    <button class="quick-chip advanced-module" onclick="switchTab('pricing-lab')"><span class="chip-icon">💰</span> Pricing &amp; A/B Lab</button>
+                    <button class="quick-chip advanced-module alert" onclick="switchTab('fraud-radar')"><span class="chip-icon">🚨</span> Fraud Radar</button>
+                    <button class="quick-chip advanced-module" onclick="switchTab('audit-logs')"><span class="chip-icon">🛡️</span> RBAC &amp; Security</button>
                     <button class="quick-chip advanced-module" onclick="switchTab('api-console')"><span class="chip-icon">⚡</span> REST API Tester</button>
                 </div>
 
@@ -1591,10 +1594,13 @@
                             <div class="endpoint-picker">
                                 <span class="method-badge post" id="apiMethodBadge">POST</span>
                                 <select id="apiEndpointSelect" class="form-select-sm" style="flex:1;">
-                                    <option value="churn">/api/v1/predict/churn (Customer Churn Risk)</option>
+                                    <option value="churn">/api/v1/churn/predict (Customer Churn Risk)</option>
                                     <option value="forecast">/api/v1/forecast/sales (Demand Forecaster)</option>
-                                    <option value="recommend">/api/v1/recommend/skus (Item-Item Affinity)</option>
-                                    <option value="segment">/api/v1/segment/classify (RFM Persona Classifier)</option>
+                                    <option value="recommend">/api/v1/recommend/item/22423 (Item-Item Affinity)</option>
+                                    <option value="segment">/api/v1/segment/rfm (RFM Persona Classifier)</option>
+                                    <option value="pricing">/api/v1/pricing/simulate-price-change (Pricing Elasticity)</option>
+                                    <option value="fraud">/api/v1/fraud/score-transaction (Isolation Forest Fraud)</option>
+                                    <option value="rbac">/api/v1/auth/rbac-matrix (RBAC &amp; Tenant Governance)</option>
                                 </select>
                             </div>
                         </div>
@@ -1633,7 +1639,7 @@
                         <div class="api-response-window">
                             <div class="terminal-bar">
                                 <span class="term-dot green"></span>
-                                <span class="term-title" id="apiResponseUrl">http://localhost:8080/api/v1/predict/churn</span>
+                                <span class="term-title" id="apiResponseUrl">http://localhost:8000/api/v1/churn/predict</span>
                                 <button class="copy-btn-sm" id="apiCopyResponseBtn">Copy JSON</button>
                             </div>
                             <pre class="api-json-output" id="apiResponseJson"></pre>
@@ -2415,7 +2421,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <small class="text-muted">Certified Production Telemetry from Nexus Retail AI Engine v2.4-prod</small>
+                <small class="text-muted">Certified Production Telemetry from Nexus Retail AI Engine v3.2-prod</small>
                 <button class="btn btn-secondary btn-sm" id="closeReportModalBtn2">Close Briefing</button>
             </div>
         </div>
@@ -2780,6 +2786,6 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=7.5"></script>
+    <script src="app.js?v=7.6"></script>
 </body>
 </html>

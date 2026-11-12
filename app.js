@@ -96,6 +96,8 @@ function showToast(title, message, type = "info") {
     const iconMap = {
         success: "✓",
         alert: "⚠️",
+        warning: "⚠️",
+        danger: "🚨",
         info: "ℹ️"
     };
 
@@ -590,9 +592,9 @@ function initNavigation() {
                 document.body.style.overflow = "";
             }
             const autoDrop = document.getElementById("searchAutocomplete");
-            if (autoDrop) autoDrop.classList.remove("active");
+            if (autoDrop) autoDrop.classList.remove("show");
             const notifDrop = document.getElementById("notifDropdown");
-            if (notifDrop) notifDrop.classList.remove("open");
+            if (notifDrop) notifDrop.classList.remove("show");
         }
     });
 }
@@ -3580,144 +3582,114 @@ function initSkuAndRestockModals() {
 const API_ENDPOINTS = {
     churn: {
         method: "POST",
-        path: "/api/v1/predict/churn",
-        url: "http://localhost:8080/api/v1/predict/churn",
+        path: "/api/v1/churn/predict",
+        url: "http://localhost:8000/api/v1/churn/predict",
         payload: {
-            customer_id: "14096",
-            recency_days: 84,
-            frequency_orders: 17,
-            monetary_spend: 65164.79,
-            avg_order_value: 3833.22,
-            cancellation_rate: 0.04
+            Recency: 84,
+            HistoricalFrequency: 17,
+            HistoricalMonetary: 65164.79,
+            HistoricalUnits: 850,
+            UniqueSKUs: 42,
+            Tenure: 280,
+            AOV: 3833.22,
+            UnitsPerOrder: 50,
+            PurchaseVelocity: 1.82
         },
         handler: (req) => {
-            const r = req.recency_days || 80;
-            const m = req.monetary_spend || 1000;
+            const r = req.Recency || 80;
+            const m = req.HistoricalMonetary || 1000;
             const prob = Math.min(0.96, Math.max(0.04, 0.15 + (r / 120) * 0.75 - (m > 10000 ? 0.08 : 0)));
-            const isHigh = prob >= 0.70;
+            const isHigh = prob >= 0.65;
             return {
-                status: "success",
-                model_checkpoint: "RandomForestClassifier_balanced_v2.4",
-                inference_timestamp: new Date().toISOString(),
-                data: {
-                    customer_id: req.customer_id,
-                    churn_probability: parseFloat(prob.toFixed(4)),
-                    churn_risk_tier: isHigh ? "HIGH_RISK" : prob >= 0.35 ? "MEDIUM_RISK" : "LOW_RISK",
-                    action_required: isHigh ? "TRIGGER_ACCOUNT_CONCIERGE_OUTREACH" : "STANDARD_LOYALTY_CADENCE",
-                    features_evaluated: {
-                        recency_days: r,
-                        frequency_orders: req.frequency_orders || 1,
-                        monetary_spend_gbp: m
-                    }
-                }
+                churn_probability: parseFloat(prob.toFixed(4)),
+                risk_tier: isHigh ? "High Risk" : prob >= 0.35 ? "Medium Risk" : "Low Risk (Healthy)",
+                is_churn_predicted: prob >= 0.50,
+                recommended_strategy: isHigh ? "VIP EXECUTIVE INTERVENTION" : "LOYALTY PRESERVATION"
             };
         }
     },
     forecast: {
         method: "POST",
         path: "/api/v1/forecast/sales",
-        url: "http://localhost:8080/api/v1/forecast/sales",
+        url: "http://localhost:8000/api/v1/forecast/sales",
         payload: {
-            horizon_days: 14,
-            day_of_week: 4,
-            promo_discount_pct: 15,
-            ad_spend_multiplier: 1.20,
-            seasonal_surge_pct: 25
+            DayOfWeek: 3,
+            DayOfMonth: 15,
+            Month: 11,
+            Quarter: 4,
+            IsWeekend: 0,
+            Lag_1: 42000.0,
+            Lag_2: 39000.0,
+            Lag_7: 45000.0,
+            Lag_14: 41000.0,
+            Lag_30: 38000.0,
+            RollingMean_7: 41500.0,
+            RollingStd_7: 3200.0,
+            RollingMean_14: 40800.0,
+            RollingMean_30: 39500.0,
+            LagOrders_1: 120.0,
+            LagOrders_7: 115.0
         },
-        handler: (req) => {
-            const base = 28450.00;
-            const dayMult = req.day_of_week === 4 ? 1.34 : req.day_of_week === 0 ? 0.65 : 1.05;
-            const promoLift = 1 + (req.promo_discount_pct * 0.0145);
-            const adLift = Math.pow(req.ad_spend_multiplier || 1, 0.42);
-            const season = 1 + ((req.seasonal_surge_pct || 0) / 100);
-            const projectedDaily = base * dayMult * promoLift * adLift * season;
-            return {
-                status: "success",
-                model_checkpoint: "RandomForestRegressor_100Trees_v2.4",
-                inference_timestamp: new Date().toISOString(),
-                data: {
-                    target_day_index: req.day_of_week,
-                    projected_daily_gmv_gbp: parseFloat(projectedDaily.toFixed(2)),
-                    horizon_aggregate_gmv_gbp: parseFloat((projectedDaily * (req.horizon_days || 14) * 0.94).toFixed(2)),
-                    confidence_interval_95: [
-                        parseFloat((projectedDaily * 0.88).toFixed(2)),
-                        parseFloat((projectedDaily * 1.14).toFixed(2))
-                    ],
-                    mape_accuracy_metric: "26.28%"
-                }
-            };
-        }
+        handler: (req) => ({
+            predicted_daily_revenue_gbp: parseFloat((((req.Lag_7 || 42000) * 0.6 + (req.RollingMean_7 || 41500) * 0.4)).toFixed(2)),
+            model_name: "Random Forest Regressor (Offline Estimate)",
+            inputs: req
+        })
     },
     recommend: {
         method: "GET",
-        path: "/api/v1/recommend/skus",
-        url: "http://localhost:8080/api/v1/recommend/skus?base_stock_code=22423&top_n=4",
-        payload: {
-            base_stock_code: "22423",
-            top_n: 4,
-            algorithm: "item_cosine_similarity"
-        },
+        path: "/api/v1/recommend/item/22423",
+        url: "http://localhost:8000/api/v1/recommend/item/22423?top_n=4",
+        payload: { stock_code: "22423", top_n: 4 },
         handler: (req) => {
-            const code = req.base_stock_code || "22423";
+            const code = req.stock_code || "22423";
             const pool = RECS_CATALOG[code] || RECS_CATALOG["22423"];
             return {
-                status: "success",
-                model_checkpoint: "SparseCosineSimilarityMatrix_3182x4333",
-                inference_timestamp: new Date().toISOString(),
-                data: {
-                    base_sku: code,
-                    base_product_name: pool.name,
-                    recommended_skus: pool.items.slice(0, req.top_n || 4).map(item => ({
-                        stock_code: item.sku,
-                        name: item.desc,
-                        unit_price_gbp: item.price,
-                        cosine_similarity_score: item.score
-                    }))
-                }
+                query_stock_code: code,
+                query_description: pool.name,
+                recommendations: pool.items.slice(0, req.top_n || 4)
             };
         }
     },
     segment: {
         method: "POST",
-        path: "/api/v1/segment/classify",
-        url: "http://localhost:8080/api/v1/segment/classify",
-        payload: {
-            recency_days: 2,
-            frequency_orders: 35,
-            monetary_spend: 5391.21
-        },
-        handler: (req) => {
-            const r = req.recency_days || 10;
-            const f = req.frequency_orders || 5;
-            const m = req.monetary_spend || 1000;
-            let persona = "Occasional / Hibernating";
-            let clusterId = 3;
-            if (m > 2500 && f > 15 && r < 30) {
-                persona = "Champions (VIP)";
-                clusterId = 0;
-            } else if (r > 60 && m > 1000) {
-                persona = "At-Risk / Lapsing";
-                clusterId = 1;
-            } else if (r < 30) {
-                persona = "Loyal Customers";
-                clusterId = 2;
-            }
-            return {
-                status: "success",
-                model_checkpoint: "KMeans_K4_StandardScaler_Log1p",
-                inference_timestamp: new Date().toISOString(),
-                data: {
-                    assigned_cluster_id: clusterId,
-                    assigned_persona: persona,
-                    log1p_rfm_vector: [
-                        parseFloat(Math.log1p(r).toFixed(4)),
-                        parseFloat(Math.log1p(f).toFixed(4)),
-                        parseFloat(Math.log1p(m).toFixed(4))
-                    ],
-                    marketing_action: persona.includes("VIP") ? "EXCLUSIVE_PREVIEW_WHITE_GLOVE" : persona.includes("At-Risk") ? "DISCOUNTED_WIN_BACK_SEQUENCE" : "NURTURE_CROSS_SELL"
-                }
-            };
-        }
+        path: "/api/v1/segment/rfm",
+        url: "http://localhost:8000/api/v1/segment/rfm",
+        payload: { Recency: 10, Frequency: 15, Monetary: 6500.0 },
+        handler: (req) => ({
+            cluster_id: (req.Monetary || 0) > 2500 ? 1 : 3,
+            segment_name: (req.Monetary || 0) > 2500 ? "Champions (VIPs)" : "Loyal Customers",
+            inputs: req
+        })
+    },
+    pricing: {
+        method: "POST",
+        path: "/api/v1/pricing/simulate-price-change",
+        url: "http://localhost:8000/api/v1/pricing/simulate-price-change",
+        payload: { category: "Kitchen & Dining", price_change_pct: 12.0, cogs_ratio: 0.47 },
+        handler: (req) => ({
+            status: "success",
+            category: req.category,
+            requested_price_change_pct: req.price_change_pct,
+            mode: "offline_preview"
+        })
+    },
+    fraud: {
+        method: "POST",
+        path: "/api/v1/fraud/score-transaction",
+        url: "http://localhost:8000/api/v1/fraud/score-transaction",
+        payload: { amount_gbp: 18500.0, total_units: 6200, line_items: 1, customer_id: "Guest", hour_of_day: 2, is_guest: true, auto_quarantine: false },
+        handler: (req) => ({
+            status: "success",
+            assessment: { risk_score: (req.amount_gbp || 0) > 4000 ? 86.5 : 18.0, risk_tier: (req.amount_gbp || 0) > 4000 ? "CRITICAL_QUARANTINE" : "LOW_SAFE" }
+        })
+    },
+    rbac: {
+        method: "GET",
+        path: "/api/v1/auth/rbac-matrix",
+        url: "http://localhost:8000/api/v1/auth/rbac-matrix",
+        payload: { info: "GET endpoint; no request body needed." },
+        handler: () => ({ status: "success", roles: ["admin", "lead_ds", "growth", "supply"] })
     }
 };
 
@@ -3727,6 +3699,7 @@ function initApiConsole() {
     const requestJson = document.getElementById("apiRequestJson");
     const responseJson = document.getElementById("apiResponseJson");
     const responseUrl = document.getElementById("apiResponseUrl");
+    const statusPill = document.getElementById("apiStatusPill");
     const latencyPill = document.getElementById("apiLatencyPill");
     const executeBtn = document.getElementById("apiExecuteBtn");
     const resetBtn = document.getElementById("apiResetPayloadBtn");
@@ -3744,10 +3717,10 @@ function initApiConsole() {
         }
         if (responseUrl) responseUrl.textContent = ep.url;
         requestJson.value = JSON.stringify(ep.payload, null, 2);
-        executeEndpoint(key);
+        executeEndpoint(key, true);
     }
 
-    function executeEndpoint(key) {
+    async function executeEndpoint(key, quiet = false) {
         const ep = API_ENDPOINTS[key || endpointSelect.value];
         if (!ep) return;
 
@@ -3759,12 +3732,41 @@ function initApiConsole() {
             return;
         }
 
-        const simLatency = (Math.random() * 5 + 3.2).toFixed(1);
-        if (latencyPill) latencyPill.textContent = `Latency: ${simLatency} ms`;
+        const t0 = performance.now();
+        try {
+            const fetchOpts = {
+                method: ep.method,
+                headers: window.getAuthHeaders({ "Content-Type": "application/json" })
+            };
+            if (ep.method !== "GET") {
+                fetchOpts.body = JSON.stringify(parsedBody);
+            }
+            const res = await fetch(ep.url, fetchOpts);
+            const elapsed = (performance.now() - t0).toFixed(1);
+            const data = await res.json();
+            if (statusPill) {
+                statusPill.textContent = `${res.status} ${res.ok ? "OK" : "ERROR"}`;
+                statusPill.className = `badge-tag ${res.ok ? "green" : "red"}`;
+            }
+            if (latencyPill) latencyPill.textContent = `Latency: ${elapsed} ms`;
+            responseJson.textContent = JSON.stringify(data, null, 2);
+            logAuditEvent("API", `Live ${ep.method} ${ep.path} (${elapsed}ms, HTTP ${res.status})`);
+            if (!quiet) showToast("Live API Executed", `HTTP ${res.status} returned in ${elapsed} ms`, res.ok ? "success" : "alert");
+            return;
+        } catch (err) {
+            // Fallback to local mock telemetry when backend :8000 is offline
+        }
 
+        const simLatency = (performance.now() - t0 + 3.5).toFixed(1);
+        if (statusPill) {
+            statusPill.textContent = "200 OK (LOCAL)";
+            statusPill.className = "badge-tag blue";
+        }
+        if (latencyPill) latencyPill.textContent = `Latency: ${simLatency} ms`;
         const resp = ep.handler(parsedBody);
         responseJson.textContent = JSON.stringify(resp, null, 2);
-        logAuditEvent("API", `Executed test call to ${ep.path} (${simLatency}ms, HTTP 200)`);
+        logAuditEvent("API", `Executed local test call to ${ep.path} (${simLatency}ms)`);
+        if (!quiet) showToast("Endpoint Executed (Local)", `Status 200 OK | Simulated fallback`, "info");
     }
 
     endpointSelect.addEventListener("change", () => {
@@ -3783,8 +3785,7 @@ function initApiConsole() {
 
     if (executeBtn) {
         executeBtn.addEventListener("click", () => {
-            executeEndpoint(endpointSelect.value);
-            showToast("Endpoint Executed", `Status 200 OK | Returned in sub-10ms`, "success");
+            executeEndpoint(endpointSelect.value, false);
         });
     }
 
