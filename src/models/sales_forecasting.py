@@ -111,13 +111,13 @@ class SalesForecastingPipeline:
 
             eval_records.append({
                 "Model": name,
-                "MAE (£)": round(mae, 2),
-                "RMSE (£)": round(rmse, 2),
+                "MAE (₹)": round(mae, 2),
+                "RMSE (₹)": round(rmse, 2),
                 "MAPE (%)": round(mape, 2),
                 "R2_Score": round(r2, 4)
             })
 
-        eval_df = pd.DataFrame(eval_records).sort_values(by="RMSE (£)")
+        eval_df = pd.DataFrame(eval_records).sort_values(by="RMSE (₹)")
 
         # Select Best Model based on Lowest RMSE
         best_row = eval_df.iloc[0]

@@ -82,7 +82,7 @@ When a customer views the **Regency Cakestand 3 Tier (StockCode: 22423)**, what 
     cells.append(code_cell("""
 sample_sku = "22423"
 meta = recommender.product_catalog[sample_sku]
-print(f"Base Product: [{sample_sku}] {meta['Description']} (£{meta['UnitPrice']})")
+print(f"Base Product: [{sample_sku}] {meta['Description']} (₹{meta['UnitPrice']})")
 
 similar_items = recommender.recommend_similar_items(sample_sku, top_n=5)
 pd.DataFrame(similar_items)

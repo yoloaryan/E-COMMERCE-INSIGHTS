@@ -435,15 +435,15 @@ class PricingElasticityEngine:
         if fine_best["price_change_pct"] > 0:
             recommendation = (
                 f"{used_cat} shows pricing upside (ε={used_elasticity:.2f}): testing a +{fine_best['price_change_pct']:.0f}% "
-                f"adjustment improves gross profit by +£{fine_best['gross_profit_gbp'] - baseline_pt['gross_profit_gbp']:,.2f}."
+                f"adjustment improves gross profit by +₹{fine_best['gross_profit_gbp'] - baseline_pt['gross_profit_gbp']:,.2f}."
             )
         elif fine_best["price_change_pct"] < 0:
             recommendation = (
                 f"{used_cat} is demand-elastic (ε={used_elasticity:.2f}): a {fine_best['price_change_pct']:.0f}% "
-                f"strategic discount unlocks volume growth worth +£{fine_best['gross_profit_gbp'] - baseline_pt['gross_profit_gbp']:,.2f} gross margin."
+                f"strategic discount unlocks volume growth worth +₹{fine_best['gross_profit_gbp'] - baseline_pt['gross_profit_gbp']:,.2f} gross margin."
             )
         else:
-            recommendation = f"{used_cat} is currently operating at its margin-optimal equilibrium price (£{base_price:.2f})."
+            recommendation = f"{used_cat} is currently operating at its margin-optimal equilibrium price (₹{base_price:.2f})."
 
         return {
             "status": "success",

@@ -87,7 +87,7 @@ class MessageFormatter:
                     "fields": [
                         {
                             "type": "mrkdwn",
-                            "text": f"*Protected Revenue:*\n£{revenue_target_gbp:,.2f}"
+                            "text": f"*Protected Revenue:*\n₹{revenue_target_gbp:,.2f}"
                         },
                         {
                             "type": "mrkdwn",
@@ -154,7 +154,7 @@ class MessageFormatter:
                     "color": color,
                     "fields": [
                         {"name": "Target Audience", "value": f"{audience_segment} ({audience_size:,} users)", "inline": True},
-                        {"name": "Revenue at Risk", "value": f"£{revenue_target_gbp:,.2f}", "inline": True},
+                        {"name": "Revenue at Risk", "value": f"₹{revenue_target_gbp:,.2f}", "inline": True},
                         {"name": "Voucher Code", "value": f"`{voucher_code}` ({discount_pct}% OFF)", "inline": True}
                     ],
                     "footer": {
@@ -517,7 +517,7 @@ class WatchdogEvaluator:
                 revenue_target_gbp=total_spend_gbp,
                 discount_pct=20,
                 channels=["slack", "email"],
-                custom_message=f"CRITICAL: Customer #{customer_id} reached {(churn_prob*100):.1f}% churn probability with £{total_spend_gbp:,.2f} historical spend."
+                custom_message=f"CRITICAL: Customer #{customer_id} reached {(churn_prob*100):.1f}% churn probability with ₹{total_spend_gbp:,.2f} historical spend."
             )
             return {
                 "triggered": True,

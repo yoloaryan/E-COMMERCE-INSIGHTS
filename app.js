@@ -297,8 +297,8 @@ function initOmniSearch() {
     if (!searchInput) return;
 
     const SUGGESTIONS = [
-        { icon: "⚠️", title: "Customer #14096", sub: "At-Risk VIP (£65,164 Spend | 81.2% Churn Risk)", badge: "VIP Alert", tab: "churn", val: "14096" },
-        { icon: "👥", title: "Customer #17850", sub: "Champion Persona (£5,391 Spend | 35 Orders)", badge: "Champion", tab: "segmentation", val: "17850" },
+        { icon: "⚠️", title: "Customer #14096", sub: "At-Risk VIP (₹65,164 Spend | 81.2% Churn Risk)", badge: "VIP Alert", tab: "churn", val: "14096" },
+        { icon: "👥", title: "Customer #17850", sub: "Champion Persona (₹5,391 Spend | 35 Orders)", badge: "Champion", tab: "segmentation", val: "17850" },
         { icon: "📦", title: "SKU 22423 - Regency Cakestand", sub: "Inventory: 420 units (11d left | Critical)", badge: "Stock Alert", tab: "inventory-mart", val: "22423" },
         { icon: "🎯", title: "SKU 85123A - White Heart T-Light", sub: "Cross-Sell Catalog Affinity Leader", badge: "Cross-Sell", tab: "recommendations", val: "85123A" },
         { icon: "📈", title: "Demand Forecasting Simulator", sub: "Interactive sensitivity sliders for promo & ad spend", badge: "ML Forecaster", tab: "forecasting", val: "" },
@@ -676,31 +676,31 @@ let countryChartInstance = null;
 
 const DATE_RANGE_DATA = {
     all: {
-        rev: "£10,279,169.87", orders: "19,776", aov: "£519.78", cancel: "1.62%", units: "5,577,275",
+        rev: "₹1,02,79,169.87", orders: "19,776", aov: "₹519.78", cancel: "1.62%", units: "5,577,275",
         growth: "↑ +14.2%", status: "Viewing: Full 374-Day Transaction History",
         labels: ["2010-12", "2011-01", "2011-02", "2011-03", "2011-04", "2011-05", "2011-06", "2011-07", "2011-08", "2011-09", "2011-10", "2011-11", "2011-12"],
         sales: [823746, 691438, 523631, 752941, 562142, 757820, 755914, 737883, 756468, 1059567, 1154979, 1509496, 513144]
     },
     q1: {
-        rev: "£1,968,010.00", orders: "3,820", aov: "£515.18", cancel: "1.54%", units: "1,085,210",
+        rev: "₹19,68,010.00", orders: "3,820", aov: "₹515.18", cancel: "1.54%", units: "1,085,210",
         growth: "↑ +8.4%", status: "Viewing: Q1 2011 (January to March)",
         labels: ["2011-01", "2011-02", "2011-03"],
         sales: [691438, 523631, 752941]
     },
     q2: {
-        rev: "£2,075,876.00", orders: "4,110", aov: "£505.08", cancel: "1.68%", units: "1,142,300",
+        rev: "₹20,75,876.00", orders: "4,110", aov: "₹505.08", cancel: "1.68%", units: "1,142,300",
         growth: "↑ +5.5%", status: "Viewing: Q2 2011 (April to June)",
         labels: ["2011-04", "2011-05", "2011-06"],
         sales: [562142, 757820, 755914]
     },
     q3: {
-        rev: "£2,553,918.00", orders: "4,950", aov: "£515.94", cancel: "1.49%", units: "1,390,450",
+        rev: "₹25,53,918.00", orders: "4,950", aov: "₹515.94", cancel: "1.49%", units: "1,390,450",
         growth: "↑ +23.0%", status: "Viewing: Q3 2011 (July to September)",
         labels: ["2011-07", "2011-08", "2011-09"],
         sales: [737883, 756468, 1059567]
     },
     q4: {
-        rev: "£3,177,619.00", orders: "5,840", aov: "£544.11", cancel: "1.74%", units: "1,754,310",
+        rev: "₹31,77,619.00", orders: "5,840", aov: "₹544.11", cancel: "1.74%", units: "1,754,310",
         growth: "↑ +38.6%", status: "Viewing: Q4 Holiday Peak (October to December)",
         labels: ["2011-10", "2011-11", "2011-12"],
         sales: [1154979, 1509496, 513144]
@@ -716,7 +716,7 @@ function initOverviewTab() {
             data: {
                 labels: DATE_RANGE_DATA.all.labels,
                 datasets: [{
-                    label: "Gross Revenue (£)",
+                    label: "Gross Revenue (₹)",
                     data: DATE_RANGE_DATA.all.sales,
                     borderColor: "#2563EB",
                     backgroundColor: "rgba(37, 99, 235, 0.08)",
@@ -732,10 +732,10 @@ function initOverviewTab() {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false },
-                    tooltip: { callbacks: { label: (ctx) => `Revenue: £${ctx.raw.toLocaleString()}` } }
+                    tooltip: { callbacks: { label: (ctx) => `Revenue: ₹${ctx.raw.toLocaleString("en-IN")}` } }
                 },
                 scales: {
-                    y: { ticks: { callback: (val) => `£${(val / 1000).toFixed(0)}k` }, grid: { color: "rgba(255,255,255,0.06)" } },
+                    y: { ticks: { callback: (val) => `₹${(val / 1000).toFixed(0)}k` }, grid: { color: "rgba(255,255,255,0.06)" } },
                     x: { grid: { display: false } }
                 }
             }
@@ -807,16 +807,16 @@ function initOverviewTab() {
 
     // 3. Top Products Table
     const topProducts = [
-        { code: "22423", desc: "Regency Cakestand 3 Tier", qty: "13,874", orders: "1,988", rev: "£174,484.74", share: "1.70%" },
-        { code: "23843", desc: "Paper Craft , Little Birdie", qty: "80,995", orders: "1", rev: "£168,469.60", share: "1.64%" },
-        { code: "85123A", desc: "White Hanging Heart T-Light Holder", qty: "37,842", orders: "2,256", rev: "£106,292.77", share: "1.03%" },
-        { code: "47566", desc: "Party Bunting", qty: "18,295", orders: "1,685", rev: "£99,504.33", share: "0.97%" },
-        { code: "85099B", desc: "Jumbo Bag Red Retrospot", qty: "48,375", orders: "2,089", rev: "£94,340.05", share: "0.92%" },
-        { code: "84879", desc: "Assorted Colour Bird Ornament", qty: "36,461", orders: "1,472", rev: "£59,094.93", share: "0.58%" },
-        { code: "23084", desc: "Rabbit Night Light", qty: "30,788", orders: "1,034", rev: "£51,346.20", share: "0.50%" },
-        { code: "22086", desc: "Paper Chain Kit 50'S Christmas", qty: "19,302", orders: "1,189", rev: "£44,617.85", share: "0.43%" },
-        { code: "21623", desc: "Vintage Union Jack Bunting", qty: "5,321", orders: "647", rev: "£37,398.24", share: "0.36%" },
-        { code: "22910", desc: "Paper Chain Kit Vintage Christmas", qty: "8,944", orders: "812", rev: "£36,742.60", share: "0.36%" }
+        { code: "22423", desc: "Regency Cakestand 3 Tier", qty: "13,874", orders: "1,988", rev: "₹1,74,484.74", share: "1.70%" },
+        { code: "23843", desc: "Paper Craft , Little Birdie", qty: "80,995", orders: "1", rev: "₹1,68,469.60", share: "1.64%" },
+        { code: "85123A", desc: "White Hanging Heart T-Light Holder", qty: "37,842", orders: "2,256", rev: "₹1,06,292.77", share: "1.03%" },
+        { code: "47566", desc: "Party Bunting", qty: "18,295", orders: "1,685", rev: "₹99,504.33", share: "0.97%" },
+        { code: "85099B", desc: "Jumbo Bag Red Retrospot", qty: "48,375", orders: "2,089", rev: "₹94,340.05", share: "0.92%" },
+        { code: "84879", desc: "Assorted Colour Bird Ornament", qty: "36,461", orders: "1,472", rev: "₹59,094.93", share: "0.58%" },
+        { code: "23084", desc: "Rabbit Night Light", qty: "30,788", orders: "1,034", rev: "₹51,346.20", share: "0.50%" },
+        { code: "22086", desc: "Paper Chain Kit 50'S Christmas", qty: "19,302", orders: "1,189", rev: "₹44,617.85", share: "0.43%" },
+        { code: "21623", desc: "Vintage Union Jack Bunting", qty: "5,321", orders: "647", rev: "₹37,398.24", share: "0.36%" },
+        { code: "22910", desc: "Paper Chain Kit Vintage Christmas", qty: "8,944", orders: "812", rev: "₹36,742.60", share: "0.36%" }
     ];
 
     const tbody = document.querySelector("#topProductsTable tbody");
@@ -910,7 +910,7 @@ async function refreshFinancialWaterfall() {
     }
 
     const s = rep.summary || {};
-    const fmtGbp = (v) => `£${Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+    const fmtGbp = (v) => `₹${Number(v || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
     const gEl = document.getElementById("finGrossGmvVal");
     const rEl = document.getElementById("finReturnLeakVal");
     const nEl = document.getElementById("finNetMarginVal");
@@ -931,7 +931,7 @@ async function refreshFinancialWaterfall() {
         skuBody.innerHTML = (rep.high_return_skus || []).map(item => `
             <tr>
                 <td><code>${item.stock_code}</code></td>
-                <td class="text-red"><strong>-£${Number(item.refund_leakage_gbp).toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong></td>
+                <td class="text-red"><strong>-₹${Number(item.refund_leakage_gbp).toLocaleString("en-IN", { maximumFractionDigits: 0 })}</strong></td>
                 <td><span class="badge-tag red">${item.return_rate_pct}%</span></td>
             </tr>
         `).join("");
@@ -953,7 +953,7 @@ async function refreshFinancialWaterfall() {
             data: {
                 labels: rep.waterfall.map(w => w.step),
                 datasets: [{
-                    label: "Amount (£)",
+                    label: "Amount (₹)",
                     data: rep.waterfall.map(w => w.amount_gbp),
                     backgroundColor: colors,
                     borderRadius: 6
@@ -964,11 +964,11 @@ async function refreshFinancialWaterfall() {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false },
-                    tooltip: { callbacks: { label: (ctx) => `£${Number(ctx.raw).toLocaleString(undefined, { maximumFractionDigits: 0 })}` } }
+                    tooltip: { callbacks: { label: (ctx) => `₹${Number(ctx.raw).toLocaleString("en-IN", { maximumFractionDigits: 0 })}` } }
                 },
                 scales: {
                     x: { ticks: { color: textCol, font: { size: 11 } }, grid: { display: false } },
-                    y: { ticks: { color: textCol, callback: (v) => `£${(v / 1000).toFixed(0)}k` }, grid: { color: gridCol } }
+                    y: { ticks: { color: textCol, callback: (v) => `₹${(v / 1000).toFixed(0)}k` }, grid: { color: gridCol } }
                 }
             }
         });
@@ -1043,7 +1043,7 @@ function initSegmentationTab() {
                 labels: ["Champions (VIP)", "At-Risk / Lapsing", "Loyal Customers", "Occasional"],
                 datasets: [
                     {
-                        label: "Average Monetary Spend (£)",
+                        label: "Average Monetary Spend (₹)",
                         data: [7993.48, 1784.53, 530.01, 346.63],
                         backgroundColor: "#2563EB",
                         borderRadius: 6,
@@ -1063,7 +1063,7 @@ function initSegmentationTab() {
                 maintainAspectRatio: false,
                 plugins: { legend: { position: "top", labels: { boxWidth: 10, color: "#94A3B8" } } },
                 scales: {
-                    y: { type: "linear", position: "left", title: { display: true, text: "Spend (£)", color: "#94A3B8" }, grid: { color: "rgba(255,255,255,0.06)" } },
+                    y: { type: "linear", position: "left", title: { display: true, text: "Spend (₹)", color: "#94A3B8" }, grid: { color: "rgba(255,255,255,0.06)" } },
                     y1: { type: "linear", position: "right", title: { display: true, text: "Orders", color: "#94A3B8" }, grid: { drawOnChartArea: false } },
                     x: { grid: { display: false } }
                 }
@@ -1099,8 +1099,8 @@ function initSegmentationTab() {
             <div class="result-grid">
                 <div class="result-stat"><strong>Recency (Last Order)</strong><span>${found.recency} days ago</span></div>
                 <div class="result-stat"><strong>Lifetime Invoices</strong><span>${found.orders} orders</span></div>
-                <div class="result-stat"><strong>Total Spend</strong><span>£${found.spend.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
-                <div class="result-stat"><strong>Avg Basket (AOV)</strong><span>£${found.aov.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+                <div class="result-stat"><strong>Total Spend</strong><span>₹${found.spend.toLocaleString("en-IN", {minimumFractionDigits: 2})}</span></div>
+                <div class="result-stat"><strong>Avg Basket (AOV)</strong><span>₹${found.aov.toLocaleString("en-IN", {minimumFractionDigits: 2})}</span></div>
             </div>
         `;
     }
@@ -1221,7 +1221,7 @@ function renderCohortHeatmapMatrix(report) {
         return `
             <tr>
                 <th scope="row">${row.cohort_month}</th>
-                <td class="cohort-size-cell">${Number(row.cohort_size).toLocaleString()}</td>
+                <td class="cohort-size-cell">${Number(row.cohort_size).toLocaleString("en-IN")}</td>
                 ${cells}
             </tr>
         `;
@@ -1300,7 +1300,7 @@ function renderSegmentMigrationTable(mig) {
             return `
                 <td class="migration-cell ${cls}">
                     <strong>${cell.pct}%</strong>
-                    <small>${Number(cell.count).toLocaleString()} accts</small>
+                    <small>${Number(cell.count).toLocaleString("en-IN")} accts</small>
                 </td>
             `;
         }).join("");
@@ -1319,8 +1319,8 @@ function renderSegmentMigrationTable(mig) {
     const winEl = document.getElementById("migWinbackVal");
     if (stayEl) stayEl.textContent = `${s.champion_stay_rate_pct ?? "--"}%`;
     if (stayBadge) stayBadge.textContent = `Champion Stay: ${s.champion_stay_rate_pct ?? "--"}%`;
-    if (slipEl) slipEl.textContent = `${Number(s.champions_slipped_count || 0).toLocaleString()} accts`;
-    if (winEl) winEl.textContent = `${Number(s.winback_upgrades_count || 0).toLocaleString()} upgrades`;
+    if (slipEl) slipEl.textContent = `${Number(s.champions_slipped_count || 0).toLocaleString("en-IN")} accts`;
+    if (winEl) winEl.textContent = `${Number(s.winback_upgrades_count || 0).toLocaleString("en-IN")} upgrades`;
 }
 
 async function refreshRetentionLiftSimulator() {
@@ -1366,8 +1366,8 @@ async function refreshRetentionLiftSimulator() {
     const recEl = document.getElementById("migRecoveredAccountsVal");
     const gainEl = document.getElementById("migProjectedGainVal");
     if (m1El) m1El.textContent = `${o.projected_month1_retention_pct ?? "--"}%`;
-    if (recEl) recEl.textContent = `${Number(o.recovered_slipping_accounts || 0).toLocaleString()} VIPs`;
-    if (gainEl) gainEl.textContent = `£${Number(o.total_annual_revenue_lift_gbp || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+    if (recEl) recEl.textContent = `${Number(o.recovered_slipping_accounts || 0).toLocaleString("en-IN")} VIPs`;
+    if (gainEl) gainEl.textContent = `₹${Number(o.total_annual_revenue_lift_gbp || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 }
 
 async function loadCohortHeatmapFromApi() {
@@ -1485,7 +1485,7 @@ function initForecastingTab() {
                 labels: testDays,
                 datasets: [
                     {
-                        label: "Ground Truth Actual Sales (£)",
+                        label: "Ground Truth Actual Sales (₹)",
                         data: actuals,
                         borderColor: "#38BDF8",
                         borderWidth: 2.5,
@@ -1494,7 +1494,7 @@ function initForecastingTab() {
                         tension: 0.2
                     },
                     {
-                        label: "Random Forest Regressor (MAE £12.4k - Winner)",
+                        label: "Random Forest Regressor (MAE ₹12.4k - Winner)",
                         data: rfPreds,
                         borderColor: "#10B981",
                         borderWidth: 2.5,
@@ -1504,7 +1504,7 @@ function initForecastingTab() {
                         tension: 0.2
                     },
                     {
-                        label: "XGBoost Regressor (MAE £14.8k)",
+                        label: "XGBoost Regressor (MAE ₹14.8k)",
                         data: xgbPreds,
                         borderColor: "#F59E0B",
                         borderWidth: 2,
@@ -1520,7 +1520,7 @@ function initForecastingTab() {
                 maintainAspectRatio: false,
                 plugins: { legend: { position: "top", labels: { boxWidth: 12, color: "#94A3B8" } } },
                 scales: {
-                    y: { ticks: { callback: (v) => `£${(v / 1000).toFixed(0)}k` }, grid: { color: "rgba(255,255,255,0.06)" } },
+                    y: { ticks: { callback: (v) => `₹${(v / 1000).toFixed(0)}k` }, grid: { color: "rgba(255,255,255,0.06)" } },
                     x: { grid: { display: false } }
                 }
             }
@@ -1573,7 +1573,7 @@ function initWhatIfSimulator() {
         document.getElementById("lblAdSpend").textContent = `+${ad}%`;
         document.getElementById("lblSeasonSurge").textContent = `+${surge}%`;
 
-        // Baseline Thursday average revenue: £48,200
+        // Baseline Thursday average revenue: ₹48,200
         const baseRev = 48200 * dayWeight;
         const volumeMultiplier = (1 + (disc * 0.0145)) * (1 + (ad * 0.006)) * (1 + (surge * 0.01));
         const effectivePriceRatio = 1 - (disc * 0.01);
@@ -1588,8 +1588,8 @@ function initWhatIfSimulator() {
             <div class="outcome-grid">
                 <div class="outcome-box">
                     <strong>Projected Daily Revenue</strong>
-                    <div class="outcome-val" style="color:var(--primary);">£${Math.round(projectedRev).toLocaleString()}</div>
-                    <small>${incrementalRev >= 0 ? '↑ +' : '↓ -'}£${Math.abs(Math.round(incrementalRev)).toLocaleString()} vs baseline</small>
+                    <div class="outcome-val" style="color:var(--primary);">₹${Math.round(projectedRev).toLocaleString("en-IN")}</div>
+                    <small>${incrementalRev >= 0 ? '↑ +' : '↓ -'}₹${Math.abs(Math.round(incrementalRev)).toLocaleString("en-IN")} vs baseline</small>
                 </div>
                 <div class="outcome-box">
                     <strong>Projected Order Volume</strong>
@@ -1598,7 +1598,7 @@ function initWhatIfSimulator() {
                 </div>
                 <div class="outcome-box">
                     <strong>Estimated Gross Margin</strong>
-                    <div class="outcome-val" style="color:var(--success);">£${Math.round(projectedMargin).toLocaleString()}</div>
+                    <div class="outcome-val" style="color:var(--success);">₹${Math.round(projectedMargin).toLocaleString("en-IN")}</div>
                     <small>${(marginRate * 100).toFixed(1)}% blended margin rate</small>
                 </div>
                 <div class="outcome-box">
@@ -1666,7 +1666,7 @@ function initChurnTab() {
             <div class="result-grid">
                 <div class="result-stat"><strong>Days Inactive (Recency)</strong><span>${found.recency} days</span></div>
                 <div class="result-stat"><strong>Lifetime Order Count</strong><span>${found.orders} orders</span></div>
-                <div class="result-stat"><strong>Historical Spend</strong><span>£${found.spend.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+                <div class="result-stat"><strong>Historical Spend</strong><span>₹${found.spend.toLocaleString("en-IN", {minimumFractionDigits: 2})}</span></div>
                 <div class="result-stat"><strong>Model Confidence</strong><span>${(prob * 100).toFixed(1)}%</span></div>
             </div>
             <div style="margin-top:1rem; padding:0.75rem; background:var(--bg-surface-alt); border-radius:6px; border-left:3px solid ${color};">
@@ -1694,7 +1694,7 @@ function initChurnTab() {
         vipTbody.innerHTML = vipsAtRisk.map(v => `
             <tr>
                 <td><strong>#${v.id}</strong></td>
-                <td><strong>£${v.spend.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong></td>
+                <td><strong>₹${v.spend.toLocaleString("en-IN", {minimumFractionDigits: 2})}</strong></td>
                 <td>${v.orders}</td>
                 <td>${v.recency} days</td>
                 <td><span class="badge-tag" style="background:#EF444422; color:#EF4444;">${(v.churnProb * 100).toFixed(1)}%</span></td>
@@ -1897,7 +1897,7 @@ async function renderBTYDDiagnostic(cid) {
             </div>
             <div class="btyd-stat-box">
                 <strong>12-Month Expected CLV (NPV)</strong>
-                <div class="stat-val" style="color:var(--primary);">£${Number(data.clv_12m_gbp).toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                <div class="stat-val" style="color:var(--primary);">₹${Number(data.clv_12m_gbp).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                 <small style="font-size:0.72rem; color:var(--text-muted);">1-Year Net Present Value</small>
             </div>
             <div class="btyd-stat-box">
@@ -1907,7 +1907,7 @@ async function renderBTYDDiagnostic(cid) {
             </div>
             <div class="btyd-stat-box">
                 <strong>Expected Order Value</strong>
-                <div class="stat-val" style="color:var(--success);">£${Number(data.expected_avg_spend_gbp).toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                <div class="stat-val" style="color:var(--success);">₹${Number(data.expected_avg_spend_gbp).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                 <small style="font-size:0.72rem; color:var(--text-muted);">Gamma-Gamma latent spend</small>
             </div>
         </div>
@@ -1957,7 +1957,7 @@ function renderBtydTrajectoryChart(data) {
             labels: months,
             datasets: [
                 {
-                    label: "Cumulative Forward CLV Cash Flow (£)",
+                    label: "Cumulative Forward CLV Cash Flow (₹)",
                     data: cumulativeRev,
                     borderColor: "#2563EB",
                     backgroundColor: "rgba(37, 99, 235, 0.12)",
@@ -1991,7 +1991,7 @@ function renderBtydTrajectoryChart(data) {
                 tooltip: {
                     callbacks: {
                         label: (ctx) => ctx.datasetIndex === 0 
-                            ? `Cumulative Revenue: £${ctx.raw.toLocaleString()}`
+                            ? `Cumulative Revenue: ₹${ctx.raw.toLocaleString("en-IN")}`
                             : `Cumulative Orders: ${ctx.raw} orders`
                     }
                 }
@@ -2000,9 +2000,9 @@ function renderBtydTrajectoryChart(data) {
                 y: {
                     type: "linear",
                     position: "left",
-                    title: { display: true, text: "Cumulative Spend (£)", color: "#94A3B8", font: { size: 11 } },
+                    title: { display: true, text: "Cumulative Spend (₹)", color: "#94A3B8", font: { size: 11 } },
                     grid: { color: "rgba(255, 255, 255, 0.06)" },
-                    ticks: { callback: (v) => `£${Number(v).toLocaleString()}` }
+                    ticks: { callback: (v) => `₹${Number(v).toLocaleString("en-IN")}` }
                 },
                 y1: {
                     type: "linear",
@@ -2069,18 +2069,18 @@ function initCLVCalculator() {
             <div class="outcome-grid">
                 <div class="outcome-box">
                     <strong>Predicted 3-Year CLV</strong>
-                    <div class="outcome-val" style="color:var(--primary);">£${Math.round(clv3Year).toLocaleString()}</div>
-                    <small>Based on £${Math.round(annualGrossProfit).toLocaleString()} annual margin</small>
+                    <div class="outcome-val" style="color:var(--primary);">₹${Math.round(clv3Year).toLocaleString("en-IN")}</div>
+                    <small>Based on ₹${Math.round(annualGrossProfit).toLocaleString("en-IN")} annual margin</small>
                 </div>
                 <div class="outcome-box">
                     <strong>Capital at Churn Risk</strong>
-                    <div class="outcome-val" style="color:var(--danger);">£${Math.round(spend).toLocaleString()}</div>
+                    <div class="outcome-val" style="color:var(--danger);">₹${Math.round(spend).toLocaleString("en-IN")}</div>
                     <small>Direct gross merchandise exposure</small>
                 </div>
                 <div class="outcome-box">
                     <strong>Expected Retention ROI</strong>
                     <div class="outcome-val" style="color:var(--success);">${roiMultiplier}x Return</div>
-                    <small>£${Math.round(savedValue).toLocaleString()} saved / £${cost} spend</small>
+                    <small>₹${Math.round(savedValue).toLocaleString("en-IN")} saved / ₹${cost} spend</small>
                 </div>
                 <div class="outcome-box">
                     <strong>Intervention Viability</strong>
@@ -2230,7 +2230,7 @@ function initRecommenderTab() {
                     <h4 class="rec-title">${item.desc}</h4>
                 </div>
                 <div>
-                    <div class="rec-price">£${item.price.toFixed(2)}</div>
+                    <div class="rec-price">₹${item.price.toFixed(2)}</div>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.4rem;">
                         <span class="rec-badge">${item.badge}</span>
                         <button class="btn btn-outline btn-xs add-cart-btn" data-sku="${item.sku}" data-desc="${item.desc}" data-price="${item.price}">+ Add</button>
@@ -2316,8 +2316,8 @@ async function refreshMarketBasketRules() {
     const avgBEl = document.getElementById("basketAvgBundleVal");
     if (topEl) topEl.textContent = `${Number(s.top_lift || 0).toFixed(2)}x`;
     if (confEl) confEl.textContent = `${Number(s.avg_confidence_pct || 0).toFixed(1)}%`;
-    if (cntEl) cntEl.textContent = `${Number(s.total_matching_rules || 0).toLocaleString()} rules`;
-    if (avgBEl) avgBEl.textContent = `£${Number(s.avg_bundle_offer_gbp || 0).toFixed(2)}`;
+    if (cntEl) cntEl.textContent = `${Number(s.total_matching_rules || 0).toLocaleString("en-IN")} rules`;
+    if (avgBEl) avgBEl.textContent = `₹${Number(s.avg_bundle_offer_gbp || 0).toFixed(2)}`;
 
     if (!BASKET_RULES_CACHE.length) {
         tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);">No association rules exceed Lift >= ${minLift.toFixed(1)}x. Lower the threshold slider above.</td></tr>`;
@@ -2334,7 +2334,7 @@ async function refreshMarketBasketRules() {
                 <td><strong>${r.confidence_pct}%</strong></td>
                 <td><span class="badge-tag" style="background:${liftColor}22;color:${liftColor};font-weight:700;">${r.lift}x</span></td>
                 <td>${r.conviction}</td>
-                <td><strong class="text-green">£${Number(r.bundle_offer_gbp).toFixed(2)}</strong></td>
+                <td><strong class="text-green">₹${Number(r.bundle_offer_gbp).toFixed(2)}</strong></td>
                 <td>
                     <button type="button" class="btn btn-outline btn-xs" onclick="window.addAssociationBundle('${r.antecedent_code}', '${r.consequent_code}')">+ Add Pair</button>
                 </td>
@@ -2403,7 +2403,7 @@ function renderCart() {
     if (APP_STATE.cart.length === 0) {
         list.innerHTML = `<p class="text-muted" style="font-size:0.85rem; padding:1rem 0;">Your simulated basket is empty. Click "+ Add to Cart" on any item above.</p>`;
         if (countSpan) countSpan.textContent = "0";
-        if (totalSpan) totalSpan.textContent = "£0.00";
+        if (totalSpan) totalSpan.textContent = "₹0.00";
         return;
     }
 
@@ -2418,10 +2418,10 @@ function renderCart() {
             <div class="cart-item-row">
                 <div class="cart-item-info">
                     <strong>${item.desc}</strong>
-                    <small>SKU: ${item.sku} | Qty: ${item.qty} × £${item.price.toFixed(2)}</small>
+                    <small>SKU: ${item.sku} | Qty: ${item.qty} × ₹${item.price.toFixed(2)}</small>
                 </div>
                 <div class="cart-item-actions">
-                    <span class="cart-item-price">£${itemTotal.toFixed(2)}</span>
+                    <span class="cart-item-price">₹${itemTotal.toFixed(2)}</span>
                     <button class="cart-item-remove" onclick="removeFromCart('${item.sku}')">✕</button>
                 </div>
             </div>
@@ -2429,7 +2429,7 @@ function renderCart() {
     }).join("");
 
     if (countSpan) countSpan.textContent = totalItems;
-    if (totalSpan) totalSpan.textContent = `£${subtotal.toFixed(2)}`;
+    if (totalSpan) totalSpan.textContent = `₹${subtotal.toFixed(2)}`;
 }
 
 function recalculateBasketCrossSell() {
@@ -2465,7 +2465,7 @@ function recalculateBasketCrossSell() {
         <div class="basket-rec-card">
             <div>
                 <strong style="font-size:0.85rem; display:block;">${rec.desc}</strong>
-                <small style="color:var(--text-muted);">SKU: ${rec.sku} | £${rec.price.toFixed(2)}</small>
+                <small style="color:var(--text-muted);">SKU: ${rec.sku} | ₹${rec.price.toFixed(2)}</small>
             </div>
             <button class="btn btn-outline btn-xs" onclick="addToCart('${rec.sku}', '${rec.desc.replace(/'/g, "\\'")}', ${rec.price})">+ Add to Order</button>
         </div>
@@ -2506,8 +2506,8 @@ function initLiveCartSimulator() {
             if (simQty) simQty.value = totalUnits;
             if (simPrice && primaryItem) simPrice.value = (totalAmount / totalUnits).toFixed(2);
 
-            showToast("Basket Dispatched to POS", `Transferred ${totalUnits} units (£${totalAmount.toFixed(2)}) to Live POS Injection Engine`, "success");
-            logAuditEvent("POS", `Dispatched shopping basket order of ${totalUnits} items (£${totalAmount.toFixed(2)}) to POS simulator`);
+            showToast("Basket Dispatched to POS", `Transferred ${totalUnits} units (₹${totalAmount.toFixed(2)}) to Live POS Injection Engine`, "success");
+            logAuditEvent("POS", `Dispatched shopping basket order of ${totalUnits} items (₹${totalAmount.toFixed(2)}) to POS simulator`);
 
             const posForm = document.getElementById("posSimulatorForm");
             if (posForm) {
@@ -2547,9 +2547,9 @@ function renderCustomerDrawerHtml(cust, cid) {
             <div>
                 <div class="drawer-section-title">Account Financial Summary</div>
                 <div class="result-grid">
-                    <div class="result-stat"><strong>Net Lifetime Spend</strong><span>£${Number(cust.spend).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+                    <div class="result-stat"><strong>Net Lifetime Spend</strong><span>₹${Number(cust.spend).toLocaleString("en-IN", {minimumFractionDigits: 2})}</span></div>
                     <div class="result-stat"><strong>Order Count</strong><span>${cust.orders} Invoices</span></div>
-                    <div class="result-stat"><strong>Average Order Value</strong><span>£${Number(cust.aov).toFixed(2)}</span></div>
+                    <div class="result-stat"><strong>Average Order Value</strong><span>₹${Number(cust.aov).toFixed(2)}</span></div>
                     <div class="result-stat"><strong>Days Inactive</strong><span>${cust.recency} days</span></div>
                     ${returnRateLine}
                 </div>
@@ -2776,10 +2776,10 @@ async function refreshPersistenceStatus(checkpoint = false) {
         const diag = await res.json();
         const tbl = diag.tables || {};
         if (modeBadge) modeBadge.textContent = `${diag.engine || "SQLite"} • ${diag.journal_mode || "WAL"}`;
-        totalEl.textContent = Number(diag.total_persisted_records || 0).toLocaleString();
-        if (poEl) poEl.textContent = Number(tbl.purchase_orders || 0).toLocaleString();
-        if (fraudEl) fraudEl.textContent = Number(tbl.fraud_alerts || 0).toLocaleString();
-        if (auditEl) auditEl.textContent = `${Number(tbl.audit_events || 0).toLocaleString()} (${diag.size_kb || 0} KB)`;
+        totalEl.textContent = Number(diag.total_persisted_records || 0).toLocaleString("en-IN");
+        if (poEl) poEl.textContent = Number(tbl.purchase_orders || 0).toLocaleString("en-IN");
+        if (fraudEl) fraudEl.textContent = Number(tbl.fraud_alerts || 0).toLocaleString("en-IN");
+        if (auditEl) auditEl.textContent = `${Number(tbl.audit_events || 0).toLocaleString("en-IN")} (${diag.size_kb || 0} KB)`;
         if (pathEl) pathEl.textContent = `Database Path: ${diag.db_path}`;
         if (checkpoint) {
             showToast("WAL Checkpointed", `Flushed ${diag.total_persisted_records} records cleanly (${diag.size_kb} KB)`, "success");
@@ -3027,8 +3027,8 @@ function renderDriftReport(report) {
         const psiWidthPct = Math.min(100, Math.max(4, (feat.psi_score / 0.50) * 100));
 
         const unit = feat.unit || "";
-        const baseMean = unit === "£" ? `£${feat.baseline_mean.toFixed(2)}` : `${feat.baseline_mean.toFixed(1)} ${unit}`;
-        const currMean = unit === "£" ? `£${feat.current_mean.toFixed(2)}` : `${feat.current_mean.toFixed(1)} ${unit}`;
+        const baseMean = unit === "₹" ? `₹${feat.baseline_mean.toFixed(2)}` : `${feat.baseline_mean.toFixed(1)} ${unit}`;
+        const currMean = unit === "₹" ? `₹${feat.current_mean.toFixed(2)}` : `${feat.current_mean.toFixed(1)} ${unit}`;
         const meanShiftPct = feat.baseline_mean !== 0 ? (((feat.current_mean - feat.baseline_mean) / feat.baseline_mean) * 100).toFixed(1) : "0";
         const shiftSign = Number(meanShiftPct) > 0 ? `+${meanShiftPct}%` : `${meanShiftPct}%`;
 
@@ -3095,8 +3095,8 @@ function generateMockDriftReport(scenario) {
             features: [
                 {
                     feature: "UnitPrice",
-                    label: "Unit Price (£)",
-                    unit: "£",
+                    label: "Unit Price (₹)",
+                    unit: "₹",
                     baseline_mean: 3.12,
                     baseline_std: 4.85,
                     current_mean: 3.14,
@@ -3127,8 +3127,8 @@ function generateMockDriftReport(scenario) {
                 },
                 {
                     feature: "TotalPrice",
-                    label: "Total Order Spend (£)",
-                    unit: "£",
+                    label: "Total Order Spend (₹)",
+                    unit: "₹",
                     baseline_mean: 20.85,
                     baseline_std: 62.30,
                     current_mean: 56.40,
@@ -3157,8 +3157,8 @@ function generateMockDriftReport(scenario) {
             features: [
                 {
                     feature: "UnitPrice",
-                    label: "Unit Price (£)",
-                    unit: "£",
+                    label: "Unit Price (₹)",
+                    unit: "₹",
                     baseline_mean: 3.12,
                     baseline_std: 4.85,
                     current_mean: 5.75,
@@ -3189,8 +3189,8 @@ function generateMockDriftReport(scenario) {
                 },
                 {
                     feature: "TotalPrice",
-                    label: "Total Order Spend (£)",
-                    unit: "£",
+                    label: "Total Order Spend (₹)",
+                    unit: "₹",
                     baseline_mean: 20.85,
                     baseline_std: 62.30,
                     current_mean: 28.95,
@@ -3219,8 +3219,8 @@ function generateMockDriftReport(scenario) {
             features: [
                 {
                     feature: "UnitPrice",
-                    label: "Unit Price (£)",
-                    unit: "£",
+                    label: "Unit Price (₹)",
+                    unit: "₹",
                     baseline_mean: 3.12,
                     baseline_std: 4.85,
                     current_mean: 3.12,
@@ -3251,8 +3251,8 @@ function generateMockDriftReport(scenario) {
                 },
                 {
                     feature: "TotalPrice",
-                    label: "Total Order Spend (£)",
-                    unit: "£",
+                    label: "Total Order Spend (₹)",
+                    unit: "₹",
                     baseline_mean: 20.85,
                     baseline_std: 62.30,
                     current_mean: 9.80,
@@ -3282,8 +3282,8 @@ function generateMockDriftReport(scenario) {
         features: [
             {
                 feature: "UnitPrice",
-                label: "Unit Price (£)",
-                unit: "£",
+                label: "Unit Price (₹)",
+                unit: "₹",
                 baseline_mean: 3.12,
                 baseline_std: 4.85,
                 current_mean: 3.11,
@@ -3314,8 +3314,8 @@ function generateMockDriftReport(scenario) {
             },
             {
                 feature: "TotalPrice",
-                label: "Total Order Spend (£)",
-                unit: "£",
+                label: "Total Order Spend (₹)",
+                unit: "₹",
                 baseline_mean: 20.85,
                 baseline_std: 62.30,
                 current_mean: 20.72,
@@ -3385,9 +3385,9 @@ function initCustomerLedger() {
                 <tr style="cursor:pointer;" onclick="openCustomerDrawer('${c.id}')">
                     <td><strong>#${c.id}</strong></td>
                     <td><span class="badge-tag ${badgeClass}">${c.segment}</span></td>
-                    <td><strong>£${Number(c.spend).toLocaleString(undefined, {minimumFractionDigits: 2})}</strong></td>
+                    <td><strong>₹${Number(c.spend).toLocaleString("en-IN", {minimumFractionDigits: 2})}</strong></td>
                     <td>${c.orders}</td>
-                    <td>£${Number(c.aov).toFixed(2)}</td>
+                    <td>₹${Number(c.aov).toFixed(2)}</td>
                     <td>${c.recency} days ago</td>
                     <td><span class="badge-tag" style="background:${churnColor}22; color:${churnColor};">${(c.churnProb * 100).toFixed(1)}%</span></td>
                     <td>
@@ -3566,11 +3566,11 @@ function renderInventoryLedgerAndPo(rows, pos = []) {
                 <td><code>${item.stock_code}</code></td>
                 <td><strong>${item.description}</strong></td>
                 <td><span class="badge-tag" style="background:${abcColor}22;color:${abcColor};font-weight:700;">${item.abc_xyz}</span></td>
-                <td>£${Number(item.unit_price).toFixed(2)}</td>
-                <td><strong>${Number(item.stock_on_hand).toLocaleString()} units</strong></td>
+                <td>₹${Number(item.unit_price).toFixed(2)}</td>
+                <td><strong>${Number(item.stock_on_hand).toLocaleString("en-IN")} units</strong></td>
                 <td>${item.daily_demand_mean} <small style="color:var(--text-muted);">&plusmn;${item.daily_demand_std}</small></td>
                 <td><span style="color:var(--text-muted);">${item.safety_stock}</span> / <strong>${item.reorder_point}</strong></td>
-                <td><strong class="text-blue">${Number(item.eoq).toLocaleString()}</strong></td>
+                <td><strong class="text-blue">${Number(item.eoq).toLocaleString("en-IN")}</strong></td>
                 <td><strong style="color:${meta.color};">${item.days_remaining}d</strong></td>
                 <td><span class="badge-tag" style="background:${meta.color}22;color:${meta.color};font-weight:700;">${meta.label}</span></td>
                 <td style="white-space:nowrap;">
@@ -3589,9 +3589,9 @@ function renderInventoryLedgerAndPo(rows, pos = []) {
                 <tr>
                     <td><code>${po.po_id}</code></td>
                     <td><strong>${po.stock_code}</strong> <small style="color:var(--text-muted);">${po.description || ""}</small></td>
-                    <td><strong>+${Number(po.order_qty).toLocaleString()}</strong></td>
+                    <td><strong>+${Number(po.order_qty).toLocaleString("en-IN")}</strong></td>
                     <td>${po.lead_time_days}d</td>
-                    <td>£${Number(po.total_cost_gbp).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td>₹${Number(po.total_cost_gbp).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     <td><strong class="text-green">${po.new_days_remaining}d</strong></td>
                     <td><code>${po.issued_by}</code></td>
                     <td><span class="badge-tag green">${po.status}</span></td>
@@ -3680,9 +3680,9 @@ async function refreshInventorySimulator() {
     const eoqEl = document.getElementById("invReadoutEoq");
     const probEl = document.getElementById("invReadoutStockoutProb");
     const abcEl = document.getElementById("invOptAbcBadge");
-    if (ssEl) ssEl.textContent = `${Number(p.safety_stock).toLocaleString()} units`;
-    if (ropEl) ropEl.textContent = `${Number(p.reorder_point).toLocaleString()} units`;
-    if (eoqEl) eoqEl.textContent = `${Number(p.eoq).toLocaleString()} units`;
+    if (ssEl) ssEl.textContent = `${Number(p.safety_stock).toLocaleString("en-IN")} units`;
+    if (ropEl) ropEl.textContent = `${Number(p.reorder_point).toLocaleString("en-IN")} units`;
+    if (eoqEl) eoqEl.textContent = `${Number(p.eoq).toLocaleString("en-IN")} units`;
     if (probEl) {
         probEl.textContent = `${p.stockout_probability_pct}%`;
         probEl.className = `stat-val ${p.stockout_probability_pct >= 25 ? "text-red" : p.stockout_probability_pct >= 12 ? "text-gold" : "text-green"}`;
@@ -3739,8 +3739,8 @@ async function initInventoryMart() {
         if (kTotal) kTotal.textContent = `${k.active_skus_monitored} SKUs`;
         if (kAbc && k.abc_distribution) kAbc.textContent = `A: ${k.abc_distribution.A || 0} • B: ${k.abc_distribution.B || 0} • C: ${k.abc_distribution.C || 0}`;
         if (kCrit) kCrit.textContent = `${k.critical_reorder_skus} SKUs`;
-        if (kOver) kOver.textContent = `£${Number(k.overstock_capital_gbp).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-        if (kSav) kSav.textContent = `£${Number(k.annual_eoq_savings_gbp).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+        if (kOver) kOver.textContent = `₹${Number(k.overstock_capital_gbp).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+        if (kSav) kSav.textContent = `₹${Number(k.annual_eoq_savings_gbp).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
     } else {
         INVENTORY_POLICIES_CACHE = INVENTORY_DATABASE.map(item => computeLocalInventoryPolicy(item, serviceLevel, leadDays, 1.0));
     }
@@ -3815,7 +3815,7 @@ async function initInventoryMart() {
                         showToast("PO Authorization Blocked", data.detail || `HTTP ${res.status}`, "alert");
                     } else {
                         const po = data.purchase_order;
-                        showToast("EOQ Purchase Order Dispatched", `${po.po_id}: +${po.order_qty} units of SKU ${po.stock_code} (£${Number(po.total_cost_gbp).toFixed(2)})`, "success");
+                        showToast("EOQ Purchase Order Dispatched", `${po.po_id}: +${po.order_qty} units of SKU ${po.stock_code} (₹${Number(po.total_cost_gbp).toFixed(2)})`, "success");
                         logAuditEvent("Inventory", `Dispatched ${po.po_id} (+${po.order_qty} units for ${po.stock_code})`);
                         await initInventoryMart();
                     }
@@ -3863,10 +3863,10 @@ function initCampaignStudio() {
     const activeCampBadge = document.getElementById("activeCampCountBadge");
 
     const segmentStats = {
-        "At-Risk VIPs": { size: "22 Accounts", sizeNum: 22, rev: "£191,892.72", revNum: 191892.72 },
-        "All At-Risk": { size: "1,180 Accounts", sizeNum: 1180, rev: "£2,105,745.40", revNum: 2105745.40 },
-        "Champions": { size: "708 Accounts", sizeNum: 708, rev: "£5,659,383.84", revNum: 5659383.84 },
-        "Hibernating": { size: "1,602 Accounts", sizeNum: 1602, rev: "£555,301.26", revNum: 555301.26 }
+        "At-Risk VIPs": { size: "22 Accounts", sizeNum: 22, rev: "₹1,91,892.72", revNum: 191892.72 },
+        "All At-Risk": { size: "1,180 Accounts", sizeNum: 1180, rev: "₹21,05,745.40", revNum: 2105745.40 },
+        "Champions": { size: "708 Accounts", sizeNum: 708, rev: "₹56,59,383.84", revNum: 5659383.84 },
+        "Hibernating": { size: "1,602 Accounts", sizeNum: 1602, rev: "₹5,55,301.26", revNum: 555301.26 }
     };
 
     function generateCode() {
@@ -4098,13 +4098,13 @@ async function refreshCausalUpliftLab() {
 
     CAUSAL_LATEST_REPORT = rep;
     const s = rep.summary || {};
-    const fmt = (v) => `£${Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+    const fmt = (v) => `₹${Number(v || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
     const pEl = document.getElementById("causalPersuadablesVal");
     const mEl = document.getElementById("causalMarginSavedVal");
     const nEl = document.getElementById("causalNetProfitVal");
     const dEl = document.getElementById("causalDidLiftVal");
     const advEl = document.getElementById("causalAdvantageBadge");
-    if (pEl) pEl.textContent = `${Number(s.persuadable_count || 0).toLocaleString()} accts`;
+    if (pEl) pEl.textContent = `${Number(s.persuadable_count || 0).toLocaleString("en-IN")} accts`;
     if (mEl) mEl.textContent = fmt(s.saved_promo_margin_gbp);
     if (nEl) nEl.textContent = fmt(s.causal_net_profit_gbp);
     if (dEl) dEl.textContent = `+${s.did_lift_pct || 0}%`;
@@ -4117,9 +4117,9 @@ async function refreshCausalUpliftLab() {
             return `
                 <tr>
                     <td><span class="badge-tag" style="background:${tone}22;color:${tone};font-weight:700;">${q.quadrant}</span></td>
-                    <td><strong>${Number(q.account_count).toLocaleString()}</strong></td>
+                    <td><strong>${Number(q.account_count).toLocaleString("en-IN")}</strong></td>
                     <td>${q.share_pct}%</td>
-                    <td><strong style="color:${q.avg_cate_gbp >= 0 ? '#10B981' : '#EF4444'};">£${q.avg_cate_gbp.toFixed(2)}</strong></td>
+                    <td><strong style="color:${q.avg_cate_gbp >= 0 ? '#10B981' : '#EF4444'};">₹${q.avg_cate_gbp.toFixed(2)}</strong></td>
                     <td>${q.recommended_policy}</td>
                 </tr>
             `;
@@ -4138,7 +4138,7 @@ async function refreshCausalUpliftLab() {
                 labels: rep.qini_curve.map(pt => pt.label),
                 datasets: [
                     {
-                        label: "Causal T-Learner Targeting (£ Profit)",
+                        label: "Causal T-Learner Targeting (₹ Profit)",
                         data: rep.qini_curve.map(pt => pt.causal_net_profit_gbp),
                         borderColor: "#10B981",
                         backgroundColor: "rgba(16, 185, 129, 0.14)",
@@ -4147,7 +4147,7 @@ async function refreshCausalUpliftLab() {
                         tension: 0.25
                     },
                     {
-                        label: "Random Blanket Discounting (£ Profit)",
+                        label: "Random Blanket Discounting (₹ Profit)",
                         data: rep.qini_curve.map(pt => pt.random_blanket_profit_gbp),
                         borderColor: "#94A3B8",
                         borderWidth: 2,
@@ -4163,7 +4163,7 @@ async function refreshCausalUpliftLab() {
                 plugins: { legend: { labels: { color: textCol, font: { size: 11 } } } },
                 scales: {
                     x: { ticks: { color: textCol }, grid: { color: gridCol } },
-                    y: { ticks: { color: textCol, callback: (v) => `£${Number(v).toLocaleString()}` }, grid: { color: gridCol } }
+                    y: { ticks: { color: textCol, callback: (v) => `₹${Number(v).toLocaleString("en-IN")}` }, grid: { color: gridCol } }
                 }
             }
         });
@@ -4194,8 +4194,8 @@ function initCausalUpliftLab() {
             const audSpan = document.getElementById("campAudienceSize");
             const revSpan = document.getElementById("campRevenueProtected");
             if (audSpan) audSpan.textContent = `${s.persuadable_count || 200} Persuadables`;
-            if (revSpan) revSpan.textContent = `£${Number(s.causal_net_profit_gbp || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            showToast("Causal Cohort Loaded", `Targeted ${s.persuadable_count} Persuadables while saving £${Number(s.saved_promo_margin_gbp || 0).toLocaleString()} from Sure Things`, "success");
+            if (revSpan) revSpan.textContent = `₹${Number(s.causal_net_profit_gbp || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            showToast("Causal Cohort Loaded", `Targeted ${s.persuadable_count} Persuadables while saving ₹${Number(s.saved_promo_margin_gbp || 0).toLocaleString("en-IN")} from Sure Things`, "success");
         });
     }
 }
@@ -4218,7 +4218,7 @@ function handleLiveIncomingOrder(order) {
         const curText = kpiRev.textContent.replace(/[^0-9.]/g, "");
         const curRev = parseFloat(curText) || 10279169.87;
         const newRev = curRev + amount;
-        kpiRev.textContent = "£" + newRev.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        kpiRev.textContent = "₹" + newRev.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         kpiRev.classList.remove("pulse-revenue");
         void kpiRev.offsetWidth;
         kpiRev.classList.add("pulse-revenue");
@@ -4227,13 +4227,13 @@ function handleLiveIncomingOrder(order) {
     const kpiOrders = document.getElementById("kpi-orders");
     if (kpiOrders) {
         const curOrders = parseInt(kpiOrders.textContent.replace(/[^0-9]/g, ""), 10) || 19776;
-        kpiOrders.textContent = (curOrders + 1).toLocaleString("en-GB");
+        kpiOrders.textContent = (curOrders + 1).toLocaleString("en-IN");
     }
 
     const kpiUnits = document.getElementById("kpi-units");
     if (kpiUnits) {
         const curUnits = parseInt(kpiUnits.textContent.replace(/[^0-9]/g, ""), 10) || 5577275;
-        kpiUnits.textContent = (curUnits + units).toLocaleString("en-GB");
+        kpiUnits.textContent = (curUnits + units).toLocaleString("en-IN");
     }
 
     // 2. Reactive Customer Ledger & Churn Probability Update
@@ -4272,7 +4272,7 @@ function handleLiveIncomingOrder(order) {
                         <small style="color:var(--text-muted); font-family:var(--font-mono);">${order.timestamp ? order.timestamp.substring(11, 19) + ' UTC' : 'Live'}</small>
                     </div>
                     <div style="font-size:0.92rem; color:var(--text-primary); margin-top:0.35rem;">
-                        Invoice <code>${invoiceNo}</code>: Customer <strong>#${cid}</strong> purchased <strong>${units} units</strong> for <strong style="color:var(--success);">+£${amount.toFixed(2)}</strong>.
+                        Invoice <code>${invoiceNo}</code>: Customer <strong>#${cid}</strong> purchased <strong>${units} units</strong> for <strong style="color:var(--success);">+₹${amount.toFixed(2)}</strong>.
                     </div>
                 </div>
 
@@ -4287,7 +4287,7 @@ function handleLiveIncomingOrder(order) {
                     </div>
                     <div class="result-stat" style="background:var(--bg-surface-alt); padding:0.75rem; border-radius:6px;">
                         <strong>New Lifetime Spend</strong>
-                        <span>£${cust.spend.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                        <span>₹${cust.spend.toLocaleString("en-IN", {minimumFractionDigits: 2})}</span>
                     </div>
                     <div class="result-stat" style="background:var(--bg-surface-alt); padding:0.75rem; border-radius:6px;">
                         <strong>WebSocket Broadcast</strong>
@@ -4301,14 +4301,14 @@ function handleLiveIncomingOrder(order) {
     // 4. UI Toast notification
     showToast(
         "⚡ Live POS Order Broadcast",
-        `${invoiceNo}: +£${amount.toFixed(2)} (${units} units) for Customer #${cid}`,
+        `${invoiceNo}: +₹${amount.toFixed(2)} (${units} units) for Customer #${cid}`,
         "success"
     );
 
     // 5. Audit Log Entry
     logAuditEvent(
         "POS/LiveStream",
-        `WebSocket Broadcast: Ingested ${invoiceNo} (+£${amount.toFixed(2)}) for #${cid}. Recency ➔ 0d.`
+        `WebSocket Broadcast: Ingested ${invoiceNo} (+₹${amount.toFixed(2)}) for #${cid}. Recency ➔ 0d.`
     );
 
     // 6. Refresh active views if visible
@@ -4403,10 +4403,10 @@ function handleMlopsRetrainingBroadcast(data) {
 function handleDatasetBatchIngestedBroadcast(data) {
     console.log("[Nexus WebSocket] Received dataset batch ingestion broadcast:", data);
     if (window.appendMLOpsTermLog) {
-        window.appendMLOpsTermLog(`[WebSocket Broadcast] Dataset batch ingested: ${data.filename} (+${data.rows_added} rows, +£${Number(data.total_revenue_gbp).toFixed(2)})`);
+        window.appendMLOpsTermLog(`[WebSocket Broadcast] Dataset batch ingested: ${data.filename} (+${data.rows_added} rows, +₹${Number(data.total_revenue_gbp).toFixed(2)})`);
     }
     showToast("Dataset Ingestion Live", `Batch ${data.filename} merged into production data store (+${data.rows_added} transactions)`, "success");
-    logAuditEvent("Data Engineering", `Ingested dataset batch: ${data.filename} (+${data.rows_added} rows, +£${Number(data.total_revenue_gbp).toFixed(2)})`);
+    logAuditEvent("Data Engineering", `Ingested dataset batch: ${data.filename} (+${data.rows_added} rows, +₹${Number(data.total_revenue_gbp).toFixed(2)})`);
 }
 
 function handleCampaignDispatchedBroadcast(data) {
@@ -4423,7 +4423,7 @@ function handleWatchdogAlertBroadcast(data) {
     if (data.rule === "churn_watchdog") {
         showToast(
             "🚨 VIP Churn Watchdog Alert",
-            `Account #${data.customer_id} reached ${(data.churn_prob * 100).toFixed(1)}% churn risk (£${Number(data.spend_gbp).toFixed(2)} spend). Automatic win-back dispatched!`,
+            `Account #${data.customer_id} reached ${(data.churn_prob * 100).toFixed(1)}% churn risk (₹${Number(data.spend_gbp).toFixed(2)} spend). Automatic win-back dispatched!`,
             "warning"
         );
     } else if (data.rule === "drift_watchdog") {
@@ -4616,7 +4616,7 @@ function downloadCSV(filename, rows) {
         rows.map(row => {
             return keys.map(k => {
                 let cell = row[k] === null || row[k] === undefined ? "" : row[k];
-                cell = cell instanceof Date ? cell.toLocaleString() : cell.toString().replace(/"/g, '""');
+                cell = cell instanceof Date ? cell.toLocaleString("en-IN") : cell.toString().replace(/"/g, '""');
                 if (cell.search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
                 return cell;
             }).join(separator);
@@ -4683,7 +4683,7 @@ function renderCohortHeatmap() {
         html += `
             <tr>
                 <td><strong>${row.cohort}</strong></td>
-                <td>${row.size.toLocaleString()}</td>
+                <td>${row.size.toLocaleString("en-IN")}</td>
         `;
 
         for (let m = 0; m <= 11; m++) {
@@ -4695,7 +4695,7 @@ function renderCohortHeatmap() {
                 else if (rate >= 35) intensityClass = "intensity-2";
                 else if (rate >= 20) intensityClass = "intensity-1";
 
-                let cellDisplay = cohortViewMode === "rate" ? `${rate.toFixed(1)}%` : `£${Math.round(row.spend * (rate / 100)).toLocaleString()}`;
+                let cellDisplay = cohortViewMode === "rate" ? `${rate.toFixed(1)}%` : `₹${Math.round(row.spend * (rate / 100)).toLocaleString("en-IN")}`;
 
                 html += `
                     <td class="cohort-cell ${intensityClass}" title="Cohort: ${row.cohort} | Month ${m} | Retention: ${rate.toFixed(1)}% (${Math.round(row.size * (rate / 100))} buyers)">
@@ -4734,7 +4734,7 @@ function initCohortHeatmap() {
             spendBtn.classList.add("active");
             rateBtn.classList.remove("active");
             renderCohortHeatmap();
-            showToast("Heatmap Mode", "Displaying Cohort Cumulative Spend (£)", "info");
+            showToast("Heatmap Mode", "Displaying Cohort Cumulative Spend (₹)", "info");
         });
     }
 
@@ -4787,7 +4787,7 @@ function initCustomSegmentBuilder() {
 
         if (lblRecency) lblRecency.textContent = `≤ ${rVal} Days`;
         if (lblFreq) lblFreq.textContent = `≥ ${fVal} Orders`;
-        if (lblSpend) lblSpend.textContent = `≥ £${mVal.toLocaleString()}`;
+        if (lblSpend) lblSpend.textContent = `≥ ₹${mVal.toLocaleString("en-IN")}`;
 
         matchedCohort = MASTER_CUSTOMERS.filter(c => c.recency <= rVal && c.orders >= fVal && c.spend >= mVal);
 
@@ -4802,17 +4802,17 @@ function initCustomSegmentBuilder() {
             <div class="sim-metric-row">
                 <div class="sim-metric-card">
                     <small>Matched Audience Size</small>
-                    <strong>${matchedCohort.length.toLocaleString()} Accounts</strong>
+                    <strong>${matchedCohort.length.toLocaleString("en-IN")} Accounts</strong>
                     <span class="text-green">${pctCust}% of Customer Base</span>
                 </div>
                 <div class="sim-metric-card highlight">
                     <small>Combined Revenue Yield</small>
-                    <strong style="color:var(--primary);">£${matchedSpend.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong>
+                    <strong style="color:var(--primary);">₹${matchedSpend.toLocaleString("en-IN", {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong>
                     <span class="text-green">${pctRev}% of Total Store GMV</span>
                 </div>
                 <div class="sim-metric-card">
                     <small>Average Order Value</small>
-                    <strong>£${aov}</strong>
+                    <strong>₹${aov}</strong>
                     <span>High Commercial Density</span>
                 </div>
             </div>
@@ -4850,9 +4850,9 @@ function initCustomSegmentBuilder() {
                 const audSize = document.getElementById("campAudienceSize");
                 const revProt = document.getElementById("campRevenueProtected");
                 if (audSize) audSize.textContent = `${matchedCohort.length} Accounts (Custom Filtered)`;
-                if (revProt) revProt.textContent = `£${matchedSpend.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                if (revProt) revProt.textContent = `₹${matchedSpend.toLocaleString("en-IN", {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
                 showToast("Cohort Linked", `Loaded ${matchedCohort.length} accounts into Campaign Studio`, "success");
-                logAuditEvent("Campaign", `Linked custom RFM cohort (${matchedCohort.length} accounts, £${matchedSpend.toFixed(2)}) to Campaign Studio`);
+                logAuditEvent("Campaign", `Linked custom RFM cohort (${matchedCohort.length} accounts, ₹${matchedSpend.toFixed(2)}) to Campaign Studio`);
             });
         }
     }
@@ -4924,7 +4924,7 @@ function initSkuAndRestockModals() {
             await initInventoryMart();
             closeSkuModal();
             showToast("SKU Registered", `Created catalog product [${code}] ${name}`, "success");
-            logAuditEvent("Catalog", `Registered new SKU catalog item: [${code}] ${name} (£${price.toFixed(2)})`);
+            logAuditEvent("Catalog", `Registered new SKU catalog item: [${code}] ${name} (₹${price.toFixed(2)})`);
         });
     }
 
@@ -4956,7 +4956,7 @@ function initSkuAndRestockModals() {
         const newDays = Math.round(newTotal / currentRestockItem.burn);
         const addedDays = Math.round(addQty / currentRestockItem.burn);
 
-        if (restockProjectedStock) restockProjectedStock.textContent = `${newTotal.toLocaleString()} Units`;
+        if (restockProjectedStock) restockProjectedStock.textContent = `${newTotal.toLocaleString("en-IN")} Units`;
         if (restockProjectedDays) restockProjectedDays.textContent = `+${addedDays} Days Coverage (${newDays} Days Total)`;
     }
 
@@ -5508,11 +5508,11 @@ async function initLivePipelineSync() {
         if (resp.ok) {
             const data = await resp.json();
             if (data && data.kpis) {
-                const revFormatted = "£" + Number(data.kpis.total_gross_revenue_gbp).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                const ordersFormatted = Number(data.kpis.total_completed_orders).toLocaleString("en-GB");
-                const aovFormatted = "£" + Number(data.kpis.average_order_value_gbp).toFixed(2);
+                const revFormatted = "₹" + Number(data.kpis.total_gross_revenue_gbp).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const ordersFormatted = Number(data.kpis.total_completed_orders).toLocaleString("en-IN");
+                const aovFormatted = "₹" + Number(data.kpis.average_order_value_gbp).toFixed(2);
                 const cancelFormatted = Number(data.kpis.cancellation_rate_pct).toFixed(2) + "%";
-                const unitsFormatted = Number(data.kpis.total_units_sold).toLocaleString("en-GB");
+                const unitsFormatted = Number(data.kpis.total_units_sold).toLocaleString("en-IN");
 
                 // Update active date range cache
                 if (typeof DATE_RANGE_DATA !== "undefined" && DATE_RANGE_DATA.all) {
@@ -5547,9 +5547,9 @@ async function initLivePipelineSync() {
                                 <tr>
                                     <td><code>${p.stock_code}</code></td>
                                     <td><strong>${p.description || "Product"}</strong></td>
-                                    <td>${Number(p.units_sold).toLocaleString("en-GB")}</td>
-                                    <td>${Number(p.order_count).toLocaleString("en-GB")}</td>
-                                    <td><strong>£${Number(p.revenue).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
+                                    <td>${Number(p.units_sold).toLocaleString("en-IN")}</td>
+                                    <td>${Number(p.order_count).toLocaleString("en-IN")}</td>
+                                    <td><strong>₹${Number(p.revenue).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
                                     <td><span class="badge-tag blue">${sharePct}</span></td>
                                 </tr>
                             `;
@@ -5565,13 +5565,13 @@ async function initLivePipelineSync() {
                         const elEval = document.getElementById("btydEvaluatedCustomers");
                         const elAvg = document.getElementById("btydAvgCustomerClv");
                         if (elTotal && clvSum.total_portfolio_clv_gbp) {
-                            elTotal.textContent = "£" + Number(clvSum.total_portfolio_clv_gbp).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                            elTotal.textContent = "₹" + Number(clvSum.total_portfolio_clv_gbp).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                         }
                         if (elEval && clvSum.total_evaluated_customers) {
-                            elEval.textContent = Number(clvSum.total_evaluated_customers).toLocaleString("en-GB") + " Accounts";
+                            elEval.textContent = Number(clvSum.total_evaluated_customers).toLocaleString("en-IN") + " Accounts";
                         }
                         if (elAvg && clvSum.avg_customer_clv_gbp) {
-                            elAvg.textContent = "£" + Number(clvSum.avg_customer_clv_gbp).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                            elAvg.textContent = "₹" + Number(clvSum.avg_customer_clv_gbp).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                         }
                     }
                     if (data.clv_btyd.sample_customers) {
@@ -5867,10 +5867,10 @@ function initDatasetImporter() {
 
         // Summary metrics
         const m = data.metrics || {};
-        if (validRowsEl) validRowsEl.textContent = `${Number(data.valid_commercial_rows).toLocaleString("en-GB")} Rows`;
+        if (validRowsEl) validRowsEl.textContent = `${Number(data.valid_commercial_rows).toLocaleString("en-IN")} Rows`;
         if (discardedEl) discardedEl.textContent = `${data.cancelled_or_invalid_rows || 0} discarded / cancelled`;
-        if (totalRevEl) totalRevEl.textContent = `£${Number(m.total_revenue_gbp || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        if (aovEl) aovEl.textContent = `AOV: £${Number(m.average_order_value_gbp || 0).toFixed(2)}`;
+        if (totalRevEl) totalRevEl.textContent = `₹${Number(m.total_revenue_gbp || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        if (aovEl) aovEl.textContent = `AOV: ₹${Number(m.average_order_value_gbp || 0).toFixed(2)}`;
         if (dateRangeEl) dateRangeEl.textContent = m.date_range || "N/A";
         if (acctsSkusEl) acctsSkusEl.textContent = `${m.unique_customers || 0} Cust / ${m.unique_skus || 0} SKUs`;
 
@@ -5883,7 +5883,7 @@ function initDatasetImporter() {
                     <td><strong>${r.Description || "Item"}</strong></td>
                     <td>${r.Quantity}</td>
                     <td><small>${(r.InvoiceDate || "").substring(0, 16)}</small></td>
-                    <td>£${Number(r.UnitPrice || 0).toFixed(2)}</td>
+                    <td>₹${Number(r.UnitPrice || 0).toFixed(2)}</td>
                     <td>${r.CustomerID ? '#' + r.CustomerID : '<span class="text-muted">Guest</span>'}</td>
                     <td><span class="badge-tag gray">${r.Country || "UK"}</span></td>
                 </tr>
@@ -6204,7 +6204,7 @@ function initAiCopilot() {
 
     function formatCellValue(val) {
         if (typeof val === "number") {
-            if (val > 1000) return Number(val).toLocaleString("en-GB", { maximumFractionDigits: 2 });
+            if (val > 1000) return Number(val).toLocaleString("en-IN", { maximumFractionDigits: 2 });
             return Number(val).toFixed(2);
         }
         return escapeHtml(String(val ?? ""));
@@ -6245,12 +6245,12 @@ function handleWebhookOrderBroadcast(data) {
     console.log("[Nexus WebSocket] Received live webhook order:", data);
     showToast(
         `⚡ ${String(data.provider || 'Store').toUpperCase()} Order Ingested`,
-        `${data.invoice_no}: +£${Number(data.total_amount_gbp || 0).toFixed(2)} (${data.items_count || 1} items) for #${data.customer_id || 'Guest'}`,
+        `${data.invoice_no}: +₹${Number(data.total_amount_gbp || 0).toFixed(2)} (${data.items_count || 1} items) for #${data.customer_id || 'Guest'}`,
         "success"
     );
     logAuditEvent(
         "Webhooks",
-        `Ingested ${String(data.provider || '').toUpperCase()} order ${data.invoice_no} (+£${Number(data.total_amount_gbp || 0).toFixed(2)}) for #${data.customer_id}`
+        `Ingested ${String(data.provider || '').toUpperCase()} order ${data.invoice_no} (+₹${Number(data.total_amount_gbp || 0).toFixed(2)}) for #${data.customer_id}`
     );
     if (typeof refreshWebhooksTelemetry === "function") {
         refreshWebhooksTelemetry();
@@ -6342,13 +6342,13 @@ function initWebhooksHub() {
                 if (simResultBox && simPayloadCode) {
                     simResultBox.style.display = "block";
                     if (simHeading) simHeading.textContent = `⚡ Live ${provider.toUpperCase()} Webhook Ingested • ${data.invoice_no}`;
-                    if (simStatus) simStatus.textContent = `200 OK • Ingested (£${Number(data.total_amount_gbp).toFixed(2)})`;
+                    if (simStatus) simStatus.textContent = `200 OK • Ingested (₹${Number(data.total_amount_gbp).toFixed(2)})`;
                     simPayloadCode.textContent = JSON.stringify(data.raw_sample_payload, null, 2);
                 }
 
                 showToast(
                     `⚡ ${provider.toUpperCase()} Simulated Order Ingested`,
-                    `Invoice ${data.invoice_no}: +£${Number(data.total_amount_gbp).toFixed(2)} (${data.items_ingested} items)`,
+                    `Invoice ${data.invoice_no}: +₹${Number(data.total_amount_gbp).toFixed(2)} (${data.items_ingested} items)`,
                     "success"
                 );
 
@@ -6379,7 +6379,7 @@ function initWebhooksHub() {
                     const ping = document.getElementById("shopifyLastPing");
                     const badge = document.getElementById("shopifyStatusBadge");
                     if (cnt) cnt.textContent = shopify.events_received;
-                    if (rev) rev.textContent = `£${Number(shopify.total_revenue_gbp).toFixed(2)}`;
+                    if (rev) rev.textContent = `₹${Number(shopify.total_revenue_gbp).toFixed(2)}`;
                     if (ping) ping.textContent = shopify.last_event_at ? new Date(shopify.last_event_at).toLocaleTimeString() : "Never";
                     if (badge) {
                         badge.textContent = shopify.status === "ACTIVE" ? "● ACTIVE" : "● LISTENING";
@@ -6394,7 +6394,7 @@ function initWebhooksHub() {
                     const ping = document.getElementById("stripeLastPing");
                     const badge = document.getElementById("stripeStatusBadge");
                     if (cnt) cnt.textContent = stripe.events_received;
-                    if (rev) rev.textContent = `£${Number(stripe.total_revenue_gbp).toFixed(2)}`;
+                    if (rev) rev.textContent = `₹${Number(stripe.total_revenue_gbp).toFixed(2)}`;
                     if (ping) ping.textContent = stripe.last_event_at ? new Date(stripe.last_event_at).toLocaleTimeString() : "Never";
                     if (badge) {
                         badge.textContent = stripe.status === "ACTIVE" ? "● ACTIVE" : "● LISTENING";
@@ -6409,7 +6409,7 @@ function initWebhooksHub() {
                     const ping = document.getElementById("wooLastPing");
                     const badge = document.getElementById("wooStatusBadge");
                     if (cnt) cnt.textContent = woo.events_received;
-                    if (rev) rev.textContent = `£${Number(woo.total_revenue_gbp).toFixed(2)}`;
+                    if (rev) rev.textContent = `₹${Number(woo.total_revenue_gbp).toFixed(2)}`;
                     if (ping) ping.textContent = woo.last_event_at ? new Date(woo.last_event_at).toLocaleTimeString() : "Never";
                     if (badge) {
                         badge.textContent = woo.status === "ACTIVE" ? "● ACTIVE" : "● LISTENING";
@@ -6419,7 +6419,7 @@ function initWebhooksHub() {
             }
 
             if (totalCountBadge) {
-                totalCountBadge.textContent = `${data.total_events_ingested || 0} Events Ingested (Total: £${Number(data.total_revenue_ingested_gbp || 0).toFixed(2)})`;
+                totalCountBadge.textContent = `${data.total_events_ingested || 0} Events Ingested (Total: ₹${Number(data.total_revenue_ingested_gbp || 0).toFixed(2)})`;
             }
 
             // Update Events Table
@@ -6436,7 +6436,7 @@ function initWebhooksHub() {
                             <td><strong>${providerIcon}</strong></td>
                             <td><code>${ev.invoice_no}</code></td>
                             <td>${ev.items_count} item(s)</td>
-                            <td style="color: var(--success); font-weight: 600;">£${Number(ev.total_amount_gbp).toFixed(2)}</td>
+                            <td style="color: var(--success); font-weight: 600;">₹${Number(ev.total_amount_gbp).toFixed(2)}</td>
                             <td>#${ev.customer_id}</td>
                             <td>${sigBadge}</td>
                             <td style="color: var(--text-muted); font-size: 0.75rem;">${timeStr}</td>
@@ -6538,10 +6538,10 @@ function initPricingLab() {
         if (kpiSource) kpiSource.textContent = elasticityReport.data_source === "production_parquet" ? "Live Parquet Fixed-Effects OLS" : "Within-SKU Log-Log OLS";
         if (kpiUplift) {
             const totalGain = cats.reduce((acc, c) => acc + (c.margin_uplift_gbp || 0), 0);
-            kpiUplift.textContent = `+£${Math.round(totalGain).toLocaleString("en-GB")}`;
+            kpiUplift.textContent = `+₹${Math.round(totalGain).toLocaleString("en-IN")}`;
         }
-        if (kpiSkus) kpiSkus.textContent = Number(elasticityReport.total_skus_analyzed || 3804).toLocaleString("en-GB");
-        if (kpiTxns) kpiTxns.textContent = `${Number(elasticityReport.total_transactions_analyzed || 527573).toLocaleString("en-GB")} Valid Rows`;
+        if (kpiSkus) kpiSkus.textContent = Number(elasticityReport.total_skus_analyzed || 3804).toLocaleString("en-IN");
+        if (kpiTxns) kpiTxns.textContent = `${Number(elasticityReport.total_transactions_analyzed || 527573).toLocaleString("en-IN")} Valid Rows`;
         if (kpiExps) kpiExps.textContent = `${(elasticityReport.experiments_ledger || []).length} Recorded`;
 
         tbody.innerHTML = cats.map(c => {
@@ -6554,10 +6554,10 @@ function initPricingLab() {
                     <th scope="row">${c.category}</th>
                     <td><code>${Number(c.elasticity_coefficient).toFixed(3)}</code></td>
                     <td>${Number(c.r_squared || 0.48).toFixed(2)}</td>
-                    <td>£${Number(c.baseline_avg_price_gbp).toFixed(2)}</td>
-                    <td>£${Math.round(c.baseline_revenue_gbp).toLocaleString("en-GB")}</td>
-                    <td><span class="badge ${optBadgeColor}">${optSign} → £${Number(c.optimal_price_gbp).toFixed(2)}</span></td>
-                    <td style="color: var(--success); font-weight: 700;">+£${Math.round(c.margin_uplift_gbp).toLocaleString("en-GB")} (+${Number(c.margin_uplift_pct).toFixed(2)}%)</td>
+                    <td>₹${Number(c.baseline_avg_price_gbp).toFixed(2)}</td>
+                    <td>₹${Math.round(c.baseline_revenue_gbp).toLocaleString("en-IN")}</td>
+                    <td><span class="badge ${optBadgeColor}">${optSign} → ₹${Number(c.optimal_price_gbp).toFixed(2)}</span></td>
+                    <td style="color: var(--success); font-weight: 700;">+₹${Math.round(c.margin_uplift_gbp).toLocaleString("en-IN")} (+${Number(c.margin_uplift_pct).toFixed(2)}%)</td>
                     <td><button type="button" class="btn btn-outline btn-xs btn-select-pricing-cat" data-cat="${c.category}">Simulate</button></td>
                 </tr>
             `;
@@ -6680,7 +6680,7 @@ function initPricingLab() {
                 profit_gain_gbp: Number((optPt.gross_profit_gbp - baseline.gross_profit_gbp).toFixed(2))
             },
             payoff_curve: curve,
-            recommendation: `${catMeta.category} (ε=${e.toFixed(2)}) maximizes bounded gross profit at ${optPt.price_change_pct > 0 ? "+" : ""}${optPt.price_change_pct}% adjustment (+£${Math.round(optPt.gross_profit_gbp - baseline.gross_profit_gbp).toLocaleString()}).`
+            recommendation: `${catMeta.category} (ε=${e.toFixed(2)}) maximizes bounded gross profit at ${optPt.price_change_pct > 0 ? "+" : ""}${optPt.price_change_pct}% adjustment (+₹${Math.round(optPt.gross_profit_gbp - baseline.gross_profit_gbp).toLocaleString("en-IN")}).`
         };
     }
 
@@ -6735,15 +6735,15 @@ function initPricingLab() {
         const optBadge = document.getElementById("pricingOptimalBadge");
         const recBox = document.getElementById("pricingRecommendationBox");
 
-        if (outPrice) outPrice.innerHTML = `£${Number(s.new_price_gbp).toFixed(2)} <small style="font-size:0.72rem;color:var(--text-muted);">${deltaPct >= 0 ? "+" : ""}${deltaPct}%</small>`;
-        if (outUnits) outUnits.innerHTML = `${Number(s.projected_units).toLocaleString("en-GB")} <small style="font-size:0.72rem;color:${s.unit_delta_pct >= 0 ? "var(--success)" : "var(--warning)"};">(${s.unit_delta_pct >= 0 ? "+" : ""}${s.unit_delta_pct}%)</small>`;
-        if (outRev) outRev.innerHTML = `£${Math.round(s.projected_revenue_gbp).toLocaleString("en-GB")} <small style="font-size:0.72rem;color:${s.revenue_delta_gbp >= 0 ? "var(--success)" : "var(--warning)"};">(${s.revenue_delta_pct >= 0 ? "+" : ""}${s.revenue_delta_pct}%)</small>`;
+        if (outPrice) outPrice.innerHTML = `₹${Number(s.new_price_gbp).toFixed(2)} <small style="font-size:0.72rem;color:var(--text-muted);">${deltaPct >= 0 ? "+" : ""}${deltaPct}%</small>`;
+        if (outUnits) outUnits.innerHTML = `${Number(s.projected_units).toLocaleString("en-IN")} <small style="font-size:0.72rem;color:${s.unit_delta_pct >= 0 ? "var(--success)" : "var(--warning)"};">(${s.unit_delta_pct >= 0 ? "+" : ""}${s.unit_delta_pct}%)</small>`;
+        if (outRev) outRev.innerHTML = `₹${Math.round(s.projected_revenue_gbp).toLocaleString("en-IN")} <small style="font-size:0.72rem;color:${s.revenue_delta_gbp >= 0 ? "var(--success)" : "var(--warning)"};">(${s.revenue_delta_pct >= 0 ? "+" : ""}${s.revenue_delta_pct}%)</small>`;
         if (outProfit) {
             outProfit.style.color = s.profit_delta_gbp >= 0 ? "var(--success)" : "var(--danger)";
-            outProfit.innerHTML = `£${Math.round(s.projected_gross_profit_gbp).toLocaleString("en-GB")} <small style="font-size:0.72rem;">(${s.profit_delta_gbp >= 0 ? "+" : "-"}£${Math.abs(Math.round(s.profit_delta_gbp)).toLocaleString("en-GB")})</small>`;
+            outProfit.innerHTML = `₹${Math.round(s.projected_gross_profit_gbp).toLocaleString("en-IN")} <small style="font-size:0.72rem;">(${s.profit_delta_gbp >= 0 ? "+" : "-"}₹${Math.abs(Math.round(s.profit_delta_gbp)).toLocaleString("en-IN")})</small>`;
         }
         if (regimeBadge) regimeBadge.textContent = `${simData.demand_regime} (ε=${Number(simData.elasticity_used).toFixed(2)})`;
-        if (optBadge) optBadge.textContent = `Optimal: ${opt.price_change_pct > 0 ? "+" : ""}${opt.price_change_pct}% (£${Number(opt.optimal_price_gbp).toFixed(2)})`;
+        if (optBadge) optBadge.textContent = `Optimal: ${opt.price_change_pct > 0 ? "+" : ""}${opt.price_change_pct}% (₹${Number(opt.optimal_price_gbp).toFixed(2)})`;
         if (recBox) recBox.innerHTML = `<strong>💡 Pricing Strategy Insight:</strong> ${simData.recommendation}`;
 
         renderPayoffCurveChart(simData.payoff_curve, deltaPct, opt.price_change_pct);
@@ -6780,7 +6780,7 @@ function initPricingLab() {
                 labels,
                 datasets: [
                     {
-                        label: "Projected Gross Revenue (£)",
+                        label: "Projected Gross Revenue (₹)",
                         data: revs,
                         borderColor: "#38BDF8",
                         backgroundColor: "rgba(56, 189, 248, 0.08)",
@@ -6789,7 +6789,7 @@ function initPricingLab() {
                         pointRadius: 2
                     },
                     {
-                        label: "Projected Gross Profit (£)",
+                        label: "Projected Gross Profit (₹)",
                         data: profits,
                         borderColor: "#10B981",
                         backgroundColor: "rgba(16, 185, 129, 0.14)",
@@ -6808,13 +6808,13 @@ function initPricingLab() {
                     legend: { position: "top", labels: { color: "#94A3B8" } },
                     tooltip: {
                         callbacks: {
-                            label: ctx => `${ctx.dataset.label}: £${Math.round(ctx.parsed.y).toLocaleString("en-GB")}`
+                            label: ctx => `${ctx.dataset.label}: ₹${Math.round(ctx.parsed.y).toLocaleString("en-IN")}`
                         }
                     }
                 },
                 scales: {
                     y: {
-                        ticks: { callback: v => `£${(v / 1000000).toFixed(2)}M` },
+                        ticks: { callback: v => `₹${(v / 100000).toFixed(1)}L` },
                         grid: { color: "rgba(255,255,255,0.06)" }
                     },
                     x: { grid: { display: false } }
@@ -6957,25 +6957,25 @@ function initPricingLab() {
                 <div class="ab-arm-card ${st.winner === "CONTROL" ? "winner-arm" : ""}">
                     <div class="ab-arm-header">
                         <strong>🅰️ Control Holdout (${exp.holdout_pct}%)</strong>
-                        <span class="badge blue">£${Number(c.unit_price_gbp).toFixed(2)}</span>
+                        <span class="badge blue">₹${Number(c.unit_price_gbp).toFixed(2)}</span>
                     </div>
                     <div class="ab-arm-stats-list">
-                        <div class="ab-arm-stat-row"><span>Visitors:</span><strong>${c.visitors.toLocaleString()}</strong></div>
-                        <div class="ab-arm-stat-row"><span>Conversions (CVR):</span><strong>${c.conversions.toLocaleString()} (${c.conversion_rate_pct}%)</strong></div>
-                        <div class="ab-arm-stat-row"><span>Revenue / Visitor:</span><strong>£${Number(c.revenue_per_visitor_gbp).toFixed(2)}</strong></div>
-                        <div class="ab-arm-stat-row"><span>Profit / Visitor:</span><strong>£${Number(c.profit_per_visitor_gbp).toFixed(2)}</strong></div>
+                        <div class="ab-arm-stat-row"><span>Visitors:</span><strong>${c.visitors.toLocaleString("en-IN")}</strong></div>
+                        <div class="ab-arm-stat-row"><span>Conversions (CVR):</span><strong>${c.conversions.toLocaleString("en-IN")} (${c.conversion_rate_pct}%)</strong></div>
+                        <div class="ab-arm-stat-row"><span>Revenue / Visitor:</span><strong>₹${Number(c.revenue_per_visitor_gbp).toFixed(2)}</strong></div>
+                        <div class="ab-arm-stat-row"><span>Profit / Visitor:</span><strong>₹${Number(c.profit_per_visitor_gbp).toFixed(2)}</strong></div>
                     </div>
                 </div>
                 <div class="ab-arm-card ${st.winner === "VARIANT" ? "winner-arm" : ""}">
                     <div class="ab-arm-header">
                         <strong>🅱️ Price Variant (${exp.price_change_pct > 0 ? "+" : ""}${exp.price_change_pct}%)</strong>
-                        <span class="badge ${st.winner === "VARIANT" ? "green" : "gold"}">£${Number(v.unit_price_gbp).toFixed(2)}</span>
+                        <span class="badge ${st.winner === "VARIANT" ? "green" : "gold"}">₹${Number(v.unit_price_gbp).toFixed(2)}</span>
                     </div>
                     <div class="ab-arm-stats-list">
-                        <div class="ab-arm-stat-row"><span>Visitors:</span><strong>${v.visitors.toLocaleString()}</strong></div>
-                        <div class="ab-arm-stat-row"><span>Conversions (CVR):</span><strong>${v.conversions.toLocaleString()} (${v.conversion_rate_pct}%)</strong></div>
-                        <div class="ab-arm-stat-row"><span>Revenue / Visitor:</span><strong>£${Number(v.revenue_per_visitor_gbp).toFixed(2)}</strong></div>
-                        <div class="ab-arm-stat-row"><span>Profit / Visitor:</span><strong>£${Number(v.profit_per_visitor_gbp).toFixed(2)}</strong></div>
+                        <div class="ab-arm-stat-row"><span>Visitors:</span><strong>${v.visitors.toLocaleString("en-IN")}</strong></div>
+                        <div class="ab-arm-stat-row"><span>Conversions (CVR):</span><strong>${v.conversions.toLocaleString("en-IN")} (${v.conversion_rate_pct}%)</strong></div>
+                        <div class="ab-arm-stat-row"><span>Revenue / Visitor:</span><strong>₹${Number(v.revenue_per_visitor_gbp).toFixed(2)}</strong></div>
+                        <div class="ab-arm-stat-row"><span>Profit / Visitor:</span><strong>₹${Number(v.profit_per_visitor_gbp).toFixed(2)}</strong></div>
                     </div>
                 </div>
             </div>
@@ -7083,9 +7083,9 @@ function initPricingLab() {
         const totOut = document.getElementById("powerTotalNOut");
         const daysOut = document.getElementById("powerDaysOut");
 
-        if (ctrlOut) ctrlOut.textContent = `${Number(powerData.sample_size_control).toLocaleString("en-GB")} visitors`;
-        if (varOut) varOut.textContent = `${Number(powerData.sample_size_variant).toLocaleString("en-GB")} visitors`;
-        if (totOut) totOut.textContent = `${Number(powerData.total_sample_size).toLocaleString("en-GB")} total`;
+        if (ctrlOut) ctrlOut.textContent = `${Number(powerData.sample_size_control).toLocaleString("en-IN")} visitors`;
+        if (varOut) varOut.textContent = `${Number(powerData.sample_size_variant).toLocaleString("en-IN")} visitors`;
+        if (totOut) totOut.textContent = `${Number(powerData.total_sample_size).toLocaleString("en-IN")} total`;
         if (daysOut) daysOut.textContent = `${powerData.estimated_duration_days} Days`;
 
         const powerCanvas = document.getElementById("abPowerCurveChart");
@@ -7267,7 +7267,7 @@ function initEnterpriseSecurity() {
         const roleSelect = document.getElementById("adminRoleSelect");
 
         const tenantLabels = {
-            tenant_uk_flagship: "UK Flagship (GBP)",
+            tenant_uk_flagship: "India Flagship (INR)",
             tenant_eu_nordics: "EU Nordics (EUR)",
             tenant_us_direct: "US Direct (USD)"
         };
@@ -7312,7 +7312,7 @@ function initEnterpriseSecurity() {
             if (roleEl) roleEl.textContent = `${APP_STATE.role} (Local Role Switch)`;
             if (tenantEl) tenantEl.textContent = tenantLabels[APP_STATE.tenantId] || APP_STATE.tenantId;
             if (tokenBar) tokenBar.style.display = "none";
-            if (sidebarTenant) sidebarTenant.textContent = tenantLabels[APP_STATE.tenantId] || "UK Flagship (GBP)";
+            if (sidebarTenant) sidebarTenant.textContent = tenantLabels[APP_STATE.tenantId] || "India Flagship (INR)";
         }
     }
 
@@ -7622,12 +7622,12 @@ function handleAnomalyAlertBroadcast(alert) {
     if (!alert) return;
     showToast(
         `🚨 Fraud Anomaly Flagged (${alert.risk_score}/100)`,
-        `Invoice ${alert.invoice_no}: £${Number(alert.amount_gbp || 0).toLocaleString()} (${alert.risk_tier})`,
+        `Invoice ${alert.invoice_no}: ₹${Number(alert.amount_gbp || 0).toLocaleString("en-IN")} (${alert.risk_tier})`,
         "alert"
     );
     logAuditEvent(
         "Fraud/Anomaly",
-        `Quarantined order ${alert.invoice_no} (score ${alert.risk_score}/100, £${Number(alert.amount_gbp || 0).toFixed(2)})`,
+        `Quarantined order ${alert.invoice_no} (score ${alert.risk_score}/100, ₹${Number(alert.amount_gbp || 0).toFixed(2)})`,
         "WARNING"
     );
     if (typeof window.refreshFraudRadarReport === "function") {
@@ -7760,7 +7760,7 @@ function initFraudRadar() {
                     <td><code>${escapeFraudHtml(item.alert_id)}</code></td>
                     <td><strong>${escapeFraudHtml(item.invoice_no)}</strong></td>
                     <td>${escapeFraudHtml(item.customer_id)}</td>
-                    <td>£${Number(item.amount_gbp || 0).toLocaleString("en-GB", { minimumFractionDigits: 2 })}</td>
+                    <td>₹${Number(item.amount_gbp || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
                     <td><strong style="color:${scoreColor};">${Number(item.risk_score).toFixed(1)}</strong></td>
                     <td><small>${escapeFraudHtml(firstSignal)}</small></td>
                     <td><span class="badge ${badgeCls}">${escapeFraudHtml(st)}</span></td>
@@ -7807,11 +7807,11 @@ function initFraudRadar() {
                 const kpiExp = document.getElementById("fraudKpiExposure");
                 const kpiFlagCnt = document.getElementById("fraudKpiAnomalyCount");
 
-                if (kpiInv) kpiInv.textContent = Number(s.total_invoices_scanned || 23218).toLocaleString("en-GB");
+                if (kpiInv) kpiInv.textContent = Number(s.total_invoices_scanned || 23218).toLocaleString("en-IN");
                 if (kpiRate) kpiRate.textContent = `${Number(s.cancellation_rate_pct || 14.74).toFixed(2)}%`;
-                if (kpiCancelCnt) kpiCancelCnt.textContent = `${Number(s.cancelled_invoices_count || 3422).toLocaleString("en-GB")} Cancelled Invoices`;
-                if (kpiExp) kpiExp.textContent = `£${((s.anomaly_revenue_exposure_gbp || 1850000) / 1000000).toFixed(2)}M`;
-                if (kpiFlagCnt) kpiFlagCnt.textContent = `${Number(s.flagged_anomalies_count || 1161).toLocaleString("en-GB")} Isolation Outliers (${s.flagged_share_pct || 5.0}%)`;
+                if (kpiCancelCnt) kpiCancelCnt.textContent = `${Number(s.cancelled_invoices_count || 3422).toLocaleString("en-IN")} Cancelled Invoices`;
+                if (kpiExp) kpiExp.textContent = `₹${((s.anomaly_revenue_exposure_gbp || 1850000) / 100000).toFixed(2)}L`;
+                if (kpiFlagCnt) kpiFlagCnt.textContent = `${Number(s.flagged_anomalies_count || 1161).toLocaleString("en-IN")} Isolation Outliers (${s.flagged_share_pct || 5.0}%)`;
 
                 renderCountryCancelChart(data.country_cancellation_rates);
                 renderQuarantineQueue(data.quarantine_queue);
@@ -7918,7 +7918,7 @@ function initFraudRadar() {
         // Offline deterministic fallback
         let localScore = 15;
         const signals = [];
-        if (Math.abs(payload.amount_gbp) > 4000) { localScore += 32; signals.push(`High order value £${Math.abs(payload.amount_gbp).toLocaleString()}`); }
+        if (Math.abs(payload.amount_gbp) > 4000) { localScore += 32; signals.push(`High order value ₹${Math.abs(payload.amount_gbp).toLocaleString("en-IN")}`); }
         if (payload.is_guest && payload.amount_gbp >= 1500) { localScore += 22; signals.push("High-value guest checkout"); }
         if (payload.hour_of_day < 6 || payload.hour_of_day >= 22) { localScore += 15; signals.push(`Off-hours timestamp (${payload.hour_of_day}:00 UTC)`); }
         if (payload.historical_cancel_rate >= 0.25) { localScore += 20; signals.push(`High account cancel rate (${(payload.historical_cancel_rate * 100).toFixed(0)}%)`); }
@@ -8096,13 +8096,13 @@ async function initDataWarehouseTab() {
             const schema = await res.json();
             const totalEl = document.getElementById("whKpiTotalRows");
             const srcEl = document.getElementById("whKpiDataSource");
-            if (totalEl) totalEl.textContent = Number(schema.total_warehouse_rows || 0).toLocaleString();
+            if (totalEl) totalEl.textContent = Number(schema.total_warehouse_rows || 0).toLocaleString("en-IN");
             if (srcEl) srcEl.textContent = `DuckDB • ${schema.data_source}`;
 
             schemaGrid.innerHTML = (schema.tables || []).map(t => `
                 <div class="btyd-stat-box">
                     <strong>${t.role} &bull; ${t.table_name}</strong>
-                    <div class="stat-val text-blue" style="font-size:1.1rem;">${Number(t.row_count).toLocaleString()} rows</div>
+                    <div class="stat-val text-blue" style="font-size:1.1rem;">${Number(t.row_count).toLocaleString("en-IN")} rows</div>
                     <small style="color:var(--text-muted);">${t.columns.length} cols &bull; ${t.description}</small>
                 </div>
             `).join("");
@@ -8289,8 +8289,8 @@ async function refreshKaplanMeierCohortCharts() {
                     return `
                         <tr>
                             <th scope="row">${_escapeSurvivalText(name)}</th>
-                            <td>${Number(c.n_subjects).toLocaleString()}</td>
-                            <td>${Number(c.n_events).toLocaleString()}</td>
+                            <td>${Number(c.n_subjects).toLocaleString("en-IN")}</td>
+                            <td>${Number(c.n_events).toLocaleString("en-IN")}</td>
                             <td>${medTxt}</td>
                             <td><strong>${(c.s_90 * 100).toFixed(1)}%</strong></td>
                             <td>${(c.s_180 * 100).toFixed(1)}%</td>
@@ -8434,7 +8434,7 @@ async function refreshCustomerXaiAndCounterfactual() {
                         <div class="result-stat"><strong>Account Cohort</strong><span>${_escapeSurvivalText(cfData.cohort)}</span></div>
                         <div class="result-stat"><strong>Baseline → Treated S(90)</strong><span>${sum.baseline_s90_pct}% → ${sum.counterfactual_s90_pct}%</span></div>
                         <div class="result-stat"><strong>RMST-365 Lifespan Gain</strong><span style="color:#10B981;">+${sum.rmst_gain_days} days</span></div>
-                        <div class="result-stat"><strong>Protected Annual Margin</strong><span style="color:#10B981;">£${Number(sum.protected_margin_gbp || 0).toLocaleString("en-GB", { minimumFractionDigits: 2 })}</span></div>
+                        <div class="result-stat"><strong>Protected Annual Margin</strong><span style="color:#10B981;">₹${Number(sum.protected_margin_gbp || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span></div>
                     </div>
                 `;
             }

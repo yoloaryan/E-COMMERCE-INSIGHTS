@@ -49,10 +49,10 @@ class ECommerceEDA:
         unique_skus = valid_sales["StockCode"].nunique()
 
         kpis = {
-            "Total Gross Revenue (£)": round(total_revenue, 2),
+            "Total Gross Revenue (₹)": round(total_revenue, 2),
             "Total Completed Invoices": total_orders,
             "Total Units Sold": int(total_units),
-            "Average Order Value (AOV £)": round(aov, 2),
+            "Average Order Value (AOV ₹)": round(aov, 2),
             "Unique Registered Customers": unique_customers,
             "Unique Active SKUs": unique_skus,
             "Cancellation Rate (%)": round((self.df["IsCancelled"].sum() / len(self.df)) * 100, 2)

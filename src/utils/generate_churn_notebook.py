@@ -183,7 +183,7 @@ vip_at_risk = scored_df[
 ].sort_values(by='HistoricalMonetary', ascending=False)
 
 print(f"Total High-Value Accounts at Immediate Risk: {len(vip_at_risk)}")
-print(f"Total Capital Exposure: £{vip_at_risk['HistoricalMonetary'].sum():,.2f}")
+print(f"Total Capital Exposure: ₹{vip_at_risk['HistoricalMonetary'].sum():,.2f}")
 
 vip_at_risk[['CustomerID', 'HistoricalMonetary', 'HistoricalFrequency', 'Recency', 'Churn_Probability', 'Retention_Strategy']].head(10)
 """))

@@ -20,7 +20,7 @@ STORE_DATA_PATH = PROCESSED_DATA_DIR / "online_retail_cleaned.csv"
 class SalesFeatureEngineer:
     """
     Transforms raw transactional logs into a clean, daily time-series feature store:
-    - Target: Daily Gross Revenue (£)
+    - Target: Daily Gross Revenue (₹)
     - Autoregressive Lags: 1-day, 7-day (weekly cycle), 14-day, 30-day (monthly cycle)
     - Rolling Statistics: 7-day moving average, 7-day volatility (std), 30-day moving average
     - Calendar Features: Day of week, Month, Day of month, IsWeekend, Quarter

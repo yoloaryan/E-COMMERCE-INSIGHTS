@@ -477,7 +477,7 @@ class StarSchemaWarehouse:
             (
                 "DQ-06",
                 "Line-Item Revenue Reconciliation",
-                "Assert total_price matches quantity * unit_price within £0.02 rounding.",
+                "Assert total_price matches quantity * unit_price within ₹0.02 rounding.",
                 "SELECT COUNT(*) FROM fact_order_lines WHERE ABS(total_price - ROUND(quantity * unit_price, 2)) > 0.02",
             ),
             (
@@ -582,3 +582,4 @@ def get_warehouse() -> StarSchemaWarehouse:
     if _WAREHOUSE_SINGLETON is None:
         _WAREHOUSE_SINGLETON = StarSchemaWarehouse()
     return _WAREHOUSE_SINGLETON
+

@@ -109,7 +109,7 @@ class AutonomousWatchdogEngine:
                 "severity": "CRITICAL" if crit_skus >= 4 else "WARNING",
                 "subsystem": "Inventory EOQ",
                 "title": f"{crit_skus} SKUs at or below Safety Stock / ROP",
-                "detail": f"Auto-EOQ replenishment advised; £{overstock_cap:,.0f} also tied in overstock (>75d cover).",
+                "detail": f"Auto-EOQ replenishment advised; ₹{overstock_cap:,.0f} also tied in overstock (>75d cover).",
                 "target_tab": "inventory-mart",
                 "cta_label": "Open EOQ Optimizer",
             })
@@ -130,7 +130,7 @@ class AutonomousWatchdogEngine:
                 "id": f"DIR-FRD-{len(pending_fraud)}",
                 "severity": fraud_status,
                 "subsystem": "Fraud Quarantine",
-                "title": f"{len(pending_fraud)} unresolved transaction hold(s) (£{pending_exposure:,.0f})",
+                "title": f"{len(pending_fraud)} unresolved transaction hold(s) (₹{pending_exposure:,.0f})",
                 "detail": "Isolation Forest flagged anomalies awaiting Supply VP or Principal Admin triage.",
                 "target_tab": "fraud-radar",
                 "cta_label": "Triage Fraud Queue",

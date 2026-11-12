@@ -41,8 +41,8 @@ SURVIVAL_FEATURE_COLS = [
 FEATURE_DISPLAY_NAMES = {
     "Recency": "Days Inactive (Recency)",
     "HistoricalFrequency": "Lifetime Order Frequency",
-    "HistoricalMonetary": "Cumulative Spend (£)",
-    "AOV": "Average Order Value (£)",
+    "HistoricalMonetary": "Cumulative Spend (₹)",
+    "AOV": "Average Order Value (₹)",
     "Tenure": "Account Tenure (Days)",
     "PurchaseVelocity": "Inter-Purchase Interval (Days)",
 }

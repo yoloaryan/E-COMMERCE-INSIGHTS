@@ -29,7 +29,7 @@ def test_executive_briefing_six_engine_aggregation():
     assert "# Nexus Retail AI — Executive Boardroom Briefing" in memo
     assert "## 1. Headline Financial & Intelligence KPIs" in memo
     assert "## 3. Prioritized Board Strategic Directives" in memo
-    assert "£" in memo
+    assert "₹" in memo
 
 
 def test_api_executive_briefing_and_downloads():

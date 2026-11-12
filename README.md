@@ -41,7 +41,7 @@ This system integrates **Customer Behavioral Segmentation (RFM + K-Means + Cohor
   │ • Autoregressive Lags (Lag 1, 7, 14) │  │ • RFM Feature Engineering         │
   │ • Rolling Averages (7d, 30d)         │  │ • Natural Log1p Scaling           │
   │ • Chronological Split (80/20)        │  │ • K-Means (K=4 via Elbow & Sil)   │
-  │ • Random Forest Regressor (MAE: £12k)│  │ • Champions, Loyal, At-Risk       │
+  │ • Random Forest Regressor (MAE: ₹12k)│  │ • Champions, Loyal, At-Risk       │
   └──────────────────┬───────────────────┘  └───────────────────┬───────────────┘
                      │                                          │
                      ├──────────────────┐                       │
@@ -50,7 +50,7 @@ This system integrates **Customer Behavioral Segmentation (RFM + K-Means + Cohor
   ┌────────────────────────────┐ ┌───────────────────┐ ┌───────────────────────┐
   │ • Inactivity Cutoff Window │ │ • Item-Item CF    │ │ • Production MySQL    │
   │ • Recall Priority (75.86%) │ │ • Cosine Affinities││ • RFM Aggregations    │
-  │ • £191.8k Exposure Flagged │ │ • Cross-Sell Drops│ │ • Churn Window Query  │
+  │ • ₹191.8k Exposure Flagged │ │ • Cross-Sell Drops│ │ • Churn Window Query  │
   └─────────────┬──────────────┘ └─────────┬─────────┘ └───────────┬───────────┘
                 │                          │                       │
                 └──────────────────────────┼───────────────────────┘
@@ -71,8 +71,8 @@ In non-contractual e-commerce, businesses face four core existential bottlenecks
 
 | Business Bottleneck | Industry Reality | ML Solution | Quantified ROI |
 | :--- | :--- | :--- | :--- |
-| **High Customer Acquisition Cost (CAC)** | Acquiring new customers is $5\times$ to $7\times$ more expensive than retention. | **Customer Churn Classifier (Random Forest)** | Identified **22 At-Risk VIP Accounts** representing **£191,892.72 in revenue exposure**, enabling proactive outreach. |
-| **One-Size-Fits-All Marketing** | Blanket promotional blast emails yield $<2\%$ conversion and fatigue users. | **RFM Segmentation + K-Means Clustering** | Uncovered that **$16.3\%$ of customers (Champions)** generate **$64.55\%$ of total gross revenue** (£7,993 avg spend). |
+| **High Customer Acquisition Cost (CAC)** | Acquiring new customers is $5\times$ to $7\times$ more expensive than retention. | **Customer Churn Classifier (Random Forest)** | Identified **22 At-Risk VIP Accounts** representing **₹1,91,892.72 in revenue exposure**, enabling proactive outreach. |
+| **One-Size-Fits-All Marketing** | Blanket promotional blast emails yield $<2\%$ conversion and fatigue users. | **RFM Segmentation + K-Means Clustering** | Uncovered that **$16.3\%$ of customers (Champions)** generate **$64.55\%$ of total gross revenue** (₹7,993 avg spend). |
 | **Stockouts & Overstock Working Capital** | Inaccurate demand forecasting leads to tied-up capital or lost high-margin sales. | **Time-Series Sales Forecasting (Ensemble ML)** | **Random Forest** achieved **26.28% MAPE** on peak Q4 sales spikes, reducing safety stock requirements by an estimated $18\%$. |
 | **Low Basket Size / Cart Abandonment** | Consumers struggle to discover complementary products across thousands of SKUs. | **Item-Based Collaborative Filtering** | Delivers sub-millisecond, highly coherent cross-sell items (e.g. Regency Teacups for Regency Cakestand). |
 
@@ -85,21 +85,21 @@ In non-contractual e-commerce, businesses face four core existential bottlenecks
 
 | Segment Name | Customer Count | Avg Recency | Avg Orders | Avg Spend | % of Customers | % of Gross Revenue |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Champions (VIPs)** | 708 | 11.9 days | 13.7 | £7,993.48 | 16.3% | **64.55%** |
-| **At-Risk / Lapsing** | 1,180 | 69.1 days | 4.1 | £1,784.53 | 27.2% | **24.02%** |
-| **Loyal Customers** | 844 | 19.0 days | 2.1 | £530.01 | 19.5% | **5.10%** |
-| **Occasional / Hibernating**| 1,602 | 184.7 days | 1.3 | £346.63 | 37.0% | **6.33%** |
+| **Champions (VIPs)** | 708 | 11.9 days | 13.7 | ₹7,993.48 | 16.3% | **64.55%** |
+| **At-Risk / Lapsing** | 1,180 | 69.1 days | 4.1 | ₹1,784.53 | 27.2% | **24.02%** |
+| **Loyal Customers** | 844 | 19.0 days | 2.1 | ₹530.01 | 19.5% | **5.10%** |
+| **Occasional / Hibernating**| 1,602 | 184.7 days | 1.3 | ₹346.63 | 37.0% | **6.33%** |
 
 ---
 
 ### 2. Time-Series Sales Forecasting (Module 3)
 - **Validation**: Strict chronological split (first 80% training, unseen final 20% test set).
 
-| Model | MAE (£) | RMSE (£) | MAPE (%) | $R^2$ Score | Selection Verdict |
+| Model | MAE (₹) | RMSE (₹) | MAPE (%) | $R^2$ Score | Selection Verdict |
 | :--- | :---: | :---: | :---: | :---: | :--- |
-| **Random Forest Regressor** | **£12,464.66** | **£22,989.70** | **$26.28\%$** | **$0.4281$** | **Production Winner** |
-| **XGBoost Regressor** | £14,826.75 | £24,854.73 | $29.13\%$ | $0.3315$ | High-performing alternative |
-| **Linear Regression (Baseline)** | £19,180.12 | £28,919.85 | $37.39\%$ | $0.0949$ | Underfitted |
+| **Random Forest Regressor** | **₹12,464.66** | **₹22,989.70** | **$26.28\%$** | **$0.4281$** | **Production Winner** |
+| **XGBoost Regressor** | ₹14,826.75 | ₹24,854.73 | $29.13\%$ | $0.3315$ | High-performing alternative |
+| **Linear Regression (Baseline)** | ₹19,180.12 | ₹28,919.85 | $37.39\%$ | $0.0949$ | Underfitted |
 
 *Top Predictors*: `DayOfWeek` (28.06%), `Lag_7` (22.06%), `RollingMean_30` (7.37%).
 
@@ -121,11 +121,11 @@ In non-contractual e-commerce, businesses face four core existential bottlenecks
 ### 4. Product Recommendations (Module 5)
 - **Methodology**: Sparse Item-Item Cosine Similarity on binary implicit feedback interaction matrices.
 - **Sample Cross-Sell Output for `[22423] Regency Cakestand 3 Tier`**:
-  1. `[22699] Roses Regency Teacup And Saucer` (£2.95) — Cosine Similarity: `0.5258`
-  2. `[22697] Green Regency Teacup And Saucer` (£2.95) — Cosine Similarity: `0.5086`
-  3. `[22698] Pink Regency Teacup And Saucer` (£2.95) — Cosine Similarity: `0.4886`
-  4. `[23245] Set Of 3 Regency Cake Tins` (£4.95) — Cosine Similarity: `0.4668`
-  5. `[23173] Regency Teapot Roses` (£9.95) — Cosine Similarity: `0.4535`
+  1. `[22699] Roses Regency Teacup And Saucer` (₹2.95) — Cosine Similarity: `0.5258`
+  2. `[22697] Green Regency Teacup And Saucer` (₹2.95) — Cosine Similarity: `0.5086`
+  3. `[22698] Pink Regency Teacup And Saucer` (₹2.95) — Cosine Similarity: `0.4886`
+  4. `[23245] Set Of 3 Regency Cake Tins` (₹4.95) — Cosine Similarity: `0.4668`
+  5. `[23173] Regency Teapot Roses` (₹9.95) — Cosine Similarity: `0.4535`
 
 ---
 
@@ -317,7 +317,7 @@ This repository includes a preconfigured [`vercel.json`](vercel.json):
 When discussing this project in a Technical or Behavioral interview, highlight these key design decisions:
 
 1. **Why not drop missing `CustomerID` immediately?**
-   > *"Dropping missing customer IDs upfront is a common novice error. Guest checkouts represented nearly 25% of all purchases and over £1.5M in sales. Dropping them would severely bias store-level demand forecasts. I implemented a Dual-Dataset Architecture: store-wide for macro sales forecasting, and customer-centric for RFM, churn, and recommendations."*
+   > *"Dropping missing customer IDs upfront is a common novice error. Guest checkouts represented nearly 25% of all purchases and over ₹15.00L in sales. Dropping them would severely bias store-level demand forecasts. I implemented a Dual-Dataset Architecture: store-wide for macro sales forecasting, and customer-centric for RFM, churn, and recommendations."*
 
 2. **Why log-transform features before K-Means clustering?**
    > *"K-Means uses Euclidean distance. Because e-commerce spend exhibits extreme power-law skewness ($>20$), unscaled whale customers would dominate the distance metric, collapsing 98% of users into a single cluster. Applying $x' = \ln(1 + x)$ followed by Z-Score standardization equilibrates geometric weights."*

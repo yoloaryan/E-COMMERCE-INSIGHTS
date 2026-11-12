@@ -84,8 +84,8 @@ fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 5))
 # Daily trajectory
 ax1.plot(daily_df['Date'], daily_df['DailyRevenue'], color='#1f77b4', linewidth=1.5)
 ax1.plot(daily_df['Date'], daily_df['RollingMean_7'], color='#ff7f0e', linewidth=2.5, label='7-Day Moving Avg')
-ax1.set_title('Daily Gross Revenue Trajectory (£)', fontsize=13, weight='bold')
-ax1.set_ylabel('Revenue (£)')
+ax1.set_title('Daily Gross Revenue Trajectory (₹)', fontsize=13, weight='bold')
+ax1.set_ylabel('Revenue (₹)')
 ax1.legend()
 
 # Day of week pattern
@@ -93,7 +93,7 @@ day_labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 sns.barplot(data=daily_df, x='DayOfWeek', y='DailyRevenue', ax=ax2, palette='Blues_d')
 ax2.set_xticklabels(day_labels)
 ax2.set_title('Average Daily Revenue by Day of Week', fontsize=13, weight='bold')
-ax2.set_ylabel('Avg Revenue (£)')
+ax2.set_ylabel('Avg Revenue (₹)')
 
 plt.tight_layout()
 plt.show()
@@ -124,12 +124,12 @@ Comparing the best performing model's predictions against ground-truth receipts.
 preds_df = pd.read_csv('../data/processed/sales_forecast_results.csv', parse_dates=['Date'])
 
 plt.figure(figsize=(14, 6))
-plt.plot(preds_df['Date'], preds_df['ActualRevenue'], label='Actual Sales (£)', color='black', linewidth=2, marker='o', markersize=4)
+plt.plot(preds_df['Date'], preds_df['ActualRevenue'], label='Actual Sales (₹)', color='black', linewidth=2, marker='o', markersize=4)
 plt.plot(preds_df['Date'], preds_df['Pred_Random Forest Regressor'], label='Random Forest Forecast', color='#2ca02c', linewidth=2.5, linestyle='--')
 plt.plot(preds_df['Date'], preds_df['Pred_XGBoost Regressor'], label='XGBoost Forecast', color='#1f77b4', linewidth=2, linestyle=':')
 plt.title('Out-of-Sample Sales Forecast Comparison (Q4 Peak)', fontsize=14, weight='bold')
 plt.xlabel('Date')
-plt.ylabel('Daily Gross Revenue (£)')
+plt.ylabel('Daily Gross Revenue (₹)')
 plt.legend(fontsize=11)
 plt.grid(True, linestyle='--', alpha=0.6)
 plt.tight_layout()

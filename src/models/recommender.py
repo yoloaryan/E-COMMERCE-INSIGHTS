@@ -224,11 +224,11 @@ if __name__ == "__main__":
     print(f"\n--- ITEM-TO-ITEM RECOMMENDATIONS FOR: [{sample_sku}] {sku_desc} ---")
     similar_items = recommender.recommend_similar_items(sample_sku, top_n=5)
     for i, item in enumerate(similar_items, 1):
-        print(f"  {i}. [{item['StockCode']}] {item['Description']} (£{item['UnitPrice']}) | Sim: {item['SimilarityScore']}")
+        print(f"  {i}. [{item['StockCode']}] {item['Description']} (₹{item['UnitPrice']}) | Sim: {item['SimilarityScore']}")
 
     # 2. Test Personalized Customer Recommendation (e.g. Customer 17850)
     sample_cid = "17850"
     print(f"\n--- PERSONALIZED RECOMMENDATIONS FOR CUSTOMER ID: {sample_cid} ---")
     user_recs = recommender.recommend_for_customer(sample_cid, top_n=5)
     for i, item in enumerate(user_recs, 1):
-        print(f"  {i}. [{item['StockCode']}] {item['Description']} (£{item['UnitPrice']}) | Score: {item['AggregatedAffinityScore']}")
+        print(f"  {i}. [{item['StockCode']}] {item['Description']} (₹{item['UnitPrice']}) | Score: {item['AggregatedAffinityScore']}")

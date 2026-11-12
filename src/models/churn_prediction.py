@@ -284,4 +284,4 @@ if __name__ == "__main__":
         (scored["Churn_Risk_Tier"] == "High Risk") & (scored["HistoricalMonetary"] >= 1000)
     ]
     print(f"\nCRITICAL VIP ACCOUNTS AT RISK OF CHURNING: {len(high_value_at_risk):,} accounts.")
-    print(f"Total Revenue Exposure from At-Risk VIPs: £{high_value_at_risk['HistoricalMonetary'].sum():,.2f}")
+    print(f"Total Revenue Exposure from At-Risk VIPs: ₹{high_value_at_risk['HistoricalMonetary'].sum():,.2f}")

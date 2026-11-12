@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=7.21">
+    <link rel="stylesheet" href="style.css?v=7.22">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -50,7 +50,7 @@
                 </select>
                 <div class="sidebar-tenant-badge" id="sidebarTenantIndicator" title="Active Multi-Tenant Workspace">
                     <span>🏢</span>
-                    <span id="sidebarTenantName">UK Flagship (GBP)</span>
+                    <span id="sidebarTenantName">India Flagship (INR)</span>
                 </div>
             </div>
 
@@ -222,7 +222,7 @@
                             <div class="notif-list">
                                 <div class="notif-item critical">
                                     <div class="notif-badge">⚠️ Churn Alert</div>
-                                    <p>Customer #14096 (Historical Spend: £65,164) reached 81.2% churn risk probability.</p>
+                                    <p>Customer #14096 (Historical Spend: ₹65,164) reached 81.2% churn risk probability.</p>
                                     <small>12 mins ago</small>
                                 </div>
                                 <div class="notif-item info">
@@ -306,7 +306,7 @@
                         <div class="kpi-icon-wrap bg-blue">💰</div>
                         <div>
                             <div class="kpi-label">Total Gross Revenue</div>
-                            <div class="kpi-value" id="kpi-revenue">£10,279,169.87</div>
+                            <div class="kpi-value" id="kpi-revenue">₹1,02,79,169.87</div>
                             <div class="kpi-meta"><span class="badge-tag green" id="kpi-rev-growth">↑ +14.2%</span> <small id="kpi-rev-sub">vs prior period</small></div>
                         </div>
                     </div>
@@ -322,7 +322,7 @@
                         <div class="kpi-icon-wrap bg-emerald">💳</div>
                         <div>
                             <div class="kpi-label">Average Order Value (AOV)</div>
-                            <div class="kpi-value" id="kpi-aov">£519.78</div>
+                            <div class="kpi-value" id="kpi-aov">₹519.78</div>
                             <div class="kpi-meta"><span class="badge-tag blue">Wholesale / B2B</span></div>
                         </div>
                     </div>
@@ -340,7 +340,7 @@
                     <div class="chart-card flex-2" id="monthlyRevenueCard">
                         <div class="card-header">
                             <div>
-                                <h3>Monthly Gross Revenue Velocity (£)</h3>
+                                <h3>Monthly Gross Revenue Velocity (₹)</h3>
                                 <p class="card-sub">Aggregated trajectory across 374 operating days (Nov 2010 – Dec 2011)</p>
                             </div>
                         </div>
@@ -377,7 +377,7 @@
                                     <th>Product Name</th>
                                     <th>Units Sold</th>
                                     <th>Completed Orders</th>
-                                    <th>Gross Revenue (£)</th>
+                                    <th>Gross Revenue (₹)</th>
                                     <th>Catalog Share</th>
                                 </tr>
                             </thead>
@@ -398,7 +398,7 @@
                         <div class="filter-actions">
                             <div class="btn-group-segmented">
                                 <button class="btn-seg active" id="cohortModeRateBtn">Retention Rate (%)</button>
-                                <button class="btn-seg" id="cohortModeSpendBtn">Cumulative Spend (£)</button>
+                                <button class="btn-seg" id="cohortModeSpendBtn">Cumulative Spend (₹)</button>
                             </div>
                             <button class="btn btn-secondary btn-sm" id="exportCohortBtn">📥 Export Cohort CSV</button>
                         </div>
@@ -486,7 +486,7 @@
                             </div>
                             <div class="btyd-stat-box">
                                 <strong>Net Margin Recovered</strong>
-                                <div class="stat-val text-green" id="finMarginRecoveredVal">£0</div>
+                                <div class="stat-val text-green" id="finMarginRecoveredVal">₹0</div>
                             </div>
                         </div>
 
@@ -496,7 +496,7 @@
                                 <thead>
                                     <tr>
                                         <th>SKU</th>
-                                        <th>Refund (£)</th>
+                                        <th>Refund (₹)</th>
                                         <th>Rate</th>
                                     </tr>
                                 </thead>
@@ -525,7 +525,7 @@
                     <div class="kpi-card gold-border">
                         <div class="kpi-label">Champions (VIPs)</div>
                         <div class="kpi-value">708</div>
-                        <div class="kpi-subtext"><strong>64.55%</strong> of Total Revenue (£7,993 avg spend)</div>
+                        <div class="kpi-subtext"><strong>64.55%</strong> of Total Revenue (₹7,993 avg spend)</div>
                     </div>
                     <div class="kpi-card red-border">
                         <div class="kpi-label">At-Risk / Lapsing</div>
@@ -556,7 +556,7 @@
                     </div>
                     <div class="chart-card flex-2">
                         <div class="card-header">
-                            <h3>Average Spend (£) vs Purchase Frequency</h3>
+                            <h3>Average Spend (₹) vs Purchase Frequency</h3>
                             <span class="badge info-badge">Behavioral Clustering</span>
                         </div>
                         <div class="chart-wrapper">
@@ -600,7 +600,7 @@
                             <small class="text-muted">Customer purchase cadence threshold</small>
                         </div>
                         <div class="sim-control-box">
-                            <label>Min Total Spend (Monetary): <strong id="lblDynSpend">&ge; £1,500</strong></label>
+                            <label>Min Total Spend (Monetary): <strong id="lblDynSpend">&ge; ₹1,500</strong></label>
                             <input type="range" id="sliderDynSpend" min="100" max="25000" value="1500" step="100">
                             <small class="text-muted">High-yield customer lifetime value barrier</small>
                         </div>
@@ -748,7 +748,7 @@
                             </div>
                             <div class="btyd-stat-box" style="grid-column: 1 / -1;">
                                 <strong>Projected Annual Revenue Uplift (&pound;)</strong>
-                                <div class="stat-val text-green" id="migProjectedGainVal">£0</div>
+                                <div class="stat-val text-green" id="migProjectedGainVal">₹0</div>
                             </div>
                         </div>
                     </div>
@@ -775,8 +775,8 @@
                     </div>
                     <div class="kpi-card">
                         <div class="kpi-label">Out-of-Sample MAE</div>
-                        <div class="kpi-value">£12,464.66</div>
-                        <div class="kpi-trend positive">Beats Linear Baseline (£19.1k)</div>
+                        <div class="kpi-value">₹12,464.66</div>
+                        <div class="kpi-trend positive">Beats Linear Baseline (₹19.1k)</div>
                     </div>
                     <div class="kpi-card">
                         <div class="kpi-label">MAPE Accuracy</div>
@@ -919,7 +919,7 @@
                     </div>
                     <div class="kpi-card highlight-glow">
                         <div class="kpi-label">VIP Capital Exposure</div>
-                        <div class="kpi-value">£191,892.72</div>
+                        <div class="kpi-value">₹1,91,892.72</div>
                         <div class="kpi-trend alert">22 Whale Accounts at Risk</div>
                     </div>
                 </div>
@@ -934,10 +934,10 @@
 
                     <div class="quick-preset-bar" style="margin-bottom:0.85rem;">
                         <span class="preset-bar-label">⚡ 1-Click VIP Profiles:</span>
-                        <button type="button" class="preset-chip" onclick="quickScanChurn('14096')">👑 VIP #14096 (£65k Spend, 81% Risk)</button>
-                        <button type="button" class="preset-chip" onclick="quickScanChurn('17850')">⭐ Loyal #17850 (£5.3k Spend, 18% Risk)</button>
-                        <button type="button" class="preset-chip" onclick="quickScanChurn('14646')">🌍 Wholesaler #14646 (£280k Spend, 2% Risk)</button>
-                        <button type="button" class="preset-chip" onclick="quickScanChurn('12352')">⚠️ At-Risk #12352 (£2.5k Spend, 74% Risk)</button>
+                        <button type="button" class="preset-chip" onclick="quickScanChurn('14096')">👑 VIP #14096 (₹65k Spend, 81% Risk)</button>
+                        <button type="button" class="preset-chip" onclick="quickScanChurn('17850')">⭐ Loyal #17850 (₹5.3k Spend, 18% Risk)</button>
+                        <button type="button" class="preset-chip" onclick="quickScanChurn('14646')">🌍 Wholesaler #14646 (₹280k Spend, 2% Risk)</button>
+                        <button type="button" class="preset-chip" onclick="quickScanChurn('12352')">⚠️ At-Risk #12352 (₹2.5k Spend, 74% Risk)</button>
                     </div>
 
                     <div class="search-form">
@@ -950,7 +950,7 @@
                 <div class="table-card" id="vipAccountsTableCard">
                     <div class="card-header">
                         <div>
-                            <h3>Critical VIP Accounts at Immediate Risk (Historical Spend &gt; £1,000)</h3>
+                            <h3>Critical VIP Accounts at Immediate Risk (Historical Spend &gt; ₹1,000)</h3>
                             <p class="card-sub">Immediate proactive win-back targets to protect bottom-line retail EBITDA</p>
                         </div>
                         <button class="btn btn-secondary btn-sm" id="exportVipChurnBtn">📥 Export CSV</button>
@@ -960,7 +960,7 @@
                             <thead>
                                 <tr>
                                     <th>Customer ID</th>
-                                    <th>Historical Spend (£)</th>
+                                    <th>Historical Spend (₹)</th>
                                     <th>Order Count</th>
                                     <th>Days Inactive</th>
                                     <th>Churn Risk</th>
@@ -992,7 +992,7 @@
                     <div class="btyd-portfolio-ribbon">
                         <div class="btyd-ribbon-stat">
                             <span class="ribbon-label">12-Month Portfolio CLV</span>
-                            <strong class="ribbon-val text-blue" id="btydTotalPortfolioClv">£9,631,782.48</strong>
+                            <strong class="ribbon-val text-blue" id="btydTotalPortfolioClv">₹96,31,782.48</strong>
                             <small>Net Present Value (NPV @ 10% WACC)</small>
                         </div>
                         <div class="btyd-ribbon-stat">
@@ -1002,24 +1002,24 @@
                         </div>
                         <div class="btyd-ribbon-stat">
                             <span class="ribbon-label">Average Forward CLV</span>
-                            <strong class="ribbon-val text-green" id="btydAvgCustomerClv">£2,222.33</strong>
+                            <strong class="ribbon-val text-green" id="btydAvgCustomerClv">₹2,222.33</strong>
                             <small>Per Customer (12 Months)</small>
                         </div>
                         <div class="btyd-ribbon-stat">
                             <span class="ribbon-label">Platinum VIP Share</span>
                             <strong class="ribbon-val text-gold">70.8%</strong>
-                            <small>957 Accounts (£6.82M Yield)</small>
+                            <small>957 Accounts (₹68.20L Yield)</small>
                         </div>
                     </div>
 
                     <!-- 1-Click Interactive Sample Account Chips -->
                     <div class="quick-preset-bar" style="margin: 1rem 0 0.75rem;">
                         <span class="preset-bar-label">⚡ 1-Click BTYD Accounts:</span>
-                        <button type="button" class="preset-chip" onclick="quickInspectBtydClv('14646')">👑 Wholesaler #14646 (P(Alive) 99.8% | £236k CLV)</button>
-                        <button type="button" class="preset-chip" onclick="quickInspectBtydClv('14096')">⚠️ Lapsing Whale #14096 (P(Alive) 18.8% | £4.9k CLV)</button>
-                        <button type="button" class="preset-chip" onclick="quickInspectBtydClv('17850')">⭐ Steady Champion #17850 (P(Alive) 82.5% | £5.3k CLV)</button>
-                        <button type="button" class="preset-chip" onclick="quickInspectBtydClv('12347')">💎 Platinum #12347 (P(Alive) 97.5% | £3.5k CLV)</button>
-                        <button type="button" class="preset-chip" onclick="quickInspectBtydClv('12352')">📉 At-Risk Core #12352 (P(Alive) 25.8% | £405 CLV)</button>
+                        <button type="button" class="preset-chip" onclick="quickInspectBtydClv('14646')">👑 Wholesaler #14646 (P(Alive) 99.8% | ₹236k CLV)</button>
+                        <button type="button" class="preset-chip" onclick="quickInspectBtydClv('14096')">⚠️ Lapsing Whale #14096 (P(Alive) 18.8% | ₹4.9k CLV)</button>
+                        <button type="button" class="preset-chip" onclick="quickInspectBtydClv('17850')">⭐ Steady Champion #17850 (P(Alive) 82.5% | ₹5.3k CLV)</button>
+                        <button type="button" class="preset-chip" onclick="quickInspectBtydClv('12347')">💎 Platinum #12347 (P(Alive) 97.5% | ₹3.5k CLV)</button>
+                        <button type="button" class="preset-chip" onclick="quickInspectBtydClv('12352')">📉 At-Risk Core #12352 (P(Alive) 25.8% | ₹405 CLV)</button>
                     </div>
 
                     <!-- Search / Direct Lookup Form -->
@@ -1059,7 +1059,7 @@
                     </div>
                     <div class="simulator-controls-grid">
                         <div class="sim-control-box">
-                            <label>Target Customer Historical Spend (£):</label>
+                            <label>Target Customer Historical Spend (₹):</label>
                             <input type="number" id="calcSpend" value="3850" min="100" max="100000" step="50" class="form-input-sm" style="width: 100%;">
                         </div>
                         <div class="sim-control-box">
@@ -1071,7 +1071,7 @@
                             <input type="range" id="sliderCalcMargin" min="15" max="75" value="42" step="1">
                         </div>
                         <div class="sim-control-box">
-                            <label>Retention Campaign Cost (£ / customer):</label>
+                            <label>Retention Campaign Cost (₹ / customer):</label>
                             <input type="number" id="calcCost" value="35" min="5" max="500" step="5" class="form-input-sm" style="width: 100%;">
                         </div>
                     </div>
@@ -1220,11 +1220,11 @@
                     <div class="control-group" id="skuSelectorGroup">
                         <label for="skuSelect"><strong>Select Base Product SKU:</strong></label>
                         <select id="skuSelect">
-                            <option value="22423">[22423] Regency Cakestand 3 Tier (£10.95)</option>
-                            <option value="85123A">[85123A] White Hanging Heart T-Light Holder (£2.55)</option>
-                            <option value="47566">[47566] Party Bunting (£4.65)</option>
-                            <option value="85099B">[85099B] Jumbo Bag Red Retrospot (£1.79)</option>
-                            <option value="20725">[20725] Lunch Bag Red Retrospot (£1.65)</option>
+                            <option value="22423">[22423] Regency Cakestand 3 Tier (₹10.95)</option>
+                            <option value="85123A">[85123A] White Hanging Heart T-Light Holder (₹2.55)</option>
+                            <option value="47566">[47566] Party Bunting (₹4.65)</option>
+                            <option value="85099B">[85099B] Jumbo Bag Red Retrospot (₹1.79)</option>
+                            <option value="20725">[20725] Lunch Bag Red Retrospot (₹1.65)</option>
                         </select>
                     </div>
                     <div class="control-group" id="custSelectorGroup" style="display: none;">
@@ -1265,7 +1265,7 @@
                             <div class="cart-total-bar">
                                 <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
                                     <strong>Basket Subtotal:</strong>
-                                    <span class="cart-total-amount" id="cartTotalAmount">£0.00</span>
+                                    <span class="cart-total-amount" id="cartTotalAmount">₹0.00</span>
                                 </div>
                                 <button class="btn btn-primary btn-sm" id="cartCheckoutBtn" style="width:100%;margin-top:0.65rem;">
                                     ⚡ Instant POS Checkout & Pipeline Sync
@@ -1562,9 +1562,9 @@
                                 <tr>
                                     <th>Customer ID</th>
                                     <th>Segment Persona</th>
-                                    <th>Lifetime Spend (£)</th>
+                                    <th>Lifetime Spend (₹)</th>
                                     <th>Orders</th>
-                                    <th>AOV (£)</th>
+                                    <th>AOV (₹)</th>
                                     <th>Last Purchase</th>
                                     <th>Churn Risk</th>
                                     <th>Status Action</th>
@@ -1595,12 +1595,12 @@
                     </div>
                     <div class="kpi-card gold-border">
                         <div class="kpi-label">Overstock / Slow Capital</div>
-                        <div class="kpi-value" id="invKpiOverstockCap">£4,358</div>
+                        <div class="kpi-value" id="invKpiOverstockCap">₹4,358</div>
                         <div class="kpi-subtext" id="invKpiOverstockSub">Working Capital Tied Above 75d Cover</div>
                     </div>
                     <div class="kpi-card green-border">
                         <div class="kpi-label">Annual EOQ Cost Savings</div>
-                        <div class="kpi-value" id="invKpiEoqSavings">£2,840</div>
+                        <div class="kpi-value" id="invKpiEoqSavings">₹2,840</div>
                         <div class="kpi-trend positive">Wilson EOQ vs Fixed Monthly Ordering</div>
                     </div>
                 </div>
@@ -1770,7 +1770,7 @@
                             <div class="form-group">
                                 <label for="campSegment">Target Cohort Segment:</label>
                                 <select id="campSegment">
-                                    <option value="At-Risk VIPs">At-Risk VIP Spenders (Spend &gt; £1k, Churn &ge; 70%)</option>
+                                    <option value="At-Risk VIPs">At-Risk VIP Spenders (Spend &gt; ₹1k, Churn &ge; 70%)</option>
                                     <option value="All At-Risk">All At-Risk / Lapsing Customers (1,180 accounts)</option>
                                     <option value="Champions">Champions (VIPs) - Appreciation & Early Access</option>
                                     <option value="Hibernating">Hibernating Win-Back (1,602 accounts)</option>
@@ -1820,7 +1820,7 @@
 
                             <div class="campaign-est-box">
                                 <div><strong>Target Audience Size:</strong> <span id="campAudienceSize">22 Accounts</span></div>
-                                <div><strong>Protected Gross Revenue Exposure:</strong> <span id="campRevenueProtected">£191,892.72</span></div>
+                                <div><strong>Protected Gross Revenue Exposure:</strong> <span id="campRevenueProtected">₹1,91,892.72</span></div>
                                 <div><strong>Projected Win-Back Rate:</strong> <span class="badge-tag green">28.5% Expected</span></div>
                             </div>
 
@@ -1839,7 +1839,7 @@
                             </div>
                             <div style="display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.8rem;">
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <span>VIP Churn Watchdog (Churn &gt; 65%, Spend &gt; £1k)</span>
+                                    <span>VIP Churn Watchdog (Churn &gt; 65%, Spend &gt; ₹1k)</span>
                                     <span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #22c55e;">● ACTIVE</span>
                                 </div>
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -1863,12 +1863,12 @@
                             <div class="campaign-item">
                                 <div class="camp-status-badge active">RUNNING</div>
                                 <h4>Q4 VIP Win-Back Acceleration</h4>
-                                <p>Target: 22 High-Value At-Risk VIPs (£1k+ historical spend)</p>
+                                <p>Target: 22 High-Value At-Risk VIPs (₹1k+ historical spend)</p>
                                 <div class="camp-stats">
                                     <div><small>Channels</small><strong>Slack, Email</strong></div>
                                     <div><small>Voucher</small><code>WINBACK-20-VIP99</code></div>
                                     <div><small>Audience</small><strong>22 accounts</strong></div>
-                                    <div><small>Preserved GMV</small><strong class="text-green">£48,210.00</strong></div>
+                                    <div><small>Preserved GMV</small><strong class="text-green">₹48,210.00</strong></div>
                                 </div>
                             </div>
                             <div class="campaign-item">
@@ -1879,7 +1879,7 @@
                                     <div><small>Channels</small><strong>Email Queue</strong></div>
                                     <div><small>Voucher</small><code>REGENCY-15-X48A1</code></div>
                                     <div><small>Audience</small><strong>1,420 accounts</strong></div>
-                                    <div><small>Generated GMV</small><strong class="text-green">£14,640.00</strong></div>
+                                    <div><small>Generated GMV</small><strong class="text-green">₹14,640.00</strong></div>
                                 </div>
                             </div>
                         </div>
@@ -1922,11 +1922,11 @@
                             </div>
                             <div class="btyd-stat-box">
                                 <strong>Saved Margin (Sure Things)</strong>
-                                <div class="stat-val text-green" id="causalMarginSavedVal">£0</div>
+                                <div class="stat-val text-green" id="causalMarginSavedVal">₹0</div>
                             </div>
                             <div class="btyd-stat-box">
                                 <strong>Causal Net Profit</strong>
-                                <div class="stat-val" id="causalNetProfitVal">£0</div>
+                                <div class="stat-val" id="causalNetProfitVal">₹0</div>
                             </div>
                             <div class="btyd-stat-box">
                                 <strong>DiD Causal Lift</strong>
@@ -1955,7 +1955,7 @@
                                         <th>Causal Quadrant</th>
                                         <th>Accounts</th>
                                         <th>Share</th>
-                                        <th>Avg CATE (£)</th>
+                                        <th>Avg CATE (₹)</th>
                                         <th>Recommended Policy</th>
                                     </tr>
                                 </thead>
@@ -1983,10 +1983,10 @@
 
                         <div class="quick-preset-bar" style="margin-bottom:0.85rem;">
                             <span class="preset-bar-label">⚡ 1-Click Order Injections:</span>
-                            <button type="button" class="preset-chip" onclick="quickFillSimOrder('14646', '22423', 48, 10.95, 'Netherlands')">👑 Wholesale Whale (£525.60)</button>
-                            <button type="button" class="preset-chip" onclick="quickFillSimOrder('14096', '85123A', 20, 2.55, 'United Kingdom')">⚠️ Win-Back Rescue (£51.00)</button>
-                            <button type="button" class="preset-chip" onclick="quickFillSimOrder('17850', '22699', 15, 2.95, 'United Kingdom')">⭐ Steady Champion (£44.25)</button>
-                            <button type="button" class="preset-chip" onclick="quickFillSimOrder('12352', '85099B', 30, 1.79, 'United Kingdom')">🛍️ Flash Basket (£53.70)</button>
+                            <button type="button" class="preset-chip" onclick="quickFillSimOrder('14646', '22423', 48, 10.95, 'Netherlands')">👑 Wholesale Whale (₹525.60)</button>
+                            <button type="button" class="preset-chip" onclick="quickFillSimOrder('14096', '85123A', 20, 2.55, 'United Kingdom')">⚠️ Win-Back Rescue (₹51.00)</button>
+                            <button type="button" class="preset-chip" onclick="quickFillSimOrder('17850', '22699', 15, 2.95, 'United Kingdom')">⭐ Steady Champion (₹44.25)</button>
+                            <button type="button" class="preset-chip" onclick="quickFillSimOrder('12352', '85099B', 30, 1.79, 'United Kingdom')">🛍️ Flash Basket (₹53.70)</button>
                         </div>
 
                         <form id="posSimulatorForm" class="admin-form">
@@ -1998,11 +1998,11 @@
                             <div class="form-group">
                                 <label>Product SKU Code:</label>
                                 <select id="simSkuCode">
-                                    <option value="22423">[22423] Regency Cakestand 3 Tier (£10.95)</option>
-                                    <option value="22699">[22699] Roses Regency Teacup And Saucer (£2.95)</option>
-                                    <option value="85123A">[85123A] White Hanging Heart T-Light Holder (£2.55)</option>
-                                    <option value="47566">[47566] Party Bunting (£4.65)</option>
-                                    <option value="85099B">[85099B] Jumbo Bag Red Retrospot (£1.79)</option>
+                                    <option value="22423">[22423] Regency Cakestand 3 Tier (₹10.95)</option>
+                                    <option value="22699">[22699] Roses Regency Teacup And Saucer (₹2.95)</option>
+                                    <option value="85123A">[85123A] White Hanging Heart T-Light Holder (₹2.55)</option>
+                                    <option value="47566">[47566] Party Bunting (₹4.65)</option>
+                                    <option value="85099B">[85099B] Jumbo Bag Red Retrospot (₹1.79)</option>
                                 </select>
                             </div>
                             <div class="form-row">
@@ -2011,7 +2011,7 @@
                                     <input type="number" id="simQty" value="12" min="1" max="1000" required>
                                 </div>
                                 <div class="form-group flex-1">
-                                    <label>Unit Price (£):</label>
+                                    <label>Unit Price (₹):</label>
                                     <input type="number" id="simPrice" value="10.95" step="0.01" required>
                                 </div>
                             </div>
@@ -2122,14 +2122,14 @@
                         <div class="security-session-box" id="authSessionDetailsBox">
                             <div class="security-kv"><span>Principal Identity:</span><strong id="secPrincipalEmail">dev@nexusretail.ai (Demo)</strong></div>
                             <div class="security-kv"><span>Assigned Role:</span><strong id="secPrincipalRole">Principal Admin (admin)</strong></div>
-                            <div class="security-kv"><span>Active Tenant:</span><strong id="secActiveTenant">Nexus UK Flagship Wholesale (GBP)</strong></div>
+                            <div class="security-kv"><span>Active Tenant:</span><strong id="secActiveTenant">Nexus India Flagship Wholesale (INR)</strong></div>
                         </div>
 
                         <div class="pricing-field-group" style="margin-top: 0.9rem;">
                             <label for="tenantWorkspaceSelect">Isolated Tenant Context Switcher (Admin Cross-Tenant)</label>
                             <div style="display: flex; gap: 0.5rem;">
                                 <select id="tenantWorkspaceSelect" name="tenant_id" class="form-select-sm" style="flex: 1;">
-                                    <option value="tenant_uk_flagship">Nexus UK Flagship Wholesale (GBP)</option>
+                                    <option value="tenant_uk_flagship">Nexus India Flagship Wholesale (INR)</option>
                                     <option value="tenant_eu_nordics">EuroCraft Retail GmbH &amp; NL (EUR)</option>
                                     <option value="tenant_us_direct">Atlantic Direct Commerce (USD)</option>
                                 </select>
@@ -2511,7 +2511,7 @@
                     </div>
                     <div class="kpi-card">
                         <div class="kpi-label">Identifiable Margin Upside</div>
-                        <div class="kpi-value text-green" id="pricingKpiTotalUplift">+£40,598</div>
+                        <div class="kpi-value text-green" id="pricingKpiTotalUplift">+₹40,598</div>
                         <div class="kpi-subtext">Across Bounded Optimal Price Points</div>
                     </div>
                     <div class="kpi-card">
@@ -2618,7 +2618,7 @@
                         <div class="result-grid" id="pricingSimOutcomeGrid" role="status" aria-live="polite" style="margin-top: 1rem;">
                             <div class="result-stat">
                                 <strong>Simulated Avg Unit Price</strong>
-                                <span id="simUnitPriceOut">£2.24</span>
+                                <span id="simUnitPriceOut">₹2.24</span>
                             </div>
                             <div class="result-stat">
                                 <strong>Projected Demand Volume</strong>
@@ -2626,11 +2626,11 @@
                             </div>
                             <div class="result-stat">
                                 <strong>Projected Revenue</strong>
-                                <span id="simRevOut">£2,493,144</span>
+                                <span id="simRevOut">₹24,93,144</span>
                             </div>
                             <div class="result-stat">
                                 <strong>Projected Gross Profit</strong>
-                                <span id="simProfitOut" style="color: var(--success);">£1,321,366</span>
+                                <span id="simProfitOut" style="color: var(--success);">₹13,21,366</span>
                             </div>
                         </div>
 
@@ -2866,7 +2866,7 @@
                     </div>
                     <div class="kpi-card gold-border">
                         <div class="kpi-label">Flagged Outlier Exposure</div>
-                        <div class="kpi-value" id="fraudKpiExposure">£1.85M</div>
+                        <div class="kpi-value" id="fraudKpiExposure">₹18.50L</div>
                         <div class="kpi-subtext" id="fraudKpiAnomalyCount">Structural &amp; Volume Outliers</div>
                     </div>
                     <div class="kpi-card">
@@ -2889,16 +2889,16 @@
 
                         <div class="quick-preset-bar" style="margin-bottom: 1rem;">
                             <span class="preset-bar-label">⚡ Test Risk Scenarios:</span>
-                            <button type="button" class="preset-chip" onclick="window.applyFraudPreset('guest_whale')">🚨 Guest Whale (£18k / 02:00)</button>
+                            <button type="button" class="preset-chip" onclick="window.applyFraudPreset('guest_whale')">🚨 Guest Whale (₹18k / 02:00)</button>
                             <button type="button" class="preset-chip" onclick="window.applyFraudPreset('high_cancel')">⚠️ Serial Canceller (65%)</button>
-                            <button type="button" class="preset-chip" onclick="window.applyFraudPreset('safe_retail')">✅ Normal UK Order (£68)</button>
+                            <button type="button" class="preset-chip" onclick="window.applyFraudPreset('safe_retail')">✅ Normal UK Order (₹68)</button>
                         </div>
 
                         <form id="fraudScoreForm" class="admin-form" aria-labelledby="fraudFormHeading">
                             <h4 id="fraudFormHeading" class="visually-hidden">Transaction Anomaly Scoring Inputs</h4>
                             <div class="form-row">
                                 <div class="pricing-field-group flex-1">
-                                    <label for="fraudAmountInput">Order Amount (£ GBP)</label>
+                                    <label for="fraudAmountInput">Order Amount (₹ INR)</label>
                                     <input type="number" id="fraudAmountInput" name="amount_gbp" value="18500" step="0.01" required class="form-input-sm">
                                 </div>
                                 <div class="pricing-field-group flex-1">
@@ -2997,7 +2997,7 @@
                                     <th scope="col">Alert ID</th>
                                     <th scope="col">Invoice</th>
                                     <th scope="col">Customer / Guest</th>
-                                    <th scope="col">Amount (£)</th>
+                                    <th scope="col">Amount (₹)</th>
                                     <th scope="col">Risk Score</th>
                                     <th scope="col">Triggered Anomaly Drivers</th>
                                     <th scope="col">Status</th>
@@ -3098,7 +3098,7 @@
                     </div>
                     <div class="form-row">
                         <div class="form-group flex-1">
-                            <label>Unit Price (£):</label>
+                            <label>Unit Price (₹):</label>
                             <input type="number" id="modalSkuPrice" placeholder="4.95" step="0.01" min="0.10" required class="form-input-sm" style="width:100%;">
                         </div>
                         <div class="form-group flex-1">
@@ -3184,7 +3184,7 @@
                 <div class="report-kpi-row" id="reportKpiGridLive">
                     <div class="report-kpi">
                         <small>Total Retail GMV</small>
-                        <strong>£10,283,862</strong>
+                        <strong>₹1,02,83,862</strong>
                         <span>374 Operating Days</span>
                     </div>
                     <div class="report-kpi">
@@ -3194,12 +3194,12 @@
                     </div>
                     <div class="report-kpi">
                         <small>Average Order Value</small>
-                        <strong>£519.78</strong>
+                        <strong>₹519.78</strong>
                         <span>Wholesale Skew</span>
                     </div>
                     <div class="report-kpi">
                         <small>VIP Churn Exposure</small>
-                        <strong style="color:var(--danger);">£191,892.72</strong>
+                        <strong style="color:var(--danger);">₹1,91,892.72</strong>
                         <span>22 Whale Accounts</span>
                     </div>
                 </div>
@@ -3226,14 +3226,14 @@
                             <tr>
                                 <td><strong>Demand Forecaster</strong></td>
                                 <td>Random Forest Regressor (100 Trees)</td>
-                                <td>MAPE 26.28% | MAE £12,464</td>
+                                <td>MAPE 26.28% | MAE ₹12,464</td>
                                 <td>18% Reduction in Warehouse Safety Buffer Stock</td>
                             </tr>
                             <tr>
                                 <td><strong>Churn Early Warning</strong></td>
                                 <td>Balanced Random Forest Classifier</td>
                                 <td>Recall 75.86% | AUC 0.7163</td>
-                                <td>Protects £191.8k in VIP revenue before 90-day lapse</td>
+                                <td>Protects ₹191.8k in VIP revenue before 90-day lapse</td>
                             </tr>
                             <tr>
                                 <td><strong>Product Recommender</strong></td>
@@ -3251,7 +3251,7 @@
                     <div class="report-directives" id="reportDirectivesLive">
                         <div class="report-directive-item">
                             <strong>🎯 VIP Concierge Intervention:</strong>
-                            <p>Activate Account Management phone outreach for the 22 At-Risk VIP accounts (led by #14096 and #12352) within 48 hours to preserve £191.8k annualized EBITDA.</p>
+                            <p>Activate Account Management phone outreach for the 22 At-Risk VIP accounts (led by #14096 and #12352) within 48 hours to preserve ₹191.8k annualized EBITDA.</p>
                         </div>
                         <div class="report-directive-item">
                             <strong>📦 Inventory Procurement Restock:</strong>
@@ -3259,7 +3259,7 @@
                         </div>
                         <div class="report-directive-item">
                             <strong>📈 International Expansion:</strong>
-                            <p>Allocate 30% digital ad budget to Dutch and German wholesale channels, capitalizing on £280k+ Netherlands cluster spend velocity.</p>
+                            <p>Allocate 30% digital ad budget to Dutch and German wholesale channels, capitalizing on ₹280k+ Netherlands cluster spend velocity.</p>
                         </div>
                     </div>
                 </div>
@@ -3448,7 +3448,7 @@
                         </div>
                         <div class="webhook-kpis">
                             <div><span class="webhook-kpi-val" id="shopifyOrdersCount">0</span><span class="webhook-kpi-lbl">Orders</span></div>
-                            <div><span class="webhook-kpi-val" id="shopifyRevenueVal">£0.00</span><span class="webhook-kpi-lbl">Revenue</span></div>
+                            <div><span class="webhook-kpi-val" id="shopifyRevenueVal">₹0.00</span><span class="webhook-kpi-lbl">Revenue</span></div>
                             <div><span class="webhook-kpi-val" id="shopifyLastPing">Never</span><span class="webhook-kpi-lbl">Last Ping</span></div>
                         </div>
                         <button type="button" class="btn btn-primary btn-sm btn-simulate-webhook" data-provider="shopify" style="width: 100%; justify-content: center;">
@@ -3474,7 +3474,7 @@
                         </div>
                         <div class="webhook-kpis">
                             <div><span class="webhook-kpi-val" id="stripeOrdersCount">0</span><span class="webhook-kpi-lbl">Charges</span></div>
-                            <div><span class="webhook-kpi-val" id="stripeRevenueVal">£0.00</span><span class="webhook-kpi-lbl">Revenue</span></div>
+                            <div><span class="webhook-kpi-val" id="stripeRevenueVal">₹0.00</span><span class="webhook-kpi-lbl">Revenue</span></div>
                             <div><span class="webhook-kpi-val" id="stripeLastPing">Never</span><span class="webhook-kpi-lbl">Last Ping</span></div>
                         </div>
                         <button type="button" class="btn btn-primary btn-sm btn-simulate-webhook" data-provider="stripe" style="width: 100%; justify-content: center;">
@@ -3500,7 +3500,7 @@
                         </div>
                         <div class="webhook-kpis">
                             <div><span class="webhook-kpi-val" id="wooOrdersCount">0</span><span class="webhook-kpi-lbl">Orders</span></div>
-                            <div><span class="webhook-kpi-val" id="wooRevenueVal">£0.00</span><span class="webhook-kpi-lbl">Revenue</span></div>
+                            <div><span class="webhook-kpi-val" id="wooRevenueVal">₹0.00</span><span class="webhook-kpi-lbl">Revenue</span></div>
                             <div><span class="webhook-kpi-val" id="wooLastPing">Never</span><span class="webhook-kpi-lbl">Last Ping</span></div>
                         </div>
                         <button type="button" class="btn btn-primary btn-sm btn-simulate-webhook" data-provider="woocommerce" style="width: 100%; justify-content: center;">
@@ -3630,6 +3630,6 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script defer src="app.js?v=7.21"></script>
+    <script defer src="app.js?v=7.22"></script>
 </body>
 </html>

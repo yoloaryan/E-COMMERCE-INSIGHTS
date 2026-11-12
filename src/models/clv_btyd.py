@@ -214,7 +214,7 @@ if __name__ == "__main__":
     clv_df = clv_engine.compute_clv(time_months=12, discount_rate=0.01)
 
     print("\n" + "="*80)
-    print("TOP 10 CUSTOMERS BY 12-MONTH PREDICTED CLV (£)")
+    print("TOP 10 CUSTOMERS BY 12-MONTH PREDICTED CLV (₹)")
     print("="*80)
     cols = ["CustomerID", "P_Alive", "Expected_Orders_365d", "Expected_Avg_Spend_GBP", "CLV_12M_GBP", "CLV_Segment"]
     print(clv_df[cols].head(10).to_string(index=False))
@@ -234,4 +234,4 @@ if __name__ == "__main__":
     summary["Avg_CLV_GBP"] = summary["Avg_CLV_GBP"].round(2)
     print(summary.to_string(index=False))
 
-    print(f"\nTotal 12-Month Projected Portfolio Future Cash Flow: £{clv_df['CLV_12M_GBP'].sum():,.2f}")
+    print(f"\nTotal 12-Month Projected Portfolio Future Cash Flow: ₹{clv_df['CLV_12M_GBP'].sum():,.2f}")

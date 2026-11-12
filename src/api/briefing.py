@@ -48,16 +48,32 @@ class ExecutiveBriefingGenerator:
         bsk_s = basket["summary"]
         wd_latest = watchdog.get("latest") or {}
 
+        def _fmt_inr(val: Any, decimals: int = 2) -> str:
+            num = round(float(val or 0.0), decimals)
+            neg = "-" if num < 0 else ""
+            raw = f"{abs(num):.{decimals}f}"
+            whole, *frac = raw.split(".")
+            if len(whole) > 3:
+                head, tail = whole[:-3], whole[-3:]
+                groups = []
+                while len(head) > 2:
+                    groups.append(head[-2:])
+                    head = head[:-2]
+                if head:
+                    groups.append(head)
+                whole = ",".join(reversed(groups)) + "," + tail
+            return f"{neg}₹{whole}" + (f".{frac[0]}" if frac else "")
+
         headline_kpis = [
             {
                 "label": "Gross Ordered GMV",
-                "value": f"£{fin_s['gross_gmv_gbp']:,.2f}",
+                "value": _fmt_inr(fin_s['gross_gmv_gbp'], 2),
                 "subtext": f"Return Rate: {fin_s['return_rate_pct']}% ({finance['filters']['country']})",
                 "tone": "blue",
             },
             {
                 "label": "Net Contribution Margin",
-                "value": f"£{fin_s['net_contribution_margin_gbp']:,.2f}",
+                "value": _fmt_inr(fin_s['net_contribution_margin_gbp'], 2),
                 "subtext": f"{fin_s['contribution_margin_pct']}% Net Realized Margin",
                 "tone": "green",
             },
@@ -70,7 +86,7 @@ class ExecutiveBriefingGenerator:
             {
                 "label": "Watchdog Health & EOQ Savings",
                 "value": f"{wd_latest.get('health_score', 100)}/100",
-                "subtext": f"£{inv_k['annual_eoq_savings_gbp']:,.0f}/yr EOQ • Top Lift {bsk_s['top_lift']}x",
+                "subtext": f"{_fmt_inr(inv_k['annual_eoq_savings_gbp'], 0)}/yr EOQ • Top Lift {bsk_s['top_lift']}x",
                 "tone": "alert" if float(wd_latest.get("health_score", 100)) < 75.0 else "green",
             },
         ]
@@ -79,8 +95,8 @@ class ExecutiveBriefingGenerator:
             {
                 "subsystem": "Financial P&L & Return Radar",
                 "architecture": "5-Step GMV-to-Contribution Bridge",
-                "benchmark_metric": f"£{fin_s['return_leakage_gbp']:,.0f} Return Leakage ({fin_s['return_rate_pct']}%)",
-                "business_impact": f"£{fin_s['net_contribution_margin_gbp']:,.0f} Net Realized Margin",
+                "benchmark_metric": f"{_fmt_inr(fin_s['return_leakage_gbp'], 0)} Return Leakage ({fin_s['return_rate_pct']}%)",
+                "business_impact": f"{_fmt_inr(fin_s['net_contribution_margin_gbp'], 0)} Net Realized Margin",
             },
             {
                 "subsystem": "Cohort Retention & Migration",
@@ -92,13 +108,13 @@ class ExecutiveBriefingGenerator:
                 "subsystem": "Inventory & Supply EOQ",
                 "architecture": "Wilson EOQ + ABC-XYZ + Safety Stock",
                 "benchmark_metric": f"{inv_k['critical_reorder_skus']} Critical SKUs <= ROP",
-                "business_impact": f"£{inv_k['annual_eoq_savings_gbp']:,.0f}/yr EOQ Cost Savings",
+                "business_impact": f"{_fmt_inr(inv_k['annual_eoq_savings_gbp'], 0)}/yr EOQ Cost Savings",
             },
             {
                 "subsystem": "Market Basket Affinity",
                 "architecture": "Pairwise Support / Confidence / Lift",
                 "benchmark_metric": f"Top Lift {bsk_s['top_lift']}x ({basket['total_baskets_mined']} baskets)",
-                "business_impact": f"Avg 10%-Off Bundle Offer: £{bsk_s['avg_bundle_offer_gbp']:.2f}",
+                "business_impact": f"Avg 10%-Off Bundle Offer: {_fmt_inr(bsk_s['avg_bundle_offer_gbp'], 2)}",
             },
             {
                 "subsystem": "Persistence & Watchdog Telemetry",
@@ -119,7 +135,7 @@ class ExecutiveBriefingGenerator:
             top_ret = finance["high_return_skus"][0]
             directives.append({
                 "title": f"[Financial Leakage] Audit Top Return SKU {top_ret['stock_code']}",
-                "detail": f"SKU {top_ret['stock_code']} accounts for £{top_ret['refund_leakage_gbp']:,.2f} in refund leakage ({top_ret['root_cause_driver']}).",
+                "detail": f"SKU {top_ret['stock_code']} accounts for {_fmt_inr(top_ret['refund_leakage_gbp'], 2)} in refund leakage ({top_ret['root_cause_driver']}).",
             })
 
         return {

@@ -205,7 +205,7 @@ class RetailCopilot:
         df = self.con.execute(sql).df()
         elapsed = round((time.perf_counter() - start_time) * 1000, 2)
         top_sku = df.iloc[0]["Product"] if not df.empty else "N/A"
-        top_rev = f"£{df.iloc[0]['GrossRevenueGBP']:,.2f}" if not df.empty else "£0"
+        top_rev = f"₹{df.iloc[0]['GrossRevenueGBP']:,.2f}" if not df.empty else "₹0"
 
         c_text = f" in {country}" if country else " globally"
         summary = (
@@ -259,7 +259,7 @@ class RetailCopilot:
         df = self.con.execute(sql).df()
         elapsed = round((time.perf_counter() - start_time) * 1000, 2)
         top_at_risk = df.iloc[0]["CustomerID"] if not df.empty else "N/A"
-        top_spend = f"£{df.iloc[0]['LifetimeSpendGBP']:,.2f}" if not df.empty else "£0"
+        top_spend = f"₹{df.iloc[0]['LifetimeSpendGBP']:,.2f}" if not df.empty else "₹0"
 
         summary = (
             f"Found critical accounts with >90 days dormancy. Top vulnerable VIP is "
@@ -336,7 +336,7 @@ class RetailCopilot:
         """
         df = self.con.execute(sql).df()
         elapsed = round((time.perf_counter() - start_time) * 1000, 2)
-        total_rev = f"£{df['RevenueGBP'].sum():,.2f}" if not df.empty else "£0"
+        total_rev = f"₹{df['RevenueGBP'].sum():,.2f}" if not df.empty else "₹0"
 
         summary = (
             f"Cumulative portfolio gross revenue reached **{total_rev}**. "
@@ -382,7 +382,7 @@ class RetailCopilot:
             summary = f"No commercial transaction history found for Customer ID #{customer_id}."
         else:
             row = df.iloc[0]
-            spend = f"£{row['LifetimeSpendGBP']:,.2f}"
+            spend = f"₹{row['LifetimeSpendGBP']:,.2f}"
             orders = row['LifetimeOrders']
             recency = row['DaysSinceLastOrder']
             risk = "High Churn Risk" if recency > 90 else "Active Customer"
@@ -410,7 +410,7 @@ class RetailCopilot:
         elapsed = round((time.perf_counter() - start_time) * 1000, 2)
         summary = (
             "**Demand Forecasting Telemetry**: The active Random Forest Regressor predicts baseline daily gross "
-            "revenue of **£42,850** with an out-of-sample **MAPE of 26.28%**. Peak order volumes occur on "
+            "revenue of **₹42,850** with an out-of-sample **MAPE of 26.28%**. Peak order volumes occur on "
             "Thursdays and mid-week restock periods. Promotional discounts (-15%) combined with digital ad scale (+30%) "
             "are projected to deliver **+28.4% incremental revenue lift**."
         )
@@ -422,9 +422,9 @@ class RetailCopilot:
             "summary": summary,
             "columns": ["Scenario", "ProjectedDailyRevenueGBP", "EstimatedOrderCount", "ConfidenceInterval95"],
             "data": [
-                {"Scenario": "Standard Baseline", "ProjectedDailyRevenueGBP": 42850.0, "EstimatedOrderCount": 142, "ConfidenceInterval95": "£38,500 - £47,200"},
-                {"Scenario": "Q4 Holiday Surge (+40%)", "ProjectedDailyRevenueGBP": 59990.0, "EstimatedOrderCount": 198, "ConfidenceInterval95": "£53,800 - £66,100"},
-                {"Scenario": "Flash Promo (35% Disc, +50% Ad)", "ProjectedDailyRevenueGBP": 51420.0, "EstimatedOrderCount": 185, "ConfidenceInterval95": "£46,200 - £56,600"}
+                {"Scenario": "Standard Baseline", "ProjectedDailyRevenueGBP": 42850.0, "EstimatedOrderCount": 142, "ConfidenceInterval95": "₹38,500 - ₹47,200"},
+                {"Scenario": "Q4 Holiday Surge (+40%)", "ProjectedDailyRevenueGBP": 59990.0, "EstimatedOrderCount": 198, "ConfidenceInterval95": "₹53,800 - ₹66,100"},
+                {"Scenario": "Flash Promo (35% Disc, +50% Ad)", "ProjectedDailyRevenueGBP": 51420.0, "EstimatedOrderCount": 185, "ConfidenceInterval95": "₹46,200 - ₹56,600"}
             ],
             "suggested_followups": [
                 "Simulate high ad growth (+80% ad spend expansion)",
@@ -448,9 +448,9 @@ class RetailCopilot:
             "summary": summary,
             "columns": ["FeatureVector", "BaselineMean", "CurrentStreamMean", "PSIScore", "KSTestPValue", "Status"],
             "data": [
-                {"FeatureVector": "UnitPrice (£)", "BaselineMean": 3.36, "CurrentStreamMean": 3.28, "PSIScore": 0.0049, "KSTestPValue": 0.828, "Status": "HEALTHY"},
+                {"FeatureVector": "UnitPrice (₹)", "BaselineMean": 3.36, "CurrentStreamMean": 3.28, "PSIScore": 0.0049, "KSTestPValue": 0.828, "Status": "HEALTHY"},
                 {"FeatureVector": "Quantity (Units)", "BaselineMean": 10.72, "CurrentStreamMean": 10.59, "PSIScore": 0.0075, "KSTestPValue": 0.275, "Status": "HEALTHY"},
-                {"FeatureVector": "TotalPrice (£)", "BaselineMean": 18.11, "CurrentStreamMean": 19.13, "PSIScore": 0.0044, "KSTestPValue": 0.811, "Status": "HEALTHY"}
+                {"FeatureVector": "TotalPrice (₹)", "BaselineMean": 18.11, "CurrentStreamMean": 19.13, "PSIScore": 0.0044, "KSTestPValue": 0.811, "Status": "HEALTHY"}
             ],
             "suggested_followups": [
                 "Simulate Black Friday surge drift (+180% Qty)",
@@ -473,7 +473,7 @@ class RetailCopilot:
         """
         df = self.con.execute(sql).df()
         elapsed = round((time.perf_counter() - start_time) * 1000, 2)
-        rev = f"£{df.iloc[0]['GrossRevenueGBP']:,.2f}" if not df.empty else "£0"
+        rev = f"₹{df.iloc[0]['GrossRevenueGBP']:,.2f}" if not df.empty else "₹0"
 
         summary = (
             f"Here is your high-level retail intelligence snapshot: Portfolio generated **{rev}** "

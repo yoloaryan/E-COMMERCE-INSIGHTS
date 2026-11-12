@@ -124,7 +124,7 @@ class AnomalyRegistry:
                 "risk_tier": "CRITICAL_QUARANTINE",
                 "recommended_action": "QUARANTINE_AND_HOLD",
                 "triggered_signals": [
-                    "Order value £168,469.60 exceeds 99.9th catalog percentile",
+                    "Order value ₹1,68,469.60 exceeds 99.9th catalog percentile",
                     "Single-SKU bulk quantity anomaly (80,995 units on 1 line)",
                 ],
                 "status": "QUARANTINED",
@@ -141,7 +141,7 @@ class AnomalyRegistry:
                 "risk_tier": "CRITICAL_QUARANTINE",
                 "recommended_action": "QUARANTINE_AND_HOLD",
                 "triggered_signals": [
-                    "Unauthenticated guest checkout exceeding £2,000 threshold",
+                    "Unauthenticated guest checkout exceeding ₹2,000 threshold",
                     "101-line basket structural spike (+8.9σ)",
                 ],
                 "status": "QUARANTINED",
@@ -311,7 +311,7 @@ class AnomalyDetectionEngine:
 
         if abs_rev > self.baseline_stats["rev_p99"] or rev_z >= 3.0:
             heuristic_pts += 18.0
-            signals.append(f"Order value £{abs_rev:,.2f} exceeds 99th percentile (+{max(rev_z, 1.0):.1f}σ)")
+            signals.append(f"Order value ₹{abs_rev:,.2f} exceeds 99th percentile (+{max(rev_z, 1.0):.1f}σ)")
 
         if qty_z >= 3.0 or (lines == 1 and abs_qty >= 500):
             heuristic_pts += 12.0
@@ -319,7 +319,7 @@ class AnomalyDetectionEngine:
 
         if is_guest and abs_rev >= 1500.0:
             heuristic_pts += 16.0
-            signals.append(f"High-value unauthenticated guest checkout (£{abs_rev:,.2f})")
+            signals.append(f"High-value unauthenticated guest checkout (₹{abs_rev:,.2f})")
 
         if is_off_hours > 0.0 and (abs_rev >= 1000.0 or is_guest):
             heuristic_pts += 10.0

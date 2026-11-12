@@ -136,9 +136,9 @@ class DataDriftMonitor:
             cur_df["TotalPrice"] = cur_df["Quantity"] * cur_df["UnitPrice"]
 
         features_to_monitor = [
-            {"col": "UnitPrice", "label": "Unit Price (£)", "unit": "£"},
+            {"col": "UnitPrice", "label": "Unit Price (₹)", "unit": "₹"},
             {"col": "Quantity", "label": "Order Item Quantity", "unit": "units"},
-            {"col": "TotalPrice", "label": "Total Order Spend (£)", "unit": "£"}
+            {"col": "TotalPrice", "label": "Total Order Spend (₹)", "unit": "₹"}
         ]
 
         feature_reports = []

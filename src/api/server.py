@@ -197,11 +197,11 @@ class SalesForecastRequest(BaseModel):
 class ChurnPredictionRequest(BaseModel):
     Recency: float = Field(..., ge=0, description="Days since last order")
     HistoricalFrequency: float = Field(..., ge=1, description="Total completed orders")
-    HistoricalMonetary: float = Field(..., description="Total cumulative spend (£)")
+    HistoricalMonetary: float = Field(..., description="Total cumulative spend (₹)")
     HistoricalUnits: float = Field(..., description="Total items purchased")
     UniqueSKUs: float = Field(..., ge=1, description="Number of distinct products ordered")
     Tenure: float = Field(..., ge=0, description="Days since first recorded purchase")
-    AOV: float = Field(..., description="Average Order Value (£)")
+    AOV: float = Field(..., description="Average Order Value (₹)")
     UnitsPerOrder: float = Field(...)
     PurchaseVelocity: float = Field(..., description="Orders per 30 days")
 
@@ -209,7 +209,7 @@ class ChurnPredictionRequest(BaseModel):
 class RFMSegmentRequest(BaseModel):
     Recency: float = Field(..., ge=0, description="Days since last purchase")
     Frequency: int = Field(..., ge=1, description="Lifetime completed orders")
-    Monetary: float = Field(..., gt=0, description="Total customer spend (£)")
+    Monetary: float = Field(..., gt=0, description="Total customer spend (₹)")
 
 
 class OrderItem(BaseModel):
@@ -680,7 +680,7 @@ async def inject_pos_order(payload: OrderInjectionRequest):
     total_units = sum(item.quantity for item in payload.items)
 
     # Reactive churn drop: a fresh purchase resets recency to 0 days
-    # Accounts spending >£500 achieve single-digit churn probability
+    # Accounts spending >₹500 achieve single-digit churn probability
     updated_churn_risk = 0.08 if total_amount >= 500 else 0.16
 
     # Real-time Isolation Forest + Z-score Fraud & Anomaly Scoring
@@ -1806,7 +1806,7 @@ async def resolve_fraud_quarantine(
         actor_email=principal.get("email", "operator"),
         actor_role=principal.get("role", "admin"),
         tenant_id=principal.get("tenant_id", "tenant_uk_flagship"),
-        action=f"Resolved fraud alert {alert_id} as {updated['status']} (£{updated['amount_gbp']:,.2f})",
+        action=f"Resolved fraud alert {alert_id} as {updated['status']} (₹{updated['amount_gbp']:,.2f})",
         status_code=200,
         severity="WARNING" if updated["status"] == "BLOCKED" else "INFO",
     )
@@ -1893,7 +1893,7 @@ async def create_inventory_purchase_order(
         actor_email=principal.get("email", "supply@nexusretail.ai"),
         actor_role=principal.get("role", "supply"),
         tenant_id=principal.get("tenant_id", "tenant_uk_flagship"),
-        action=f"Issued {po['po_id']} for SKU {po['stock_code']} (+{po['order_qty']} units, £{po['total_cost_gbp']:,.2f})",
+        action=f"Issued {po['po_id']} for SKU {po['stock_code']} (+{po['order_qty']} units, ₹{po['total_cost_gbp']:,.2f})",
         status_code=200,
         severity="INFO",
     )
