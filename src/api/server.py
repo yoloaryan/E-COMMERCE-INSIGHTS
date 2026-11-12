@@ -43,6 +43,7 @@ from src.api.watchdog import get_watchdog_engine
 from src.models.basket_rules import get_basket_engine
 from src.models.financial_waterfall import get_waterfall_engine
 from src.api.briefing import ExecutiveBriefingGenerator
+from src.models.customer_360 import get_customer_360_engine
 
 MODELS_DIR = ROOT_DIR / "models"
 MANIFEST_PATH = MODELS_DIR / "model_manifest.json"
@@ -2127,6 +2128,38 @@ def download_executive_briefing_pack(
         media_type="text/markdown; charset=utf-8",
         headers={"Content-Disposition": 'attachment; filename="nexus_executive_briefing.md"'},
     )
+
+
+# -----------------------------------------------------------------------------
+# Phase 24: Unified Customer-360 Intelligence & Ledger API
+# -----------------------------------------------------------------------------
+@app.get("/api/v1/customers/ledger", tags=["Customer Intelligence"])
+def get_customer_ledger(
+    segment: str = Query(default="all", description="Segment filter or 'all'"),
+    search: str = Query(default="", description="Filter by Customer ID or country"),
+    limit: int = Query(default=40, ge=1, le=200),
+):
+    """
+    Returns paginated, searchable Customer-360 ledger records aggregated across
+    all verified retail accounts.
+    """
+    return get_customer_360_engine().query_ledger(
+        segment=segment,
+        search=search,
+        limit=limit,
+    )
+
+
+@app.get("/api/v1/customers/{customer_id}/360", tags=["Customer Intelligence"])
+def get_customer_360_dossier(customer_id: str):
+    """
+    Returns complete Customer-360 dossier including Gross/Net Spend, Return Rate %,
+    Churn Probability, Top Purchased SKUs, and Next-Best-Action recommendation.
+    """
+    profile = get_customer_360_engine().get_customer_profile(customer_id)
+    if profile is None:
+        raise HTTPException(status_code=404, detail=f"Customer account '{customer_id}' not found.")
+    return {"status": "success", "profile": profile}
 
 
 if __name__ == "__main__":

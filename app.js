@@ -2485,16 +2485,10 @@ function initLiveCartSimulator() {
 // =============================================================================
 // CUSTOMER DETAIL SLIDE-IN MODAL DRAWER
 // =============================================================================
-function openCustomerDrawer(cid) {
-    const backdrop = document.getElementById("customerDrawerBackdrop");
+function renderCustomerDrawerHtml(cust, cid) {
     const drawerTitle = document.getElementById("drawerCustTitle");
     const drawerBadge = document.getElementById("drawerCustBadge");
     const drawerBody = document.getElementById("drawerBody");
-
-    const cust = MASTER_CUSTOMERS.find(c => c.id === cid) || {
-        id: cid, segment: "Loyal Customers", spend: 1850.00, orders: 8, aov: 231.25, recency: 18, churnProb: 0.18,
-        history: ["Regency Cakestand", "White T-Light Holder", "Vintage Christmas Chain"]
-    };
 
     if (drawerTitle) drawerTitle.textContent = `Customer Account #${cust.id}`;
     if (drawerBadge) {
@@ -2502,36 +2496,44 @@ function openCustomerDrawer(cid) {
         drawerBadge.className = `badge-tag ${cust.segment.includes("VIP") ? "gold-border" : cust.segment.includes("At-Risk") ? "red-border" : "green-border"}`;
     }
 
-    const savedNotes = localStorage.getItem(`nexus_notes_${cust.id}`) || "VIP wholesale client. High preference for Regency collection lines.";
+    const savedNotes = localStorage.getItem(`nexus_notes_${cust.id}`) || `Next Best Action: ${cust.next_best_action || "VIP wholesale engagement."}`;
+    const returnRateLine = cust.return_rate_pct !== undefined
+        ? `<div class="result-stat"><strong>Market &amp; Return Rate</strong><span>${cust.country || "United Kingdom"} (${cust.return_rate_pct}% ret.)</span></div>`
+        : "";
+    const actionBanner = cust.next_best_action
+        ? `<div style="margin-top:0.5rem;padding:0.55rem 0.75rem;border-radius:var(--radius-sm);background:var(--primary-light);border:1px solid rgba(59,130,246,0.3);font-size:0.78rem;"><strong>Recommended NBA:</strong> ${cust.next_best_action}</div>`
+        : "";
 
     if (drawerBody) {
         drawerBody.innerHTML = `
             <div>
                 <div class="drawer-section-title">Account Financial Summary</div>
                 <div class="result-grid">
-                    <div class="result-stat"><strong>Lifetime Spend</strong><span>£${cust.spend.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+                    <div class="result-stat"><strong>Net Lifetime Spend</strong><span>£${Number(cust.spend).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
                     <div class="result-stat"><strong>Order Count</strong><span>${cust.orders} Invoices</span></div>
-                    <div class="result-stat"><strong>Average Order Value</strong><span>£${cust.aov.toFixed(2)}</span></div>
+                    <div class="result-stat"><strong>Average Order Value</strong><span>£${Number(cust.aov).toFixed(2)}</span></div>
                     <div class="result-stat"><strong>Days Inactive</strong><span>${cust.recency} days</span></div>
+                    ${returnRateLine}
                 </div>
             </div>
 
             <div>
-                <div class="drawer-section-title">Churn Risk Assessment</div>
+                <div class="drawer-section-title">Churn &amp; Return Risk Assessment</div>
                 <div style="background:var(--bg-surface-alt); padding:0.85rem; border-radius:6px; border-left:3px solid ${cust.churnProb >= 0.70 ? '#EF4444' : '#10B981'};">
                     <strong>Model Probability: ${(cust.churnProb * 100).toFixed(1)}%</strong>
                     <p style="font-size:0.82rem; color:var(--text-secondary); margin-top:0.25rem;">
                         ${cust.churnProb >= 0.70 ? 'High probability of departure. Urgent engagement required.' : 'Healthy retention trajectory.'}
                     </p>
+                    ${actionBanner}
                 </div>
             </div>
 
             <div>
-                <div class="drawer-section-title">Verified Invoicing Ledger History</div>
+                <div class="drawer-section-title">Top Verified Purchases &amp; Ledger History</div>
                 <div class="drawer-timeline">
-                    ${cust.history.map((h, i) => `
+                    ${(cust.history || ["Retail Basket"]).map((h, i) => `
                         <div class="drawer-timeline-item">
-                            <strong style="font-size:0.85rem;">Invoice #INV-${201100 + i}</strong>
+                            <strong style="font-size:0.85rem;">Top Product Tier #${i + 1}</strong>
                             <div style="font-size:0.8rem; color:var(--text-secondary);">${h}</div>
                         </div>
                     `).join("")}
@@ -2548,8 +2550,29 @@ function openCustomerDrawer(cid) {
             </div>
         `;
     }
+}
 
+async function openCustomerDrawer(cid) {
+    const backdrop = document.getElementById("customerDrawerBackdrop");
+    const fallbackCust = MASTER_CUSTOMERS.find(c => c.id === String(cid)) || {
+        id: String(cid), segment: "Loyal Customers", spend: 1850.00, orders: 8, aov: 231.25, recency: 18, churnProb: 0.18,
+        history: ["Regency Cakestand", "White T-Light Holder", "Vintage Christmas Chain"]
+    };
+
+    renderCustomerDrawerHtml(fallbackCust, cid);
     if (backdrop) backdrop.classList.add("open");
+
+    try {
+        const res = await fetch(`http://localhost:8000/api/v1/customers/${encodeURIComponent(String(cid))}/360`);
+        if (res.ok) {
+            const payload = await res.json();
+            if (payload && payload.profile) {
+                renderCustomerDrawerHtml(payload.profile, cid);
+            }
+        }
+    } catch (_e) {
+        // Offline local profile already displayed
+    }
 }
 
 function closeCustomerDrawer() {
@@ -3281,19 +3304,42 @@ function initCustomerLedger() {
     const filterSelect = document.getElementById("customerSegmentFilter");
     const searchInput = document.getElementById("custLedgerSearch");
     const exportBtn = document.getElementById("exportCustLedgerBtn");
+    let ledgerExportCache = [...MASTER_CUSTOMERS];
 
-    function renderLedger() {
+    async function renderLedger() {
         if (!tbody) return;
         const filter = filterSelect ? filterSelect.value : "all";
         const query = searchInput ? searchInput.value.trim() : "";
 
-        let filtered = MASTER_CUSTOMERS.filter(c => {
-            const matchSeg = filter === "all" || c.segment === filter;
-            const matchQuery = !query || c.id.includes(query);
-            return matchSeg && matchQuery;
-        });
+        let rows = null;
+        try {
+            const res = await fetch(`http://localhost:8000/api/v1/customers/ledger?segment=${encodeURIComponent(filter)}&search=${encodeURIComponent(query)}&limit=40`);
+            if (res.ok) {
+                const payload = await res.json();
+                if (Array.isArray(payload.customers)) {
+                    rows = payload.customers;
+                    ledgerExportCache = rows;
+                }
+            }
+        } catch (_e) {
+            // Fallback offline ledger slice below
+        }
 
-        tbody.innerHTML = filtered.map(c => {
+        if (!rows) {
+            rows = MASTER_CUSTOMERS.filter(c => {
+                const matchSeg = filter === "all" || c.segment === filter;
+                const matchQuery = !query || c.id.includes(query);
+                return matchSeg && matchQuery;
+            });
+            ledgerExportCache = rows;
+        }
+
+        if (!rows.length) {
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);">No matching customer accounts found.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = rows.map(c => {
             const badgeClass = c.segment.includes("VIP") ? "gold-border" : c.segment.includes("At-Risk") ? "red-border" : "green-border";
             const churnColor = c.churnProb >= 0.70 ? "#EF4444" : c.churnProb >= 0.35 ? "#F59E0B" : "#10B981";
 
@@ -3301,14 +3347,14 @@ function initCustomerLedger() {
                 <tr style="cursor:pointer;" onclick="openCustomerDrawer('${c.id}')">
                     <td><strong>#${c.id}</strong></td>
                     <td><span class="badge-tag ${badgeClass}">${c.segment}</span></td>
-                    <td><strong>£${c.spend.toLocaleString(undefined, {minimumFractionDigits: 2})}</strong></td>
+                    <td><strong>£${Number(c.spend).toLocaleString(undefined, {minimumFractionDigits: 2})}</strong></td>
                     <td>${c.orders}</td>
-                    <td>£${c.aov.toFixed(2)}</td>
+                    <td>£${Number(c.aov).toFixed(2)}</td>
                     <td>${c.recency} days ago</td>
                     <td><span class="badge-tag" style="background:${churnColor}22; color:${churnColor};">${(c.churnProb * 100).toFixed(1)}%</span></td>
                     <td>
                         <button class="btn btn-outline btn-xs" onclick="event.stopPropagation(); openCustomerDrawer('${c.id}')">
-                            Inspect
+                            Inspect 360
                         </button>
                     </td>
                 </tr>
@@ -3320,7 +3366,7 @@ function initCustomerLedger() {
     if (searchInput) searchInput.addEventListener("input", renderLedger);
     if (exportBtn) {
         exportBtn.addEventListener("click", () => {
-            downloadCSV("customer_ledger_export.csv", MASTER_CUSTOMERS);
+            downloadCSV("customer_ledger_export.csv", ledgerExportCache);
             showToast("Export Complete", "customer_ledger_export.csv downloaded", "success");
             logAuditEvent("Export", "Exported Master Customer Ledger CSV");
         });
@@ -4938,6 +4984,13 @@ const API_ENDPOINTS = {
         url: "http://localhost:8000/api/v1/reports/executive-briefing?country=All",
         payload: { info: "GET endpoint; aggregates all 6 core operational engines into a Boardroom Briefing." },
         handler: () => ({ status: "success", platform_version: "Nexus Retail AI v4.0-prod" })
+    },
+    customer_360: {
+        method: "GET",
+        path: "/api/v1/customers/14646/360",
+        url: "http://localhost:8000/api/v1/customers/14646/360",
+        payload: { info: "GET endpoint; retrieves full Customer-360 dossier, return rate, and NBA." },
+        handler: () => ({ status: "success", profile: MASTER_CUSTOMERS[1] })
     },
     rbac: {
         method: "GET",
