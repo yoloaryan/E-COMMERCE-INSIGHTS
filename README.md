@@ -13,11 +13,11 @@
 > [!IMPORTANT]
 > 🚀 **Live Production Web Application:** **[https://e-commerce-insights.onrender.com/](https://e-commerce-insights.onrender.com/)**
 >
-> The full enterprise platform is deployed live on Render's global edge network as a responsive single-page web application (HTML5 / CSS3 / Vanilla JavaScript). Experience all 12 operational intelligence modules, real-time RFM segment lookups, interactive demand sensitivity simulators, VIP churn early warning, and one-click CSV export suites.
+> The full enterprise platform is built as a Carbon Black & Daylight **Liquid Glass** single-page web application (HTML5 / CSS3 / Vanilla JavaScript) backed by FastAPI microservices. Experience all 14 operational intelligence modules, real-time RFM & BTYD CLV lookups, Cohort & Markov migration heatmaps, Inventory EOQ optimization, Apriori basket rules, Return & P&L financial waterfalls, Fraud radar, Autonomous Watchdog telemetry, SQLite WAL persistence, and live Executive Boardroom briefing exports.
 
 An industry-grade Data Science, Machine Learning, and Business Intelligence platform built on **541,909 real-world transnational e-commerce records**. 
 
-This system integrates **Customer Behavioral Segmentation (RFM + K-Means)**, **Macro Demand & Sales Forecasting (Time-Series ML)**, **Customer Churn Early-Warning (Classification)**, and **Product Recommendation (Item-Item Collaborative Filtering)** into an interactive **Enterprise Web Intelligence Suite**.
+This system integrates **Customer Behavioral Segmentation (RFM + K-Means + Cohorts)**, **Macro Demand & Sales Forecasting**, **Churn Early-Warning**, **Collaborative Filtering & Apriori Basket Rules**, **Dynamic Pricing & A/B Labs**, **Inventory EOQ & Supply Optimization**, **Isolation Forest Fraud Detection**, and **Multi-Tenant RBAC Security** into an interactive **Enterprise Web Intelligence Suite**.
 
 ---
 

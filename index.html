@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=7.14">
+    <link rel="stylesheet" href="style.css?v=7.15">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -2062,6 +2062,7 @@
                                     <option value="watchdog">/api/v1/watchdog/status (4-Engine Health Watchdog)</option>
                                     <option value="basket_rules">/api/v1/recommendations/basket-rules (Apriori Lift Rules)</option>
                                     <option value="finance">/api/v1/finance/waterfall-report (P&amp;L Margin Waterfall)</option>
+                                    <option value="briefing">/api/v1/reports/executive-briefing (6-Engine Boardroom Memo)</option>
                                     <option value="rbac">/api/v1/auth/rbac-matrix (RBAC &amp; Tenant Governance)</option>
                                 </select>
                             </div>
@@ -2793,16 +2794,17 @@
                     <small class="text-muted" id="reportGeneratedDate">Generated: Real-time Snapshot</small>
                 </div>
                 <div style="display:flex;gap:0.5rem;align-items:center;">
+                    <button type="button" class="btn btn-secondary btn-sm" id="downloadBriefingMdBtn">📥 Export Markdown Memo</button>
                     <button class="btn btn-primary btn-sm" id="printReportBtn">🖨️ Print / Save PDF</button>
                     <button class="modal-close-btn" id="closeReportModalBtn">✕</button>
                 </div>
             </div>
             <div class="modal-body report-printable-body">
                 <!-- Section 1: Executive KPI Grid -->
-                <div class="report-kpi-row">
+                <div class="report-kpi-row" id="reportKpiGridLive">
                     <div class="report-kpi">
                         <small>Total Retail GMV</small>
-                        <strong>£10,279,169.87</strong>
+                        <strong>£10,283,862</strong>
                         <span>374 Operating Days</span>
                     </div>
                     <div class="report-kpi">
@@ -2824,7 +2826,7 @@
 
                 <!-- Section 2: Core Machine Learning Engine Health -->
                 <div class="report-section">
-                    <h3>1. Machine Learning Production Audit</h3>
+                    <h3>1. Live Multi-Engine Intelligence &amp; Operations Audit</h3>
                     <table class="data-table" style="font-size:0.82rem;margin-top:0.5rem;">
                         <thead>
                             <tr>
@@ -2834,7 +2836,7 @@
                                 <th>Business Impact</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="reportAuditTbodyLive">
                             <tr>
                                 <td><strong>Customer Segmentation</strong></td>
                                 <td>K-Means (K=4) + Log1p Transformed</td>
@@ -2866,7 +2868,7 @@
                 <!-- Section 3: Strategic Recommendations -->
                 <div class="report-section" style="margin-top:1.25rem;">
                     <h3>2. Board Strategic Directives & Action Items</h3>
-                    <div class="report-directives">
+                    <div class="report-directives" id="reportDirectivesLive">
                         <div class="report-directive-item">
                             <strong>🎯 VIP Concierge Intervention:</strong>
                             <p>Activate Account Management phone outreach for the 22 At-Risk VIP accounts (led by #14096 and #12352) within 48 hours to preserve £191.8k annualized EBITDA.</p>
@@ -2883,7 +2885,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <small class="text-muted">Certified Production Telemetry from Nexus Retail AI Engine v3.2-prod</small>
+                <small class="text-muted" id="reportVersionFooter">Certified Production Telemetry from Nexus Retail AI Engine v4.0-prod</small>
                 <button class="btn btn-secondary btn-sm" id="closeReportModalBtn2">Close Briefing</button>
             </div>
         </div>
@@ -3248,6 +3250,6 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=7.14"></script>
+    <script src="app.js?v=7.15"></script>
 </body>
 </html>

@@ -42,6 +42,7 @@ from src.utils.state_store import get_state_store
 from src.api.watchdog import get_watchdog_engine
 from src.models.basket_rules import get_basket_engine
 from src.models.financial_waterfall import get_waterfall_engine
+from src.api.briefing import ExecutiveBriefingGenerator
 
 MODELS_DIR = ROOT_DIR / "models"
 MANIFEST_PATH = MODELS_DIR / "model_manifest.json"
@@ -2082,6 +2083,49 @@ def simulate_financial_margin_recovery(payload: SimulateMarginRecoveryRequest):
         return_reduction_pct=payload.return_reduction_pct,
         country=payload.country,
         cogs_ratio=payload.cogs_ratio,
+    )
+
+
+# -----------------------------------------------------------------------------
+# Phase 23: Live Executive Boardroom Briefing & Markdown/JSON Export
+# -----------------------------------------------------------------------------
+@app.get("/api/v1/reports/executive-briefing", tags=["Executive Reporting"])
+def get_executive_briefing_pack(
+    country: str = Query(default="All"),
+    cogs_ratio: float = Query(default=0.58, ge=0.20, le=0.85),
+):
+    """
+    Aggregates live telemetry across all 6 core operational engines into an
+    executive boardroom briefing pack.
+    """
+    return ExecutiveBriefingGenerator.generate_briefing(
+        country=country,
+        cogs_ratio=cogs_ratio,
+    )
+
+
+@app.get("/api/v1/reports/executive-briefing/download", tags=["Executive Reporting"])
+def download_executive_briefing_pack(
+    format: str = Query(default="markdown", description="'markdown' or 'json'"),
+    country: str = Query(default="All"),
+):
+    """
+    Exports a formatted Markdown board memo or structured JSON briefing as a downloadable attachment.
+    """
+    briefing = ExecutiveBriefingGenerator.generate_briefing(country=country)
+    fmt = str(format or "markdown").strip().lower()
+    if fmt == "json":
+        content = json.dumps(briefing, indent=2)
+        return Response(
+            content=content,
+            media_type="application/json",
+            headers={"Content-Disposition": 'attachment; filename="nexus_executive_briefing.json"'},
+        )
+    memo = ExecutiveBriefingGenerator.render_markdown_memo(briefing)
+    return Response(
+        content=memo,
+        media_type="text/markdown; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="nexus_executive_briefing.md"'},
     )
 
 

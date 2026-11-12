@@ -4932,6 +4932,13 @@ const API_ENDPOINTS = {
         payload: { info: "GET endpoint; returns Gross-to-Net P&L margin waterfall and high-return SKUs." },
         handler: () => ({ status: "healthy", summary: { return_rate_pct: 8.42 } })
     },
+    briefing: {
+        method: "GET",
+        path: "/api/v1/reports/executive-briefing",
+        url: "http://localhost:8000/api/v1/reports/executive-briefing?country=All",
+        payload: { info: "GET endpoint; aggregates all 6 core operational engines into a Boardroom Briefing." },
+        handler: () => ({ status: "success", platform_version: "Nexus Retail AI v4.0-prod" })
+    },
     rbac: {
         method: "GET",
         path: "/api/v1/auth/rbac-matrix",
@@ -5071,7 +5078,63 @@ function initExecutiveReportModal() {
     const closeBtn1 = document.getElementById("closeReportModalBtn");
     const closeBtn2 = document.getElementById("closeReportModalBtn2");
     const printBtn = document.getElementById("printReportBtn");
+    const downloadMdBtn = document.getElementById("downloadBriefingMdBtn");
     const dateSpan = document.getElementById("reportGeneratedDate");
+
+    async function hydrateLiveBriefing() {
+        try {
+            const res = await fetch("http://localhost:8000/api/v1/reports/executive-briefing?country=All");
+            if (!res.ok) return;
+            const data = await res.json();
+
+            if (dateSpan && data.generated_at) {
+                dateSpan.textContent = `Generated: ${new Date(data.generated_at).toUTCString()} | Health Score: ${data.executive_health_score}/100`;
+            }
+
+            const kpiGrid = document.getElementById("reportKpiGridLive");
+            if (kpiGrid && Array.isArray(data.headline_kpis)) {
+                kpiGrid.innerHTML = data.headline_kpis.map(k => {
+                    const colorStyle = k.tone === "alert" ? ' style="color:var(--danger);"' : k.tone === "green" ? ' style="color:var(--success);"' : "";
+                    return `
+                        <div class="report-kpi">
+                            <small>${k.label}</small>
+                            <strong${colorStyle}>${k.value}</strong>
+                            <span>${k.subtext}</span>
+                        </div>
+                    `;
+                }).join("");
+            }
+
+            const auditTbody = document.getElementById("reportAuditTbodyLive");
+            if (auditTbody && Array.isArray(data.engine_audit_rows)) {
+                auditTbody.innerHTML = data.engine_audit_rows.map(r => `
+                    <tr>
+                        <td><strong>${r.subsystem}</strong></td>
+                        <td>${r.architecture}</td>
+                        <td>${r.benchmark_metric}</td>
+                        <td>${r.business_impact}</td>
+                    </tr>
+                `).join("");
+            }
+
+            const dirList = document.getElementById("reportDirectivesLive");
+            if (dirList && Array.isArray(data.strategic_directives) && data.strategic_directives.length) {
+                dirList.innerHTML = data.strategic_directives.map(d => `
+                    <div class="report-directive-item">
+                        <strong>${d.title}:</strong>
+                        <p>${d.detail}</p>
+                    </div>
+                `).join("");
+            }
+
+            const verFooter = document.getElementById("reportVersionFooter");
+            if (verFooter && data.platform_version) {
+                verFooter.textContent = `Certified Production Telemetry from ${data.platform_version} (${data.country})`;
+            }
+        } catch (_e) {
+            // Preserve pre-rendered baseline modal telemetry if backend :8000 is offline
+        }
+    }
 
     if (openBtn && reportModal) {
         openBtn.addEventListener("click", () => {
@@ -5079,7 +5142,8 @@ function initExecutiveReportModal() {
                 dateSpan.textContent = `Generated: ${new Date().toUTCString()} | Nexus Retail AI`;
             }
             reportModal.classList.add("open");
-            logAuditEvent("Security", "Generated Executive Board Briefing Report");
+            hydrateLiveBriefing();
+            logAuditEvent("Security", "Generated Live 6-Engine Executive Board Briefing Report");
         });
     }
 
@@ -5096,6 +5160,26 @@ function initExecutiveReportModal() {
             showToast("Print Triggered", "Prepared board briefing PDF / printer document", "info");
         });
     }
+
+    if (downloadMdBtn) {
+        downloadMdBtn.addEventListener("click", async () => {
+            try {
+                const res = await fetch("http://localhost:8000/api/v1/reports/executive-briefing/download?format=markdown");
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const text = await res.text();
+                const blob = new Blob([text], { type: "text/markdown;charset=utf-8;" });
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download = "nexus_executive_briefing.md";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                showToast("Memo Downloaded", "Exported nexus_executive_briefing.md", "success");
+            } catch (_e) {
+                showToast("Export Unavailable", "Connect FastAPI backend :8000 to export live Markdown memo", "alert");
+            }
+        });
+    }
 }
 
 // =============================================================================
@@ -5104,8 +5188,8 @@ function initExecutiveReportModal() {
 function initChartDefaults() {
     if (window.Chart) {
         Chart.defaults.font.family = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
-        Chart.defaults.color = "#94A3B8";
-        Chart.defaults.plugins.tooltip.backgroundColor = "rgba(15, 23, 42, 0.94)";
+        Chart.defaults.color = "#A1A1AA";
+        Chart.defaults.plugins.tooltip.backgroundColor = "rgba(10, 10, 12, 0.94)";
         Chart.defaults.plugins.tooltip.titleColor = "#FFFFFF";
         Chart.defaults.plugins.tooltip.bodyColor = "#F1F5F9";
         Chart.defaults.plugins.tooltip.borderColor = "rgba(255, 255, 255, 0.12)";
