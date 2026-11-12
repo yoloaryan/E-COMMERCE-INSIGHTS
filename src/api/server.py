@@ -40,6 +40,7 @@ from src.models.inventory_optimization import get_inventory_engine
 from src.models.cohort_analytics import get_cohort_engine
 from src.utils.state_store import get_state_store
 from src.api.watchdog import get_watchdog_engine
+from src.models.basket_rules import get_basket_engine
 
 MODELS_DIR = ROOT_DIR / "models"
 MANIFEST_PATH = MODELS_DIR / "model_manifest.json"
@@ -366,6 +367,11 @@ class WatchdogSweepRequest(BaseModel):
 class WatchdogConfigRequest(BaseModel):
     enabled: Optional[bool] = Field(default=None)
     interval_seconds: Optional[int] = Field(default=None, ge=15, le=3600)
+
+
+class EvaluateBundleRequest(BaseModel):
+    items: List[str] = Field(default_factory=list, description="Active SKU stock codes in cart")
+    discount_pct: float = Field(default=10.0, ge=0.0, le=40.0)
 
 
 # -----------------------------------------------------------------------------
@@ -2007,6 +2013,38 @@ def configure_watchdog_scheduler(
         severity="INFO",
     )
     return {"status": "updated", "scheduler": cfg}
+
+
+# -----------------------------------------------------------------------------
+# Phase 21: Market Basket Association Rules & Cross-Sell Bundle Optimizer
+# -----------------------------------------------------------------------------
+@app.get("/api/v1/recommendations/basket-rules", tags=["Recommender Engine"])
+def get_market_basket_rules(
+    min_lift: float = Query(default=1.2, ge=0.5, le=20.0),
+    min_support_pct: float = Query(default=0.5, ge=0.0, le=50.0),
+    limit: int = Query(default=18, ge=1, le=100),
+):
+    """
+    Returns top empirical Support / Confidence / Lift pairwise association rules
+    and cross-sell bundle offer economics mined from order invoices.
+    """
+    return get_basket_engine().generate_rules_report(
+        min_lift=min_lift,
+        min_support_pct=min_support_pct,
+        limit=limit,
+    )
+
+
+@app.post("/api/v1/recommendations/evaluate-bundle", tags=["Recommender Engine"])
+def evaluate_cart_bundle(payload: EvaluateBundleRequest):
+    """
+    Evaluates an active cart SKU vector and returns highest-Lift complementary add-ons,
+    discounted bundle subtotal, projected AOV uplift, and estimated net margin.
+    """
+    return get_basket_engine().evaluate_bundle(
+        items=payload.items,
+        discount_pct=payload.discount_pct,
+    )
 
 
 if __name__ == "__main__":

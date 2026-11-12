@@ -124,6 +124,29 @@ function showToast(title, message, type = "info") {
 // =============================================================================
 // THEME MANAGER
 // =============================================================================
+function syncChartsWithTheme() {
+    if (typeof Chart === "undefined" || !Chart.instances) return;
+    const isLight = document.documentElement.getAttribute("data-theme") === "light";
+    const textCol = isLight ? "#334155" : "#D4D4D8";
+    const gridCol = isLight ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
+
+    Object.values(Chart.instances).forEach(chart => {
+        if (!chart || !chart.options) return;
+        if (chart.options.plugins && chart.options.plugins.legend && chart.options.plugins.legend.labels) {
+            chart.options.plugins.legend.labels.color = textCol;
+        }
+        if (chart.options.scales) {
+            Object.values(chart.options.scales).forEach(scale => {
+                if (!scale) return;
+                if (scale.ticks) scale.ticks.color = textCol;
+                if (scale.title) scale.title.color = textCol;
+                if (scale.grid && scale.grid.display !== false) scale.grid.color = gridCol;
+            });
+        }
+        chart.update("none");
+    });
+}
+
 function initThemeManager() {
     const html = document.documentElement;
     const toggleBtn = document.getElementById("themeToggleBtn");
@@ -138,6 +161,7 @@ function initThemeManager() {
             html.setAttribute("data-theme", APP_STATE.theme);
             localStorage.setItem("nexus_theme", APP_STATE.theme);
             if (themeIcon) themeIcon.textContent = APP_STATE.theme === "dark" ? "☀️" : "🌙";
+            syncChartsWithTheme();
             showToast("Visual Theme Updated", `Switched interface to ${APP_STATE.theme.toUpperCase()} mode`, "info");
             logAuditEvent("Security", `Toggled workspace visual theme to ${APP_STATE.theme.toUpperCase()}`);
         });
@@ -2057,6 +2081,113 @@ function initRecommenderTab() {
     };
 
     renderRecommendations();
+    initMarketBasketRules();
+}
+
+// =============================================================================
+// PHASE 21: MARKET BASKET ASSOCIATION RULES & BUNDLE OPTIMIZER
+// =============================================================================
+let BASKET_RULES_CACHE = [];
+let BASKET_RULES_WIRED = false;
+
+async function refreshMarketBasketRules() {
+    const tbody = document.getElementById("basketRulesTbody");
+    const slider = document.getElementById("basketMinLiftSlider");
+    const minLiftVal = document.getElementById("basketMinLiftVal");
+    if (!tbody) return;
+
+    const minLift = parseFloat(slider ? slider.value : "1.2");
+    if (minLiftVal) minLiftVal.textContent = `${minLift.toFixed(1)}x`;
+
+    let report = null;
+    try {
+        const res = await fetch(`http://localhost:8000/api/v1/recommendations/basket-rules?min_lift=${minLift}&min_support_pct=0.5&limit=18`);
+        if (res.ok) report = await res.json();
+    } catch (_e) {
+        // Offline association rules fallback below
+    }
+
+    if (!report) {
+        const fallbackRules = [
+            { rule_id: "22699->22697", antecedent_code: "22699", antecedent_name: "Roses Regency Teacup And Saucer", antecedent_price: 2.95, consequent_code: "22697", consequent_name: "Green Regency Teacup And Saucer", consequent_price: 2.95, support_pct: 12.4, confidence_pct: 76.2, lift: 4.18, conviction: 3.45, bundle_offer_gbp: 5.31 },
+            { rule_id: "22423->22699", antecedent_code: "22423", antecedent_name: "Regency Cakestand 3 Tier", antecedent_price: 10.95, consequent_code: "22699", consequent_name: "Roses Regency Teacup And Saucer", consequent_price: 2.95, support_pct: 9.8, confidence_pct: 58.4, lift: 3.21, conviction: 1.98, bundle_offer_gbp: 12.51 },
+            { rule_id: "85123A->21733", antecedent_code: "85123A", antecedent_name: "White Hanging Heart T-Light Holder", antecedent_price: 2.55, consequent_code: "21733", consequent_name: "Red Hanging Heart T-Light Holder", consequent_price: 2.55, support_pct: 8.6, confidence_pct: 61.0, lift: 2.94, conviction: 2.04, bundle_offer_gbp: 4.59 },
+            { rule_id: "85099B->20725", antecedent_code: "85099B", antecedent_name: "Jumbo Bag Red Retrospot", antecedent_price: 1.79, consequent_code: "20725", consequent_name: "Lunch Bag Red Retrospot", consequent_price: 1.65, support_pct: 7.4, confidence_pct: 48.2, lift: 2.15, conviction: 1.50, bundle_offer_gbp: 3.10 }
+        ].filter(r => r.lift >= minLift);
+        report = {
+            summary: {
+                total_matching_rules: fallbackRules.length,
+                top_lift: fallbackRules[0] ? fallbackRules[0].lift : minLift,
+                avg_confidence_pct: 61.0,
+                avg_bundle_offer_gbp: 6.38
+            },
+            rules: fallbackRules
+        };
+    }
+
+    BASKET_RULES_CACHE = report.rules || [];
+    const s = report.summary || {};
+    const topEl = document.getElementById("basketTopLiftVal");
+    const confEl = document.getElementById("basketAvgConfVal");
+    const cntEl = document.getElementById("basketRuleCountVal");
+    const avgBEl = document.getElementById("basketAvgBundleVal");
+    if (topEl) topEl.textContent = `${Number(s.top_lift || 0).toFixed(2)}x`;
+    if (confEl) confEl.textContent = `${Number(s.avg_confidence_pct || 0).toFixed(1)}%`;
+    if (cntEl) cntEl.textContent = `${Number(s.total_matching_rules || 0).toLocaleString()} rules`;
+    if (avgBEl) avgBEl.textContent = `£${Number(s.avg_bundle_offer_gbp || 0).toFixed(2)}`;
+
+    if (!BASKET_RULES_CACHE.length) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);">No association rules exceed Lift >= ${minLift.toFixed(1)}x. Lower the threshold slider above.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = BASKET_RULES_CACHE.map(r => {
+        const liftColor = r.lift >= 3.0 ? "#10B981" : r.lift >= 2.0 ? "#3B82F6" : "#F59E0B";
+        return `
+            <tr>
+                <td><code>${r.antecedent_code}</code> <strong>${r.antecedent_name}</strong></td>
+                <td><code>${r.consequent_code}</code> <strong>${r.consequent_name}</strong></td>
+                <td>${r.support_pct}%</td>
+                <td><strong>${r.confidence_pct}%</strong></td>
+                <td><span class="badge-tag" style="background:${liftColor}22;color:${liftColor};font-weight:700;">${r.lift}x</span></td>
+                <td>${r.conviction}</td>
+                <td><strong class="text-green">£${Number(r.bundle_offer_gbp).toFixed(2)}</strong></td>
+                <td>
+                    <button type="button" class="btn btn-outline btn-xs" onclick="window.addAssociationBundle('${r.antecedent_code}', '${r.consequent_code}')">+ Add Pair</button>
+                </td>
+            </tr>
+        `;
+    }).join("");
+}
+
+function initMarketBasketRules() {
+    refreshMarketBasketRules();
+    if (BASKET_RULES_WIRED) return;
+    BASKET_RULES_WIRED = true;
+
+    const slider = document.getElementById("basketMinLiftSlider");
+    const exportBtn = document.getElementById("exportBasketRulesBtn");
+
+    if (slider) {
+        slider.addEventListener("input", refreshMarketBasketRules);
+        slider.addEventListener("change", refreshMarketBasketRules);
+    }
+    if (exportBtn) {
+        exportBtn.addEventListener("click", () => {
+            if (BASKET_RULES_CACHE.length) {
+                downloadCSV("market_basket_association_rules.csv", BASKET_RULES_CACHE);
+                showToast("Rules Exported", "market_basket_association_rules.csv downloaded", "success");
+                logAuditEvent("Recommender", "Exported Phase 21 Apriori Association Rules to CSV");
+            }
+        });
+    }
+
+    window.addAssociationBundle = (aCode, bCode) => {
+        const match = BASKET_RULES_CACHE.find(r => r.antecedent_code === aCode && r.consequent_code === bCode);
+        if (!match) return;
+        addToCart(match.antecedent_code, match.antecedent_name, match.antecedent_price);
+        addToCart(match.consequent_code, match.consequent_name, match.consequent_price);
+    };
 }
 
 function addToCart(sku, desc, price) {
@@ -4641,6 +4772,13 @@ const API_ENDPOINTS = {
         url: "http://localhost:8000/api/v1/watchdog/status",
         payload: { info: "GET endpoint; returns 4-engine Watchdog health score and remediation directives." },
         handler: () => ({ status: "online", latest: { health_score: 84.0, overall_status: "ATTENTION" } })
+    },
+    basket_rules: {
+        method: "GET",
+        path: "/api/v1/recommendations/basket-rules",
+        url: "http://localhost:8000/api/v1/recommendations/basket-rules?min_lift=1.2&limit=12",
+        payload: { info: "GET endpoint; mines pairwise Support, Confidence, and Lift across checkout baskets." },
+        handler: () => ({ status: "healthy", summary: { top_lift: 4.18, total_matching_rules: 4 } })
     },
     rbac: {
         method: "GET",
