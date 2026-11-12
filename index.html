@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=7.13">
+    <link rel="stylesheet" href="style.css?v=7.14">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -412,6 +412,91 @@
                             <span class="leg-stop leg-4">&gt; 75%</span>
                         </div>
                         <small class="text-muted" style="margin-left: auto;">UCI Retail baseline demonstrates exceptional 38.4% 1-month wholesale repeat order retention.</small>
+                    </div>
+                </div>
+
+                <!-- Phase 22: Return & Refund Financial Waterfall + Geographic Unit Economics -->
+                <div class="charts-row" id="financialWaterfallSection" style="margin-top: 1.5rem;">
+                    <div class="chart-card flex-2">
+                        <div class="card-header">
+                            <div>
+                                <h3>💸 Gross-to-Net Financial P&amp;L Waterfall &amp; Return Leakage</h3>
+                                <p class="card-sub">Reconciling Ordered GMV, Empirical Return/Cancel Leakage, COGS &amp; Net Realized Contribution Margin</p>
+                            </div>
+                            <div class="filter-actions" style="display:flex;gap:0.5rem;align-items:center;">
+                                <label for="finCountryFilter" style="font-size:0.78rem;font-weight:600;color:var(--text-secondary);">Market:</label>
+                                <select id="finCountryFilter" class="form-select-sm">
+                                    <option value="All">All Markets</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="btyd-stat-grid" style="margin-bottom: 1rem;">
+                            <div class="btyd-stat-box">
+                                <strong>Gross Ordered GMV</strong>
+                                <div class="stat-val text-blue" id="finGrossGmvVal">--</div>
+                            </div>
+                            <div class="btyd-stat-box">
+                                <strong>Return &amp; Cancel Leakage</strong>
+                                <div class="stat-val text-red" id="finReturnLeakVal">--</div>
+                            </div>
+                            <div class="btyd-stat-box">
+                                <strong>Net Contribution Margin</strong>
+                                <div class="stat-val text-green" id="finNetMarginVal">--</div>
+                            </div>
+                            <div class="btyd-stat-box">
+                                <strong>Return Rate (%)</strong>
+                                <div class="stat-val text-gold" id="finReturnRateVal">--</div>
+                            </div>
+                        </div>
+
+                        <div class="chart-wrapper" style="height:250px;">
+                            <canvas id="financialWaterfallChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <div>
+                                <h3>📉 Return Reduction Margin Recovery</h3>
+                                <p class="card-sub">Project EBITDA &amp; reverse-logistics savings from cutting cancellation/return rates</p>
+                            </div>
+                        </div>
+
+                        <div class="pricing-controls-stack">
+                            <div class="pricing-field-group">
+                                <div class="pricing-slider-label-row">
+                                    <label for="finReturnReductionSlider">Target Return Reduction (%)</label>
+                                    <span class="pricing-slider-readout" id="finReturnReductionVal">25%</span>
+                                </div>
+                                <input type="range" id="finReturnReductionSlider" class="modern-range-slider" min="0" max="60" step="5" value="25">
+                            </div>
+                        </div>
+
+                        <div class="btyd-stat-grid" style="margin-top: 1rem;">
+                            <div class="btyd-stat-box">
+                                <strong>Target Return Rate</strong>
+                                <div class="stat-val text-blue" id="finTargetReturnRateVal">--%</div>
+                            </div>
+                            <div class="btyd-stat-box">
+                                <strong>Net Margin Recovered</strong>
+                                <div class="stat-val text-green" id="finMarginRecoveredVal">£0</div>
+                            </div>
+                        </div>
+
+                        <h4 style="font-size:0.84rem;margin:1rem 0 0.5rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.04em;">Top Return-Prone SKUs</h4>
+                        <div class="table-responsive" style="max-height:190px;overflow-y:auto;">
+                            <table class="data-table" id="finReturnSkusTable">
+                                <thead>
+                                    <tr>
+                                        <th>SKU</th>
+                                        <th>Refund (£)</th>
+                                        <th>Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="finReturnSkusTbody"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -1976,6 +2061,7 @@
                                     <option value="persistence">/api/v1/system/persistence-status (SQLite WAL Telemetry)</option>
                                     <option value="watchdog">/api/v1/watchdog/status (4-Engine Health Watchdog)</option>
                                     <option value="basket_rules">/api/v1/recommendations/basket-rules (Apriori Lift Rules)</option>
+                                    <option value="finance">/api/v1/finance/waterfall-report (P&amp;L Margin Waterfall)</option>
                                     <option value="rbac">/api/v1/auth/rbac-matrix (RBAC &amp; Tenant Governance)</option>
                                 </select>
                             </div>
@@ -3162,6 +3248,6 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=7.13"></script>
+    <script src="app.js?v=7.14"></script>
 </body>
 </html>

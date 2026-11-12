@@ -806,6 +806,151 @@ function initOverviewTab() {
             logAuditEvent("Export", "Exported Top 10 Revenue SKUs CSV report");
         });
     }
+
+    initFinancialWaterfall();
+}
+
+// =============================================================================
+// PHASE 22: RETURN & REFUND FINANCIAL WATERFALL ANALYTICS
+// =============================================================================
+let financialWaterfallChartInstance = null;
+let FINANCE_WIRED = false;
+
+async function refreshFinancialWaterfall() {
+    const countryEl = document.getElementById("finCountryFilter");
+    const sliderEl = document.getElementById("finReturnReductionSlider");
+    const chartCanvas = document.getElementById("financialWaterfallChart");
+    if (!chartCanvas) return;
+
+    const country = countryEl ? countryEl.value : "All";
+    const redPct = parseFloat(sliderEl ? sliderEl.value : "25");
+    const redLabel = document.getElementById("finReturnReductionVal");
+    if (redLabel) redLabel.textContent = `${redPct.toFixed(0)}%`;
+
+    let rep = null;
+    let sim = null;
+    try {
+        const [rRes, sRes] = await Promise.all([
+            fetch(`http://localhost:8000/api/v1/finance/waterfall-report?country=${encodeURIComponent(country)}`),
+            fetch("http://localhost:8000/api/v1/finance/simulate-margin-recovery", {
+                method: "POST",
+                headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
+                body: JSON.stringify({ return_reduction_pct: redPct, country, cogs_ratio: 0.58 })
+            })
+        ]);
+        if (rRes.ok) rep = await rRes.json();
+        if (sRes.ok) sim = await sRes.json();
+    } catch (_e) {
+        // Offline P&L fallback below
+    }
+
+    if (!rep) {
+        rep = {
+            available_countries: ["All", "United Kingdom", "Netherlands", "EIRE", "Germany", "France"],
+            summary: { gross_gmv_gbp: 10644560, return_leakage_gbp: 896812, net_revenue_gbp: 9747748, net_contribution_margin_gbp: 3348000, return_rate_pct: 8.42 },
+            waterfall: [
+                { step: "Gross Ordered GMV", amount_gbp: 10644560, type: "positive" },
+                { step: "Returns & Cancels", amount_gbp: -896812, type: "negative" },
+                { step: "Net Realized Rev", amount_gbp: 9747748, type: "subtotal" },
+                { step: "COGS & Logistics", amount_gbp: -6399748, type: "negative" },
+                { step: "Net Contribution", amount_gbp: 3348000, type: "total" }
+            ],
+            high_return_skus: [
+                { stock_code: "23843", refund_leakage_gbp: 168469.6, return_rate_pct: 50.0 },
+                { stock_code: "23166", refund_leakage_gbp: 77183.6, return_rate_pct: 48.2 },
+                { stock_code: "22423", refund_leakage_gbp: 18942.5, return_rate_pct: 11.4 }
+            ]
+        };
+    }
+    if (!sim) {
+        const s = rep.summary;
+        const inc = (s.return_leakage_gbp * (redPct / 100)) * 0.54;
+        sim = { outputs: { target_return_rate_pct: (s.return_rate_pct * (1 - redPct / 100)).toFixed(2), incremental_net_margin_gbp: inc } };
+    }
+
+    if (countryEl && Array.isArray(rep.available_countries) && countryEl.options.length <= 1 && rep.available_countries.length > 1) {
+        const prev = countryEl.value || "All";
+        countryEl.innerHTML = rep.available_countries.map(c => `<option value="${c}">${c === "All" ? "All Markets" : c}</option>`).join("");
+        if (rep.available_countries.includes(prev)) countryEl.value = prev;
+    }
+
+    const s = rep.summary || {};
+    const fmtGbp = (v) => `£${Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+    const gEl = document.getElementById("finGrossGmvVal");
+    const rEl = document.getElementById("finReturnLeakVal");
+    const nEl = document.getElementById("finNetMarginVal");
+    const rtEl = document.getElementById("finReturnRateVal");
+    if (gEl) gEl.textContent = fmtGbp(s.gross_gmv_gbp);
+    if (rEl) rEl.textContent = `-${fmtGbp(s.return_leakage_gbp)}`;
+    if (nEl) nEl.textContent = fmtGbp(s.net_contribution_margin_gbp);
+    if (rtEl) rtEl.textContent = `${s.return_rate_pct}%`;
+
+    const o = sim.outputs || {};
+    const trEl = document.getElementById("finTargetReturnRateVal");
+    const mrEl = document.getElementById("finMarginRecoveredVal");
+    if (trEl) trEl.textContent = `${o.target_return_rate_pct}%`;
+    if (mrEl) mrEl.textContent = `+${fmtGbp(o.incremental_net_margin_gbp)}`;
+
+    const skuBody = document.getElementById("finReturnSkusTbody");
+    if (skuBody) {
+        skuBody.innerHTML = (rep.high_return_skus || []).map(item => `
+            <tr>
+                <td><code>${item.stock_code}</code></td>
+                <td class="text-red"><strong>-£${Number(item.refund_leakage_gbp).toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong></td>
+                <td><span class="badge-tag red">${item.return_rate_pct}%</span></td>
+            </tr>
+        `).join("");
+    }
+
+    if (typeof Chart !== "undefined" && Array.isArray(rep.waterfall)) {
+        if (financialWaterfallChartInstance) financialWaterfallChartInstance.destroy();
+        const isLight = document.documentElement.getAttribute("data-theme") === "light";
+        const textCol = isLight ? "#334155" : "#D4D4D8";
+        const gridCol = isLight ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
+
+        const colors = rep.waterfall.map(w =>
+            w.type === "positive" ? "#3B82F6" :
+            w.type === "negative" ? "#EF4444" :
+            w.type === "subtotal" ? "#8B5CF6" : "#10B981"
+        );
+        financialWaterfallChartInstance = new Chart(chartCanvas.getContext("2d"), {
+            type: "bar",
+            data: {
+                labels: rep.waterfall.map(w => w.step),
+                datasets: [{
+                    label: "Amount (£)",
+                    data: rep.waterfall.map(w => w.amount_gbp),
+                    backgroundColor: colors,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: (ctx) => `£${Number(ctx.raw).toLocaleString(undefined, { maximumFractionDigits: 0 })}` } }
+                },
+                scales: {
+                    x: { ticks: { color: textCol, font: { size: 11 } }, grid: { display: false } },
+                    y: { ticks: { color: textCol, callback: (v) => `£${(v / 1000).toFixed(0)}k` }, grid: { color: gridCol } }
+                }
+            }
+        });
+    }
+}
+
+function initFinancialWaterfall() {
+    refreshFinancialWaterfall();
+    if (FINANCE_WIRED) return;
+    FINANCE_WIRED = true;
+    const countryEl = document.getElementById("finCountryFilter");
+    const sliderEl = document.getElementById("finReturnReductionSlider");
+    if (countryEl) countryEl.addEventListener("change", refreshFinancialWaterfall);
+    if (sliderEl) {
+        sliderEl.addEventListener("input", refreshFinancialWaterfall);
+        sliderEl.addEventListener("change", refreshFinancialWaterfall);
+    }
 }
 
 // =============================================================================
@@ -4779,6 +4924,13 @@ const API_ENDPOINTS = {
         url: "http://localhost:8000/api/v1/recommendations/basket-rules?min_lift=1.2&limit=12",
         payload: { info: "GET endpoint; mines pairwise Support, Confidence, and Lift across checkout baskets." },
         handler: () => ({ status: "healthy", summary: { top_lift: 4.18, total_matching_rules: 4 } })
+    },
+    finance: {
+        method: "GET",
+        path: "/api/v1/finance/waterfall-report",
+        url: "http://localhost:8000/api/v1/finance/waterfall-report?country=All&cogs_ratio=0.58",
+        payload: { info: "GET endpoint; returns Gross-to-Net P&L margin waterfall and high-return SKUs." },
+        handler: () => ({ status: "healthy", summary: { return_rate_pct: 8.42 } })
     },
     rbac: {
         method: "GET",

@@ -41,6 +41,7 @@ from src.models.cohort_analytics import get_cohort_engine
 from src.utils.state_store import get_state_store
 from src.api.watchdog import get_watchdog_engine
 from src.models.basket_rules import get_basket_engine
+from src.models.financial_waterfall import get_waterfall_engine
 
 MODELS_DIR = ROOT_DIR / "models"
 MANIFEST_PATH = MODELS_DIR / "model_manifest.json"
@@ -372,6 +373,12 @@ class WatchdogConfigRequest(BaseModel):
 class EvaluateBundleRequest(BaseModel):
     items: List[str] = Field(default_factory=list, description="Active SKU stock codes in cart")
     discount_pct: float = Field(default=10.0, ge=0.0, le=40.0)
+
+
+class SimulateMarginRecoveryRequest(BaseModel):
+    return_reduction_pct: float = Field(default=25.0, ge=0.0, le=75.0)
+    country: str = Field(default="All")
+    cogs_ratio: float = Field(default=0.58, ge=0.20, le=0.85)
 
 
 # -----------------------------------------------------------------------------
@@ -2044,6 +2051,37 @@ def evaluate_cart_bundle(payload: EvaluateBundleRequest):
     return get_basket_engine().evaluate_bundle(
         items=payload.items,
         discount_pct=payload.discount_pct,
+    )
+
+
+# -----------------------------------------------------------------------------
+# Phase 22: Return & Refund Financial Waterfall + Geographic Net-Margin Analytics
+# -----------------------------------------------------------------------------
+@app.get("/api/v1/finance/waterfall-report", tags=["Financial Waterfall & Unit Economics"])
+def get_financial_waterfall_report(
+    country: str = Query(default="All", description="Market filter ('All' or specific country)"),
+    cogs_ratio: float = Query(default=0.58, ge=0.20, le=0.85),
+):
+    """
+    Reconciles Gross Ordered GMV, empirical Return/Cancellation Leakage, COGS,
+    and Reverse Logistics into Net Contribution Margin by market and high-return SKU.
+    """
+    return get_waterfall_engine().generate_waterfall_report(
+        country=country,
+        cogs_ratio=cogs_ratio,
+    )
+
+
+@app.post("/api/v1/finance/simulate-margin-recovery", tags=["Financial Waterfall & Unit Economics"])
+def simulate_financial_margin_recovery(payload: SimulateMarginRecoveryRequest):
+    """
+    Simulates incremental net EBITDA/contribution margin recovered by reducing
+    product return and order cancellation rates.
+    """
+    return get_waterfall_engine().simulate_margin_recovery(
+        return_reduction_pct=payload.return_reduction_pct,
+        country=payload.country,
+        cogs_ratio=payload.cogs_ratio,
     )
 
 
