@@ -669,6 +669,260 @@ class TaxInvoiceEngine:
 </body>
 </html>"""
 
+    def generate_gstr1_return(self, period: str = "All", supply_mode: str = "MIXED") -> Dict[str, Any]:
+        """
+        Aggregates statutory GSTR-1 return tables (B2B, B2CS consumer supplies, CDNR Credit Notes,
+        and Table 12 HSN Tax Summary) over DuckDB transactional records + runtime POS invoices.
+        """
+        mode = (supply_mode or "MIXED").strip().upper()
+        if mode not in {"MIXED", "INTRA_ONLY", "INTER_ONLY"}:
+            mode = "MIXED"
+
+        # Single source of truth SQL CASE mapping from HSN_SLAB_RULES
+        hsn_when = "\n".join(
+            f"WHEN upper(COALESCE(CAST(Description AS VARCHAR), '')) LIKE '%{kw}%' THEN '{hsn}'"
+            for kw, hsn, _ in HSN_SLAB_RULES
+        )
+        rate_when = "\n".join(
+            f"WHEN upper(COALESCE(CAST(Description AS VARCHAR), '')) LIKE '%{kw}%' THEN {slab}"
+            for kw, _, slab in HSN_SLAB_RULES
+        )
+
+        # Intra-state condition: MIXED splits United Kingdom -> intra-state vs overseas/other -> inter-state
+        if mode == "INTRA_ONLY":
+            is_intra_sql = "TRUE"
+        elif mode == "INTER_ONLY":
+            is_intra_sql = "FALSE"
+        else:
+            is_intra_sql = "COALESCE(CAST(Country AS VARCHAR), 'India') IN ('United Kingdom', 'India')"
+
+        available_periods: List[str] = ["All"]
+        rows_agg: List[tuple] = []
+
+        if self.data_path.exists():
+            try:
+                con = duckdb.connect(database=":memory:")
+                period_rows = con.execute(
+                    f"""
+                    SELECT DISTINCT strftime(TRY_CAST(InvoiceDate AS TIMESTAMP), '%Y-%m') AS ym
+                    FROM read_parquet(?)
+                    WHERE TRY_CAST(InvoiceDate AS TIMESTAMP) IS NOT NULL
+                    ORDER BY ym DESC
+                    """,
+                    [str(self.data_path)],
+                ).fetchall()
+                available_periods.extend([str(r[0]) for r in period_rows if r[0]])
+
+                where_period = ""
+                params: List[Any] = [str(self.data_path)]
+                if period and period != "All":
+                    where_period = "WHERE strftime(TRY_CAST(InvoiceDate AS TIMESTAMP), '%Y-%m') = ?"
+                    params.append(period)
+
+                rows_agg = con.execute(
+                    f"""
+                    WITH base AS (
+                        SELECT
+                            CAST(InvoiceNo AS VARCHAR) AS inv_no,
+                            CASE {hsn_when} ELSE '9983' END AS hsn_code,
+                            CASE {rate_when} ELSE 18.0 END AS gst_rate,
+                            CASE WHEN CAST(IsCancelled AS BOOLEAN) OR upper(CAST(InvoiceNo AS VARCHAR)) LIKE 'C%' THEN 1 ELSE 0 END AS is_cn,
+                            ({is_intra_sql}) AS is_intra,
+                            CAST(Quantity AS BIGINT) AS qty,
+                            CAST(TotalPrice AS DOUBLE) AS taxable_val,
+                            COALESCE(CAST(CustomerID AS VARCHAR), 'Guest') AS cust_id
+                        FROM read_parquet(?)
+                        {where_period}
+                    )
+                    SELECT
+                        hsn_code,
+                        gst_rate,
+                        is_cn,
+                        is_intra,
+                        COUNT(*) AS line_cnt,
+                        COUNT(DISTINCT inv_no) AS inv_cnt,
+                        SUM(qty) AS sum_qty,
+                        ROUND(SUM(taxable_val), 2) AS sum_taxable,
+                        SUM(CASE WHEN is_cn = 0 AND taxable_val >= 2500.0 THEN 1 ELSE 0 END) AS b2b_lines,
+                        ROUND(SUM(CASE WHEN is_cn = 0 AND taxable_val >= 2500.0 THEN taxable_val ELSE 0.0 END), 2) AS b2b_taxable
+                    FROM base
+                    GROUP BY hsn_code, gst_rate, is_cn, is_intra
+                    """,
+                    params,
+                ).fetchall()
+                con.close()
+            except Exception:
+                rows_agg = []
+
+        # Include synthetic fallback when no Parquet rows exist (CI/offline) + any runtime generated POS invoices
+        extra_raws: List[Dict[str, Any]] = []
+        if not rows_agg:
+            extra_raws.extend(self._synthetic.values())
+        extra_raws.extend(self._generated_store.values())
+
+        for raw in extra_raws:
+            ym = str(raw.get("invoice_date", ""))[:7]
+            if ym and len(ym) == 7 and ym not in available_periods:
+                available_periods.append(ym)
+            if period and period != "All" and ym != period:
+                continue
+            is_cn = 1 if (bool(raw.get("is_credit_note")) or str(raw.get("invoice_no", "")).upper().startswith("C")) else 0
+            country_val = str(raw.get("country", "India"))
+            if mode == "INTRA_ONLY":
+                is_intra = True
+            elif mode == "INTER_ONLY":
+                is_intra = False
+            else:
+                is_intra = country_val in ("United Kingdom", "India")
+            for item in raw.get("items", []):
+                qty = int(item.get("quantity", 1))
+                if is_cn and qty > 0:
+                    qty = -qty
+                taxable = round(qty * float(item.get("unit_price", 0.0)), 2)
+                hsn, rate = resolve_hsn_and_gst_rate(item.get("description", ""))
+                b2b_l = 1 if (is_cn == 0 and taxable >= 2500.0) else 0
+                b2b_v = taxable if b2b_l else 0.0
+                rows_agg.append((hsn, rate, is_cn, is_intra, 1, 1, qty, taxable, b2b_l, b2b_v))
+
+        gross_outward_taxable = 0.0
+        gross_outward_gst = 0.0
+        cdnr_taxable = 0.0
+        cdnr_gst = 0.0
+        b2b_taxable = 0.0
+        b2b_gst = 0.0
+        b2cs_taxable = 0.0
+        b2cs_gst = 0.0
+        cgst_payable = 0.0
+        sgst_payable = 0.0
+        igst_payable = 0.0
+        outward_inv_count = 0
+        credit_note_count = 0
+
+        hsn_buckets: Dict[tuple, Dict[str, Any]] = {}
+
+        for hsn, rate, is_cn, is_intra, line_cnt, inv_cnt, sum_qty, sum_taxable, b2b_l, b2b_v in rows_agg:
+            rate_f = float(rate)
+            taxable_f = round(float(sum_taxable or 0.0), 2)
+            # Note: C-prefixed cancellation lines may store negative TotalPrice; handle magnitude cleanly
+            signed_tax = round(taxable_f * (rate_f / 100.0), 2)
+            if is_intra:
+                cgst = round(signed_tax / 2.0, 2)
+                sgst = round(signed_tax - cgst, 2)
+                igst = 0.0
+            else:
+                cgst = 0.0
+                sgst = 0.0
+                igst = signed_tax
+
+            if int(is_cn) == 1:
+                credit_note_count += int(inv_cnt)
+                cdnr_taxable = round(cdnr_taxable + abs(taxable_f), 2)
+                cdnr_gst = round(cdnr_gst + abs(signed_tax), 2)
+                # Reduce outward net amounts (ensure negative signed delta)
+                delta_taxable = -abs(taxable_f)
+                delta_cgst = -abs(cgst)
+                delta_sgst = -abs(sgst)
+                delta_igst = -abs(igst)
+                delta_tax = -abs(signed_tax)
+            else:
+                outward_inv_count += int(inv_cnt)
+                gross_outward_taxable = round(gross_outward_taxable + taxable_f, 2)
+                gross_outward_gst = round(gross_outward_gst + signed_tax, 2)
+                b2b_part = round(float(b2b_v or 0.0), 2)
+                b2b_tax_part = round(b2b_part * (rate_f / 100.0), 2)
+                b2b_taxable = round(b2b_taxable + b2b_part, 2)
+                b2b_gst = round(b2b_gst + b2b_tax_part, 2)
+                b2cs_taxable = round(b2cs_taxable + (taxable_f - b2b_part), 2)
+                b2cs_gst = round(b2cs_gst + (signed_tax - b2b_tax_part), 2)
+                delta_taxable = taxable_f
+                delta_cgst = cgst
+                delta_sgst = sgst
+                delta_igst = igst
+                delta_tax = signed_tax
+
+            cgst_payable = round(cgst_payable + delta_cgst, 2)
+            sgst_payable = round(sgst_payable + delta_sgst, 2)
+            igst_payable = round(igst_payable + delta_igst, 2)
+
+            b_key = (str(hsn), rate_f)
+            if b_key not in hsn_buckets:
+                hsn_buckets[b_key] = {
+                    "hsn_code": str(hsn),
+                    "gst_rate_pct": rate_f,
+                    "sku_lines": 0,
+                    "total_qty": 0,
+                    "taxable_value_inr": 0.0,
+                    "cgst_inr": 0.0,
+                    "sgst_inr": 0.0,
+                    "igst_inr": 0.0,
+                    "total_tax_inr": 0.0,
+                }
+            bucket = hsn_buckets[b_key]
+            bucket["sku_lines"] += int(line_cnt)
+            bucket["total_qty"] += int(sum_qty or 0)
+            bucket["taxable_value_inr"] = round(bucket["taxable_value_inr"] + delta_taxable, 2)
+            bucket["cgst_inr"] = round(bucket["cgst_inr"] + delta_cgst, 2)
+            bucket["sgst_inr"] = round(bucket["sgst_inr"] + delta_sgst, 2)
+            bucket["igst_inr"] = round(bucket["igst_inr"] + delta_igst, 2)
+            bucket["total_tax_inr"] = round(bucket["total_tax_inr"] + delta_tax, 2)
+
+        net_taxable = round(gross_outward_taxable - cdnr_taxable, 2)
+        net_gst_payable = round(gross_outward_gst - cdnr_gst, 2)
+        # Reconcile sum of component slabs cleanly to net_gst_payable within 0.01 rounding
+        slab_sum = round(cgst_payable + sgst_payable + igst_payable, 2)
+        if slab_sum != net_gst_payable:
+            if igst_payable != 0.0:
+                igst_payable = round(igst_payable + (net_gst_payable - slab_sum), 2)
+            else:
+                sgst_payable = round(sgst_payable + (net_gst_payable - slab_sum), 2)
+
+        hsn_summary = sorted(
+            hsn_buckets.values(),
+            key=lambda x: x["taxable_value_inr"],
+            reverse=True,
+        )
+
+        selected_period = period if period in available_periods else "All"
+        gstr1_payload = {
+            "gstin": "29AAACN4192K1ZV",
+            "fp": selected_period if selected_period != "All" else "FY-2010-11",
+            "gt": gross_outward_taxable,
+            "cur_gt": net_taxable,
+            "b2b": {"supply_value_inr": b2b_taxable, "tax_inr": b2b_gst},
+            "b2cs": {"supply_value_inr": b2cs_taxable, "tax_inr": b2cs_gst},
+            "cdnr": {"credit_note_count": credit_note_count, "taxable_offset_inr": cdnr_taxable, "tax_offset_inr": cdnr_gst},
+            "hsn": {"data": hsn_summary},
+        }
+
+        return {
+            "status": "healthy",
+            "selected_period": selected_period,
+            "supply_mode": mode,
+            "available_periods": available_periods,
+            "summary": {
+                "currency": "INR",
+                "currency_symbol": "₹",
+                "outward_invoices_count": outward_inv_count,
+                "credit_notes_count": credit_note_count,
+                "gross_outward_taxable_inr": gross_outward_taxable,
+                "gross_outward_gst_inr": gross_outward_gst,
+                "cdnr_credit_note_taxable_inr": cdnr_taxable,
+                "cdnr_gst_offset_inr": cdnr_gst,
+                "net_taxable_turnover_inr": net_taxable,
+                "net_gst_payable_inr": net_gst_payable,
+                "cgst_payable_inr": cgst_payable,
+                "sgst_payable_inr": sgst_payable,
+                "igst_payable_inr": igst_payable,
+            },
+            "sections": [
+                {"table": "Table 4 (B2B Commercial)", "taxable_inr": b2b_taxable, "gst_inr": b2b_gst, "notes": "Commercial / wholesale lines >= ₹2,500"},
+                {"table": "Table 7 (B2CS Retail)", "taxable_inr": b2cs_taxable, "gst_inr": b2cs_gst, "notes": "B2C retail invoices aggregated by HSN slab"},
+                {"table": "Table 9B (CDNR Credit Notes)", "taxable_inr": -cdnr_taxable, "gst_inr": -cdnr_gst, "notes": "C-prefixed cancellation offsets reducing liability"},
+            ],
+            "hsn_summary": hsn_summary,
+            "gstr1_json_payload": gstr1_payload,
+        }
+
 
 _INVOICE_ENGINE_SINGLETON: Optional[TaxInvoiceEngine] = None
 

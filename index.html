@@ -13,7 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=7.23">
+    <link rel="stylesheet" href="style.css?v=7.24">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -2102,6 +2102,85 @@
                         <!-- Populated by JS -->
                     </div>
                 </div>
+
+                <!-- Phase 29: Monthly GSTR-1 Return Filing, CDNR Credit-Note Reconciliation & Table 12 HSN Summary -->
+                <div class="interactive-card" id="gstr1FilingPanel" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <div>
+                            <h3>📊 Monthly GSTR-1 Filing, CDNR Credit Notes &amp; Table 12 HSN Summary</h3>
+                            <p class="card-sub">Reconciles Gross Outward GST, C-prefixed Credit Note reversals (Table 9B), and HSN slab liabilities across DuckDB records</p>
+                        </div>
+                        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-secondary btn-sm" id="btnDownloadGstr1Json">📥 Download GSTR-1 JSON</button>
+                            <button type="button" class="btn btn-outline btn-sm" id="btnExportGstr1HsnCsv">📑 Export HSN CSV</button>
+                        </div>
+                    </div>
+
+                    <div class="invoice-controls-grid">
+                        <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                            <label for="gstr1PeriodSelect" style="font-size:0.78rem; color:var(--text-secondary);">Filing Period (YYYY-MM):</label>
+                            <select id="gstr1PeriodSelect" class="form-input-sm">
+                                <option value="All" selected>All Periods (Full Ledger)</option>
+                            </select>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                            <label for="gstr1SupplyModeSelect" style="font-size:0.78rem; color:var(--text-secondary);">Tax Split Mode:</label>
+                            <select id="gstr1SupplyModeSelect" class="form-input-sm">
+                                <option value="MIXED" selected>Mixed (Domestic CGST+SGST &amp; Inter-State IGST)</option>
+                                <option value="INTRA_ONLY">100% Intra-State (CGST + SGST)</option>
+                                <option value="INTER_ONLY">100% Inter-State (IGST Only)</option>
+                            </select>
+                        </div>
+                        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                            <button type="button" id="btnRefreshGstr1" class="btn btn-primary btn-sm">Recompute GSTR-1 Return</button>
+                        </div>
+                    </div>
+
+                    <div class="survival-kpi-strip" id="gstr1KpiStrip">
+                        <div class="survival-kpi-box">
+                            <div class="kpi-label">Net Taxable Turnover</div>
+                            <div class="kpi-value" id="gstr1NetTaxableVal">—</div>
+                        </div>
+                        <div class="survival-kpi-box">
+                            <div class="kpi-label">Gross Outward GST</div>
+                            <div class="kpi-value" id="gstr1GrossGstVal">—</div>
+                        </div>
+                        <div class="survival-kpi-box">
+                            <div class="kpi-label">CDNR Credit-Note Offset</div>
+                            <div class="kpi-value" id="gstr1CdnrOffsetVal" style="color:var(--danger, #EF4444);">—</div>
+                        </div>
+                        <div class="survival-kpi-box">
+                            <div class="kpi-label">Net Statutory GST Payable</div>
+                            <div class="kpi-value" id="gstr1NetPayableVal" style="color:var(--accent-green, #10B981);">—</div>
+                        </div>
+                    </div>
+
+                    <div id="gstr1SectionsRibbon" style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:1rem;">
+                        <!-- Populated by JS -->
+                    </div>
+
+                    <div tabindex="0" role="region" aria-labelledby="gstr1HsnCaption" class="invoice-table-wrapper">
+                        <table class="data-table" id="gstr1HsnTable">
+                            <caption id="gstr1HsnCaption" class="survival-caption">GSTR-1 Table 12 — HSN-Wise Outward Supply &amp; Tax Liability Summary (INR)</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">HSN Code</th>
+                                    <th scope="col">GST Slab</th>
+                                    <th scope="col">SKU Lines</th>
+                                    <th scope="col">Net Qty</th>
+                                    <th scope="col">Taxable Value (₹)</th>
+                                    <th scope="col">CGST (₹)</th>
+                                    <th scope="col">SGST (₹)</th>
+                                    <th scope="col">IGST (₹)</th>
+                                    <th scope="col">Total Tax (₹)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="gstr1HsnTbody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </section>
 
             <!-- ============================================================= -->
@@ -2320,6 +2399,7 @@
                                     <option value="causal">/api/v1/causal/uplift-report (T-Learner Uplift &amp; DiD)</option>
                                     <option value="survival_xai">/api/v1/survival/kaplan-meier-report (Kaplan-Meier &amp; XAI)</option>
                                     <option value="tax_invoice">/api/v1/invoices/536365 (Indian GST &amp; VAT Invoice)</option>
+                                    <option value="gstr1_return">/api/v1/invoices/gstr1-return (Monthly GSTR-1 &amp; HSN Ledger)</option>
                                     <option value="rbac">/api/v1/auth/rbac-matrix (RBAC &amp; Tenant Governance)</option>
                                 </select>
                             </div>
@@ -3631,7 +3711,7 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script defer src="js/core/api-config.js?v=7.23"></script>
-    <script defer src="app.js?v=7.23"></script>
+    <script defer src="js/core/api-config.js?v=7.24"></script>
+    <script defer src="app.js?v=7.24"></script>
 </body>
 </html>

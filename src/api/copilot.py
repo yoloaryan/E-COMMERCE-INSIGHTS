@@ -362,7 +362,7 @@ class RetailCopilot:
         cid_num = int(customer_id)
         sql = f"""
         SELECT 
-            CAST(customer_id AS BIGINT) AS "CustomerID",
+            TRY_CAST(customer_id AS BIGINT) AS "CustomerID",
             COUNT(DISTINCT invoice_no) AS "LifetimeOrders",
             SUM(quantity) AS "TotalUnits",
             ROUND(SUM(total_price), 2) AS "LifetimeSpendGBP",
@@ -371,9 +371,9 @@ class RetailCopilot:
             MAX(invoice_date) AS "LastPurchase",
             DATE_DIFF('day', MAX(invoice_date), (SELECT MAX(invoice_date) FROM ecommerce_transactions)) AS "DaysSinceLastOrder"
         FROM ecommerce_transactions
-        WHERE customer_id = {cid_num}
+        WHERE TRY_CAST(customer_id AS BIGINT) = {cid_num}
           AND is_cancelled = FALSE
-        GROUP BY customer_id;
+        GROUP BY TRY_CAST(customer_id AS BIGINT);
         """
         df = self.con.execute(sql).df()
         elapsed = round((time.perf_counter() - start_time) * 1000, 2)

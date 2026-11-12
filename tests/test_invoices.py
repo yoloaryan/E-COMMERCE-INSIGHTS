@@ -99,3 +99,28 @@ def test_api_tax_invoice_endpoints_and_html_export():
     assert "IGST" in res_html.text
     assert gen_no in res_html.text
 
+
+def test_gstr1_monthly_return_reconciliation_and_hsn_summary(tmp_path):
+    engine = TaxInvoiceEngine(data_path=tmp_path / "missing.parquet")
+    ret = engine.generate_gstr1_return(period="All", supply_mode="MIXED")
+
+    assert ret["status"] == "healthy"
+    s = ret["summary"]
+    assert s["gross_outward_taxable_inr"] > 0
+    assert s["cdnr_credit_note_taxable_inr"] > 0
+    assert abs((s["gross_outward_taxable_inr"] - s["cdnr_credit_note_taxable_inr"]) - s["net_taxable_turnover_inr"]) < 1e-6
+    assert abs((s["gross_outward_gst_inr"] - s["cdnr_gst_offset_inr"]) - s["net_gst_payable_inr"]) < 1e-6
+    assert abs((s["cgst_payable_inr"] + s["sgst_payable_inr"] + s["igst_payable_inr"]) - s["net_gst_payable_inr"]) < 1e-6
+    assert len(ret["hsn_summary"]) >= 2
+    assert len(ret["sections"]) == 3
+
+
+def test_api_gstr1_return_endpoint():
+    res = client.get("/api/v1/invoices/gstr1-return?period=All&supply_mode=INTRA_ONLY")
+    assert res.status_code == 200
+    body = res.json()
+    assert body["status"] == "healthy"
+    assert body["summary"]["igst_payable_inr"] == 0.0
+    assert body["summary"]["cgst_payable_inr"] > 0.0
+    assert body["gstr1_json_payload"]["gstin"] == "29AAACN4192K1ZV"
+

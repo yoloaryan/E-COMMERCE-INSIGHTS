@@ -2344,6 +2344,18 @@ def list_recent_tax_invoices(
     return get_invoice_engine().list_recent_invoices(limit=limit, country=country)
 
 
+@app.get("/api/v1/invoices/gstr1-return", tags=["Tax Invoicing & Compliance"])
+def get_monthly_gstr1_return(
+    period: str = Query(default="All", description="YYYY-MM filing month or All"),
+    supply_mode: str = Query(default="MIXED", description="MIXED | INTRA_ONLY | INTER_ONLY"),
+):
+    """
+    Aggregates Monthly GSTR-1 return tables (Table 4 B2B, Table 7 B2CS, Table 9B CDNR
+    Credit Notes, and Table 12 HSN Tax Summary) over DuckDB records & live POS invoices.
+    """
+    return get_invoice_engine().generate_gstr1_return(period=period, supply_mode=supply_mode)
+
+
 @app.post("/api/v1/invoices/generate", tags=["Tax Invoicing & Compliance"])
 def generate_statutory_tax_invoice(
     payload: GenerateTaxInvoiceRequest,

@@ -200,8 +200,79 @@ window.loadTaxInvoicePreset = function(invNo, regime, supplyState) {
     fetchActiveTaxInvoice();
 };
 
+let ACTIVE_GSTR1_CACHE = null;
+
+function _fmtInr(v) {
+    return "₹" + Number(v || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+async function refreshGstr1ReturnPanel() {
+    const periodSel = document.getElementById("gstr1PeriodSelect");
+    const modeSel = document.getElementById("gstr1SupplyModeSelect");
+    const tbody = document.getElementById("gstr1HsnTbody");
+    const ribbon = document.getElementById("gstr1SectionsRibbon");
+    if (!periodSel || !tbody) return;
+
+    const period = periodSel.value || "All";
+    const mode = modeSel ? modeSel.value : "MIXED";
+
+    try {
+        const res = await fetch(nexusApiUrl(`/api/v1/invoices/gstr1-return?period=${encodeURIComponent(period)}&supply_mode=${encodeURIComponent(mode)}`));
+        if (!res.ok) return;
+        const data = await res.json();
+        ACTIVE_GSTR1_CACHE = data;
+
+        // Hydrate period options once dynamically
+        if (periodSel.options.length <= 1 && Array.isArray(data.available_periods)) {
+            periodSel.innerHTML = data.available_periods
+                .map(p => `<option value="${_escInv(p)}" ${p === data.selected_period ? "selected" : ""}>${p === "All" ? "All Periods (Full Ledger)" : _escInv(p)}</option>`)
+                .join("");
+        }
+
+        const sum = data.summary || {};
+        const elNet = document.getElementById("gstr1NetTaxableVal");
+        const elGross = document.getElementById("gstr1GrossGstVal");
+        const elCdnr = document.getElementById("gstr1CdnrOffsetVal");
+        const elPay = document.getElementById("gstr1NetPayableVal");
+        if (elNet) elNet.textContent = _fmtInr(sum.net_taxable_turnover_inr);
+        if (elGross) elGross.textContent = _fmtInr(sum.gross_outward_gst_inr);
+        if (elCdnr) elCdnr.textContent = `-${_fmtInr(sum.cdnr_gst_offset_inr)}`;
+        if (elPay) elPay.textContent = _fmtInr(sum.net_gst_payable_inr);
+
+        if (ribbon && Array.isArray(data.sections)) {
+            ribbon.innerHTML = data.sections.map(sec => `
+                <div class="btyd-stat-box" style="flex:1; min-width:190px;">
+                    <strong>${_escInv(sec.table)}</strong>
+                    <div class="stat-val" style="font-size:1.05rem;">${_fmtInr(sec.gst_inr)} GST</div>
+                    <small style="color:var(--text-muted);">Taxable: ${_fmtInr(sec.taxable_inr)} &bull; ${_escInv(sec.notes)}</small>
+                </div>
+            `).join("");
+        }
+
+        const hsnRows = data.hsn_summary || [];
+        tbody.innerHTML = hsnRows.map(row => `
+            <tr>
+                <th scope="row">${_escInv(row.hsn_code)}</th>
+                <td data-label="GST Slab">${Number(row.gst_rate_pct).toFixed(0)}%</td>
+                <td data-label="SKU Lines">${Number(row.sku_lines).toLocaleString("en-IN")}</td>
+                <td data-label="Net Qty">${Number(row.total_qty).toLocaleString("en-IN")}</td>
+                <td data-label="Taxable (₹)">${_fmtInr(row.taxable_value_inr)}</td>
+                <td data-label="CGST (₹)">${_fmtInr(row.cgst_inr)}</td>
+                <td data-label="SGST (₹)">${_fmtInr(row.sgst_inr)}</td>
+                <td data-label="IGST (₹)">${_fmtInr(row.igst_inr)}</td>
+                <td data-label="Total Tax (₹)"><strong>${_fmtInr(row.total_tax_inr)}</strong></td>
+            </tr>
+        `).join("");
+    } catch (_e) {
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--text-muted);">Connect FastAPI backend to aggregate GSTR-1 return tables.</td></tr>`;
+        }
+    }
+}
+
 export function initTaxInvoiceStudio() {
     fetchActiveTaxInvoice();
+    refreshGstr1ReturnPanel();
     if (TAX_INVOICE_WIRED) return;
     TAX_INVOICE_WIRED = true;
 
@@ -213,9 +284,46 @@ export function initTaxInvoiceStudio() {
     const jsonBtn = document.getElementById("taxDownloadJsonBtn");
 
     if (lookupBtn) lookupBtn.addEventListener("click", fetchActiveTaxInvoice);
-    if (issueBtn) issueBtn.addEventListener("click", issueTaxInvoiceFromPosForm);
+    if (issueBtn) {
+        issueBtn.addEventListener("click", async () => {
+            await issueTaxInvoiceFromPosForm();
+            refreshGstr1ReturnPanel();
+        });
+    }
     if (regimeSel) regimeSel.addEventListener("change", fetchActiveTaxInvoice);
     if (supplySel) supplySel.addEventListener("change", fetchActiveTaxInvoice);
+
+    const gstrPeriod = document.getElementById("gstr1PeriodSelect");
+    const gstrMode = document.getElementById("gstr1SupplyModeSelect");
+    const gstrRefreshBtn = document.getElementById("btnRefreshGstr1");
+    const gstrJsonBtn = document.getElementById("btnDownloadGstr1Json");
+    const gstrCsvBtn = document.getElementById("btnExportGstr1HsnCsv");
+
+    if (gstrPeriod) gstrPeriod.addEventListener("change", refreshGstr1ReturnPanel);
+    if (gstrMode) gstrMode.addEventListener("change", refreshGstr1ReturnPanel);
+    if (gstrRefreshBtn) gstrRefreshBtn.addEventListener("click", refreshGstr1ReturnPanel);
+
+    if (gstrJsonBtn) {
+        gstrJsonBtn.addEventListener("click", () => {
+            if (!ACTIVE_GSTR1_CACHE?.gstr1_json_payload) return;
+            const blob = new Blob([JSON.stringify(ACTIVE_GSTR1_CACHE.gstr1_json_payload, null, 2)], { type: "application/json" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = `gstr1_return_${ACTIVE_GSTR1_CACHE.selected_period || "all"}.json`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+            showToast("GSTR-1 JSON Exported", "Official GSTR-1 return filing JSON downloaded", "success");
+            logAuditEvent("Tax Compliance", `Exported GSTR-1 JSON (${ACTIVE_GSTR1_CACHE.selected_period})`);
+        });
+    }
+
+    if (gstrCsvBtn) {
+        gstrCsvBtn.addEventListener("click", () => {
+            if (!ACTIVE_GSTR1_CACHE?.hsn_summary?.length) return;
+            downloadCSV(`gstr1_hsn_summary_${ACTIVE_GSTR1_CACHE.selected_period || "all"}.csv`, ACTIVE_GSTR1_CACHE.hsn_summary);
+            showToast("HSN Table 12 Exported", "gstr1_hsn_summary CSV downloaded", "success");
+        });
+    }
 
     if (printBtn) {
         printBtn.addEventListener("click", () => {
