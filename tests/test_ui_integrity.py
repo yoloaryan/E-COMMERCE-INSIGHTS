@@ -14,7 +14,7 @@ STYLE_CSS = ROOT_DIR / "style.css"
 APP_JS = ROOT_DIR / "app.js"
 
 
-def test_all_14_tabs_and_navigation_match():
+def test_all_15_tabs_and_navigation_match():
     """Verify every sidebar data-tab maps 1-to-1 with a tab-pane section and JS tabMeta."""
     html = INDEX_HTML.read_text(encoding="utf-8")
     js = APP_JS.read_text(encoding="utf-8")
@@ -22,7 +22,7 @@ def test_all_14_tabs_and_navigation_match():
     nav_tabs = re.findall(r'class="nav-item[^"]*"\s+data-tab="([^"]+)"', html)
     pane_tabs = re.findall(r'<section\s+id="tab-([^"]+)"\s+class="tab-pane', html)
 
-    assert len(nav_tabs) == 14, f"Expected 14 navigation modules, found {len(nav_tabs)}: {nav_tabs}"
+    assert len(nav_tabs) == 15, f"Expected 15 navigation modules, found {len(nav_tabs)}: {nav_tabs}"
     assert set(nav_tabs) == set(pane_tabs), f"Tab mismatch: nav={set(nav_tabs) ^ set(pane_tabs)}"
 
     # Confirm cache-bust versions match cleanly between CSS and JS

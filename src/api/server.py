@@ -44,6 +44,7 @@ from src.models.basket_rules import get_basket_engine
 from src.models.financial_waterfall import get_waterfall_engine
 from src.api.briefing import ExecutiveBriefingGenerator
 from src.models.customer_360 import get_customer_360_engine
+from src.data.warehouse import get_warehouse
 
 MODELS_DIR = ROOT_DIR / "models"
 MANIFEST_PATH = MODELS_DIR / "model_manifest.json"
@@ -381,6 +382,11 @@ class SimulateMarginRecoveryRequest(BaseModel):
     return_reduction_pct: float = Field(default=25.0, ge=0.0, le=75.0)
     country: str = Field(default="All")
     cogs_ratio: float = Field(default=0.58, ge=0.20, le=0.85)
+
+
+class WarehouseQueryRequest(BaseModel):
+    sql: str = Field(..., min_length=6, description="Read-only SELECT or WITH analytical SQL")
+    max_rows: int = Field(default=100, ge=1, le=200)
 
 
 # -----------------------------------------------------------------------------
@@ -2160,6 +2166,42 @@ def get_customer_360_dossier(customer_id: str):
     if profile is None:
         raise HTTPException(status_code=404, detail=f"Customer account '{customer_id}' not found.")
     return {"status": "success", "profile": profile}
+
+
+# -----------------------------------------------------------------------------
+# Phase 25: Kimball Star-Schema Warehouse, SQL Workbench & Data Quality Suite
+# -----------------------------------------------------------------------------
+@app.get("/api/v1/warehouse/schema", tags=["Star Schema & SQL Warehouse"])
+def get_warehouse_schema():
+    """
+    Returns Kimball Star-Schema tables (4 Dimensions, 2 Facts), row counts, column
+    types, and curated Data-Analyst SQL case studies.
+    """
+    return get_warehouse().get_schema_catalog()
+
+
+@app.get("/api/v1/warehouse/data-quality", tags=["Star Schema & SQL Warehouse"])
+def get_warehouse_data_quality():
+    """
+    Executes all 7 automated SQL data-quality contract assertions against the
+    DuckDB Star Schema and returns pass/fail telemetry.
+    """
+    return get_warehouse().run_data_quality_checks()
+
+
+@app.post("/api/v1/warehouse/query", tags=["Star Schema & SQL Warehouse"])
+def execute_warehouse_sql(
+    payload: WarehouseQueryRequest,
+    _principal: Dict[str, Any] = Depends(require_permission("copilot:query")),
+):
+    """
+    Executes a strictly read-only SELECT / WITH CTE query against the Kimball Star
+    Schema in DuckDB with row capping and DDL/DML sandbox protection.
+    """
+    try:
+        return get_warehouse().execute_sql(sql=payload.sql, max_rows=payload.max_rows)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 if __name__ == "__main__":

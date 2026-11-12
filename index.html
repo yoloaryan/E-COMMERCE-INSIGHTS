@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=7.16">
+    <link rel="stylesheet" href="style.css?v=7.17">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -77,6 +77,11 @@
                     <span class="nav-icon">🎯</span>
                     <span class="nav-label">Product Recommender</span>
                 </button>
+                <button class="nav-item" data-tab="data-warehouse">
+                    <span class="nav-icon">🗄️</span>
+                    <span class="nav-label">Star Schema &amp; SQL Lab</span>
+                    <span class="menu-badge green">DQ</span>
+                </button>
 
                 <div class="nav-section-title advanced-module">COMMERCE OPERATIONS</div>
                 <button class="nav-item advanced-module" data-tab="customer-mgmt">
@@ -123,8 +128,8 @@
                     <span class="nav-label">Security & Audit Logs</span>
                 </button>
 
-                <div class="advanced-module-hint" id="simpleModeHint">
-                    Showing 5 core intelligence tools. <a href="javascript:void(0)" id="linkSwitchToAll">Show all 14 modules</a>
+                    <div class="advanced-module-hint" id="simpleModeHint">
+                    Showing 6 core intelligence tools. <a href="javascript:void(0)" id="linkSwitchToAll">Show all 15 modules</a>
                 </div>
             </nav>
 
@@ -279,6 +284,7 @@
                     <button class="quick-chip" onclick="switchTab('forecasting')"><span class="chip-icon">📈</span> What-If Simulator</button>
                     <button class="quick-chip alert" onclick="switchTab('churn')"><span class="chip-icon">⚠️</span> 22 VIP Churn</button>
                     <button class="quick-chip" onclick="switchTab('recommendations')"><span class="chip-icon">🎯</span> Live Basket</button>
+                    <button class="quick-chip" onclick="switchTab('data-warehouse')"><span class="chip-icon">🗄️</span> SQL Lab &amp; DQ</button>
                     <button class="quick-chip advanced-module" onclick="switchTab('inventory-mart')"><span class="chip-icon">📦</span> Low Stock Alert</button>
                     <button class="quick-chip advanced-module" onclick="switchTab('pricing-lab')"><span class="chip-icon">💰</span> Pricing &amp; A/B Lab</button>
                     <button class="quick-chip advanced-module alert" onclick="switchTab('fraud-radar')"><span class="chip-icon">🚨</span> Fraud Radar</button>
@@ -2064,6 +2070,7 @@
                                     <option value="finance">/api/v1/finance/waterfall-report (P&amp;L Margin Waterfall)</option>
                                     <option value="briefing">/api/v1/reports/executive-briefing (6-Engine Boardroom Memo)</option>
                                     <option value="customer_360">/api/v1/customers/14646/360 (Customer-360 Dossier)</option>
+                                    <option value="warehouse_dq">/api/v1/warehouse/data-quality (7-Rule Star Schema DQ)</option>
                                     <option value="rbac">/api/v1/auth/rbac-matrix (RBAC &amp; Tenant Governance)</option>
                                 </select>
                             </div>
@@ -2108,6 +2115,130 @@
                             </div>
                             <pre class="api-json-output" id="apiResponseJson"></pre>
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================= -->
+            <!-- TAB 15: KIMBALL STAR-SCHEMA WAREHOUSE, SQL LAB & DATA QUALITY -->
+            <!-- ============================================================= -->
+            <section id="tab-data-warehouse" class="tab-pane">
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-label">Total Warehouse Records</div>
+                        <div class="kpi-value" id="whKpiTotalRows">--</div>
+                        <div class="kpi-subtext" id="whKpiDataSource">DuckDB Kimball Star Schema</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Normalized Star Relations</div>
+                        <div class="kpi-value" id="whKpiSchemaCount">6 Tables</div>
+                        <div class="kpi-subtext">4 Dimensions &bull; 2 Facts</div>
+                    </div>
+                    <div class="kpi-card green-border">
+                        <div class="kpi-label">Automated Data Quality Score</div>
+                        <div class="kpi-value text-green" id="whKpiDqScore">100.0%</div>
+                        <div class="kpi-subtext" id="whKpiDqChecksSummary">7 / 7 SQL Contracts Passing</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Last Query Execution</div>
+                        <div class="kpi-value text-blue" id="whKpiLastLatency">-- ms</div>
+                        <div class="kpi-subtext" id="whKpiRowCount">0 Rows Returned</div>
+                    </div>
+                </div>
+
+                <!-- Star Schema Interactive Relation Strip -->
+                <div class="table-card" style="margin-bottom: 1.5rem;">
+                    <div class="card-header">
+                        <div>
+                            <h3>📐 Kimball Dimensional Star Schema Catalog</h3>
+                            <p class="card-sub">Fact-to-Dimension lineage linking completed sales lines and isolated returns to Product, Customer, Geography, and Calendar dimensions</p>
+                        </div>
+                        <span class="badge-tag green" id="whCertificationBadge">CERTIFIED CLEAN</span>
+                    </div>
+                    <div class="btyd-stat-grid" id="whSchemaGrid"></div>
+                </div>
+
+                <!-- Dual SQL Case-Study Workbench & Result Auto-Visualizer -->
+                <div class="charts-row">
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <div>
+                                <h3>💻 Read-Only Analytical SQL Workbench</h3>
+                                <p class="card-sub">Execute CTEs, Window Functions (LAG / ROW_NUMBER), and multi-table Star Joins against DuckDB</p>
+                            </div>
+                        </div>
+
+                        <div class="pricing-controls-stack">
+                            <div class="pricing-field-group">
+                                <label for="whCaseStudySelect">Curated Analyst Interview Case Studies</label>
+                                <select id="whCaseStudySelect" class="form-select-sm"></select>
+                            </div>
+
+                            <div class="pricing-field-group">
+                                <label for="whSqlEditor">Analytical SQL (Read-Only SELECT / WITH Sandbox)</label>
+                                <textarea id="whSqlEditor" class="code-textarea" rows="10" spellcheck="false" style="width:100%;"></textarea>
+                            </div>
+                        </div>
+
+                        <div style="display:flex;gap:0.65rem;flex-wrap:wrap;margin-top:0.85rem;">
+                            <button type="button" class="btn btn-primary btn-sm" id="whRunSqlBtn">▶️ Execute SQL Query</button>
+                            <button type="button" class="btn btn-secondary btn-sm" id="whExportSqlCsvBtn">📥 Export Result CSV</button>
+                        </div>
+                    </div>
+
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <div>
+                                <h3>📊 Auto-Charted Query Distribution</h3>
+                                <p class="card-sub">Automatically plots primary numeric column returned from your SQL result set</p>
+                            </div>
+                            <span class="badge-tag blue" id="whChartMetricBadge">Revenue Preview</span>
+                        </div>
+                        <div class="chart-wrapper" style="height:290px;">
+                            <canvas id="whQueryChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live SQL Query Output Table -->
+                <div class="table-card" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <div>
+                            <h3>📋 SQL Query Output Set</h3>
+                            <p class="card-sub" id="whQueryStatusSub">Run any case-study or custom read-only query above to inspect tabular output</p>
+                        </div>
+                    </div>
+                    <div class="table-responsive" style="max-height:360px;overflow:auto;">
+                        <table class="data-table" id="whResultsTable">
+                            <thead id="whResultsThead"></thead>
+                            <tbody id="whResultsTbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Automated 7-Rule SQL Data-Quality Contract Suite -->
+                <div class="table-card" id="whDqCard" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <div>
+                            <h3>🛡️ Automated SQL Data-Quality Contract Suite</h3>
+                            <p class="card-sub">Production assertions guarding primary keys, foreign-key lineage, price invariants, and financial reconciliation</p>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm" id="whRunDqBtn">🔄 Re-Run 7 DQ Contracts</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table" id="whDqTable">
+                            <thead>
+                                <tr>
+                                    <th>Contract ID</th>
+                                    <th>Assertion Rule</th>
+                                    <th>SQL Audit Check</th>
+                                    <th>Violations</th>
+                                    <th>Latency</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="whDqTbody"></tbody>
+                        </table>
                     </div>
                 </div>
             </section>
@@ -3251,6 +3382,6 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=7.16"></script>
+    <script src="app.js?v=7.17"></script>
 </body>
 </html>
