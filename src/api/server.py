@@ -46,6 +46,7 @@ from src.api.briefing import ExecutiveBriefingGenerator
 from src.models.customer_360 import get_customer_360_engine
 from src.data.warehouse import get_warehouse
 from src.models.causal_uplift import get_causal_engine
+from src.models.survival_xai import get_survival_xai_engine
 
 MODELS_DIR = ROOT_DIR / "models"
 MANIFEST_PATH = MODELS_DIR / "model_manifest.json"
@@ -402,6 +403,13 @@ class DidAttributionRequest(BaseModel):
     ctrl_post: float = Field(..., ge=0.0)
     n_treat: int = Field(default=250, ge=2)
     n_ctrl: int = Field(default=250, ge=2)
+
+
+class SimulateSurvivalInterventionRequest(BaseModel):
+    customer_id: str = Field(default="14096")
+    recency_reduction_days: int = Field(default=45, ge=0, le=180)
+    frequency_boost_orders: int = Field(default=2, ge=0, le=20)
+    aov_boost_pct: float = Field(default=15.0, ge=0.0, le=100.0)
 
 
 # -----------------------------------------------------------------------------
@@ -2262,6 +2270,46 @@ def compute_did_campaign_attribution(payload: DidAttributionRequest):
         ctrl_post=payload.ctrl_post,
         n_treat=payload.n_treat,
         n_ctrl=payload.n_ctrl,
+    )
+
+
+# -----------------------------------------------------------------------------
+# Phase 27: Survival Analysis, Weibull Hazard & Explainable AI (XAI) Engine
+# -----------------------------------------------------------------------------
+@app.get("/api/v1/survival/kaplan-meier-report", tags=["Survival Analysis & XAI"])
+def get_kaplan_meier_survival_report(
+    segment: str = Query(default="All", description="RFM cohort segment or All"),
+):
+    """
+    Returns non-parametric Kaplan-Meier S(t) survival curves with Greenwood 95% CIs,
+    RMST-365 metrics, global Gini drivers, and high-hazard accounts.
+    """
+    return get_survival_xai_engine().get_kaplan_meier_report(segment=segment)
+
+
+@app.get("/api/v1/survival/explain/{customer_id}", tags=["Survival Analysis & XAI"])
+def explain_customer_churn_shapley(customer_id: str):
+    """
+    Computes exact Coalitional Shapley feature attributions (2^6 coalitions) and
+    parametric Weibull survival curves for an individual customer account.
+    """
+    return get_survival_xai_engine().explain_customer(customer_id=customer_id)
+
+
+@app.post("/api/v1/survival/simulate-intervention", tags=["Survival Analysis & XAI"])
+def simulate_survival_retention_intervention(
+    payload: SimulateSurvivalInterventionRequest,
+    _principal: Dict[str, Any] = Depends(require_permission("predict:execute")),
+):
+    """
+    Simulates a counterfactual retention action and evaluates 90-day survival lift,
+    RMST lifespan extension, and saved expected 12-month gross margin.
+    """
+    return get_survival_xai_engine().simulate_retention_intervention(
+        customer_id=payload.customer_id,
+        recency_reduction_days=payload.recency_reduction_days,
+        frequency_boost_orders=payload.frequency_boost_orders,
+        aov_boost_pct=payload.aov_boost_pct,
     )
 
 

@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=7.18">
+    <link rel="stylesheet" href="style.css?v=7.19">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -898,6 +898,7 @@
                     <button class="subnav-pill" onclick="jumpToSection('vipAccountsTableCard', this)">🚨 VIP Whale Accounts</button>
                     <button class="subnav-pill" onclick="jumpToSection('btydClvExplorerCard', this)">💎 BTYD CLV Explorer</button>
                     <button class="subnav-pill" onclick="jumpToSection('clvRoiCalcCard', this)">💰 Retention ROI</button>
+                    <button class="subnav-pill" onclick="jumpToSection('survivalXaiCard', this)">⏳ Survival &amp; XAI</button>
                 </div>
 
                 <div class="kpi-grid" id="churnKpiGrid">
@@ -1076,6 +1077,113 @@
                     </div>
                     <div class="sim-outcome-panel" id="clvOutcomePanel">
                         <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Phase 27: Survival Analysis, Weibull Hazard & Exact Shapley XAI -->
+                <div class="interactive-card" id="survivalXaiCard" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <div>
+                            <h3 id="survivalXaiHeading">⏳ Survival Analysis, Weibull Hazard &amp; Shapley XAI Lab</h3>
+                            <p class="card-sub">Kaplan-Meier S(t) cohorts (Greenwood 95% CIs), exact 2^6 Coalitional Shapley attributions, and counterfactual intervention curves</p>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                            <label for="survivalCohortSelect" style="font-size:0.78rem; color:var(--text-secondary);">Cohort Filter:</label>
+                            <select id="survivalCohortSelect" class="form-input-sm" style="width:auto;">
+                                <option value="All">All Accounts</option>
+                                <option value="Champions (VIP)">Champions (VIP)</option>
+                                <option value="Loyal Customers">Loyal Customers</option>
+                                <option value="At-Risk / Lapsing">At-Risk / Lapsing</option>
+                                <option value="Occasional / Hibernating">Occasional / Hibernating</option>
+                            </select>
+                            <span class="badge live-badge">Exact Shapley XAI</span>
+                        </div>
+                    </div>
+
+                    <div class="survival-kpi-strip">
+                        <div class="survival-kpi-box">
+                            <div class="kpi-label">Median Lifespan T(50)</div>
+                            <div class="kpi-value" id="survivalMedianVal">—</div>
+                        </div>
+                        <div class="survival-kpi-box">
+                            <div class="kpi-label">90-Day Survival S(90)</div>
+                            <div class="kpi-value" id="survival90Val">—</div>
+                        </div>
+                        <div class="survival-kpi-box">
+                            <div class="kpi-label">Top XAI Risk Driver</div>
+                            <div class="kpi-value" id="survivalTopDriverVal" style="font-size:0.95rem;">—</div>
+                        </div>
+                        <div class="survival-kpi-box">
+                            <div class="kpi-label">Simulated S(90) Lift</div>
+                            <div class="kpi-value" id="survivalLiftVal" style="color:var(--accent-green, #10B981);">—</div>
+                        </div>
+                    </div>
+
+                    <div class="survival-dual-grid">
+                        <div>
+                            <h4 style="font-size:0.9rem; margin-bottom:0.5rem;">Kaplan-Meier Cohort Survival Curve S(t) with 95% CI</h4>
+                            <div style="height:260px; position:relative;">
+                                <canvas id="kmSurvivalChart" aria-label="Kaplan-Meier cohort survival chart"></canvas>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 style="font-size:0.9rem; margin-bottom:0.5rem;">Exact Shapley Feature Attribution (±pp Risk Contribution)</h4>
+                            <div style="height:260px; position:relative;">
+                                <canvas id="xaiAttributionChart" aria-label="Shapley churn feature attribution chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="search-form" style="margin-top:1.15rem; align-items:end; flex-wrap:wrap; gap:0.75rem;">
+                        <div style="display:flex; flex-direction:column; gap:0.25rem; min-width:190px; flex:1;">
+                            <label for="xaiCustomerInput" style="font-size:0.78rem; color:var(--text-secondary);">Explain Customer ID:</label>
+                            <input type="text" id="xaiCustomerInput" value="14096" placeholder="e.g. 14096, 12352, 17850">
+                        </div>
+                        <button type="button" id="xaiExplainBtn" class="btn btn-primary">Compute Shapley XAI &amp; Curve</button>
+                    </div>
+
+                    <div class="simulator-controls-grid" style="margin-top:1rem;">
+                        <div class="sim-control-box">
+                            <label for="xaiRecencySlider">Reactivate Now (Recency Reduction): <strong id="xaiRecencyLbl">45 days</strong></label>
+                            <input type="range" id="xaiRecencySlider" min="0" max="120" step="5" value="45">
+                        </div>
+                        <div class="sim-control-box">
+                            <label for="xaiFreqSlider">Win-Back Order Boost: <strong id="xaiFreqLbl">+2 orders</strong></label>
+                            <input type="range" id="xaiFreqSlider" min="0" max="10" step="1" value="2">
+                        </div>
+                        <div class="sim-control-box">
+                            <label for="xaiAovSlider">Bundle Basket AOV Uplift: <strong id="xaiAovLbl">+15%</strong></label>
+                            <input type="range" id="xaiAovSlider" min="0" max="50" step="5" value="15">
+                        </div>
+                    </div>
+
+                    <div class="survival-dual-grid" style="margin-top:1rem; align-items:center;">
+                        <div style="height:220px; position:relative;">
+                            <canvas id="survivalCounterfactualChart" aria-label="Baseline vs counterfactual Weibull survival trajectory"></canvas>
+                        </div>
+                        <div class="sim-outcome-panel" id="survivalCounterfactualSummary" aria-live="polite">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+
+                    <div class="table-responsive" style="margin-top:1.25rem;">
+                        <table class="data-table" id="survivalCohortTable">
+                            <caption class="survival-caption">Kaplan-Meier Non-Parametric Benchmark &amp; Restricted Mean Survival Time (365-Day Horizon)</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">RFM Cohort</th>
+                                    <th scope="col">Subjects</th>
+                                    <th scope="col">Events</th>
+                                    <th scope="col">Median T(50)</th>
+                                    <th scope="col">S(90d)</th>
+                                    <th scope="col">S(180d)</th>
+                                    <th scope="col">RMST-365</th>
+                                </tr>
+                            </thead>
+                            <tbody id="survivalCohortTbody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </section>
@@ -2151,6 +2259,7 @@
                                     <option value="customer_360">/api/v1/customers/14646/360 (Customer-360 Dossier)</option>
                                     <option value="warehouse_dq">/api/v1/warehouse/data-quality (7-Rule Star Schema DQ)</option>
                                     <option value="causal">/api/v1/causal/uplift-report (T-Learner Uplift &amp; DiD)</option>
+                                    <option value="survival_xai">/api/v1/survival/kaplan-meier-report (Kaplan-Meier &amp; XAI)</option>
                                     <option value="rbac">/api/v1/auth/rbac-matrix (RBAC &amp; Tenant Governance)</option>
                                 </select>
                             </div>
@@ -3462,6 +3571,6 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=7.18"></script>
+    <script src="app.js?v=7.19"></script>
 </body>
 </html>
