@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=7.9">
+    <link rel="stylesheet" href="style.css?v=7.10">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -426,6 +426,8 @@
                     <button class="subnav-pill" onclick="jumpToSection('segChartsRow', this)">📈 Spend vs Frequency</button>
                     <button class="subnav-pill" onclick="jumpToSection('personaLookupCard', this)">👤 Account Lookup</button>
                     <button class="subnav-pill" onclick="jumpToSection('rfmSlicerCard', this)">🎛️ Custom RFM Slicer</button>
+                    <button class="subnav-pill" onclick="jumpToSection('cohortHeatmapCard', this)">🔥 Cohort Heatmap</button>
+                    <button class="subnav-pill" onclick="jumpToSection('segmentMigrationCard', this)">🔀 Segment Migration</button>
                 </div>
 
                 <div class="kpi-grid" id="segKpiGrid">
@@ -515,6 +517,149 @@
 
                     <div class="sim-outcome-panel" id="customSegmentOutcomePanel">
                         <!-- Populated dynamically by JS -->
+                    </div>
+                </div>
+
+                <!-- Phase 18: Longitudinal Cohort Retention Heatmap & Decay Curve -->
+                <div class="table-card" id="cohortHeatmapCard" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <div>
+                            <h3 id="cohortHeatmapHeading">🔥 Monthly Acquisition Cohort Retention Heatmap (M0–M12)</h3>
+                            <p class="card-sub">Track repeat logo retention (%) and Net Revenue Retention (NRR %) across every historical cohort</p>
+                        </div>
+                        <div class="filter-actions" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+                            <div class="btn-group-segmented" role="group" aria-label="Cohort Retention Metric">
+                                <button type="button" class="btn-seg active" id="btnCohortMetricCustomers">👥 Logo Retention %</button>
+                                <button type="button" class="btn-seg" id="btnCohortMetricRevenue">💷 Revenue (NRR %)</button>
+                            </div>
+                            <label for="cohortCountryFilter" style="font-size:0.78rem;font-weight:600;color:var(--text-secondary);">Market:</label>
+                            <select id="cohortCountryFilter" class="form-select-sm">
+                                <option value="All">All Markets</option>
+                            </select>
+                            <button type="button" class="btn btn-secondary btn-sm" id="exportCohortCsvBtn">📥 Export Matrix</button>
+                        </div>
+                    </div>
+
+                    <div class="btyd-stat-grid" style="margin-bottom:1.15rem;">
+                        <div class="btyd-stat-box">
+                            <strong>Avg Month-1 Repeat</strong>
+                            <div class="stat-val text-blue" id="cohortKpiM1">32.4%</div>
+                        </div>
+                        <div class="btyd-stat-box">
+                            <strong>Avg Month-3 Retention</strong>
+                            <div class="stat-val" id="cohortKpiM3">24.8%</div>
+                        </div>
+                        <div class="btyd-stat-box">
+                            <strong>Month-1 Revenue (NRR)</strong>
+                            <div class="stat-val text-green" id="cohortKpiNrr">36.2%</div>
+                        </div>
+                        <div class="btyd-stat-box">
+                            <strong>Top Acquisition Cohort</strong>
+                            <div class="stat-val text-gold" id="cohortKpiBestCohort">2010-12</div>
+                        </div>
+                    </div>
+
+                    <div tabindex="0" role="region" aria-labelledby="cohortHeatmapHeading" class="cohort-matrix-wrap">
+                        <table class="cohort-heatmap-table" id="cohortHeatmapTable">
+                            <caption class="sr-only">Monthly Customer Acquisition Cohort Retention Matrix M0 through M12</caption>
+                            <thead id="cohortHeatmapThead"></thead>
+                            <tbody id="cohortHeatmapTbody"></tbody>
+                        </table>
+                    </div>
+
+                    <div style="margin-top: 1.5rem;">
+                        <div class="card-header" style="margin-bottom:0.5rem;">
+                            <h4>Portfolio Retention &amp; Net Revenue Decay Curve (M0–M12)</h4>
+                            <span class="badge-tag blue">Empirical Cohort Average</span>
+                        </div>
+                        <div class="chart-wrapper" style="height:240px;">
+                            <canvas id="cohortDecayChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Phase 18: RFM Segment Migration Matrix & Retention Lift Simulator -->
+                <div class="charts-row" id="segmentMigrationCard" style="margin-top: 1.5rem;">
+                    <div class="chart-card flex-2">
+                        <div class="card-header">
+                            <div>
+                                <h3>🔀 RFM Segment Markov Migration Matrix (H1 &rarr; H2)</h3>
+                                <p class="card-sub">Transitions between Prior and Current behavioral windows: stay rate, Champion slippage &amp; win-backs</p>
+                            </div>
+                            <span class="badge-tag green" id="migStayRateBadge">Champion Stay: --%</span>
+                        </div>
+
+                        <div class="btyd-stat-grid" style="margin-bottom:1rem;">
+                            <div class="btyd-stat-box">
+                                <strong>Champion Retention Rate</strong>
+                                <div class="stat-val text-gold" id="migStayRateVal">--%</div>
+                            </div>
+                            <div class="btyd-stat-box">
+                                <strong>Slipped Champions (Risk)</strong>
+                                <div class="stat-val text-red" id="migSlipCountVal">--</div>
+                            </div>
+                            <div class="btyd-stat-box">
+                                <strong>Win-Back Upgrades</strong>
+                                <div class="stat-val text-green" id="migWinbackVal">--</div>
+                            </div>
+                        </div>
+
+                        <div tabindex="0" role="region" aria-label="RFM Segment Migration Matrix" class="table-responsive">
+                            <table class="data-table cohort-migration-table" id="segmentMigrationTable">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Prior H1 \ Current H2</th>
+                                        <th scope="col">Champions</th>
+                                        <th scope="col">Loyal</th>
+                                        <th scope="col">At-Risk</th>
+                                        <th scope="col">Hibernating</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="segmentMigrationTbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <div>
+                                <h3>🚀 Retention &amp; Win-Back LTV Lift Simulator</h3>
+                                <p class="card-sub">Model annualized revenue gain from improving Month-1 onboarding &amp; reactivating slipped VIPs</p>
+                            </div>
+                        </div>
+
+                        <div class="pricing-controls-stack">
+                            <div class="pricing-field-group">
+                                <div class="pricing-slider-label-row">
+                                    <label for="migLiftSlider">Month-1 Repeat Lift (+pp)</label>
+                                    <span class="pricing-slider-readout" id="migLiftVal">+5.0 pp</span>
+                                </div>
+                                <input type="range" id="migLiftSlider" class="modern-range-slider" min="0" max="25" step="1" value="5">
+                            </div>
+
+                            <div class="pricing-field-group">
+                                <div class="pricing-slider-label-row">
+                                    <label for="migWinbackSlider">Slipped Champion Win-Back (%)</label>
+                                    <span class="pricing-slider-readout" id="migWinbackSliderVal">20%</span>
+                                </div>
+                                <input type="range" id="migWinbackSlider" class="modern-range-slider" min="0" max="60" step="5" value="20">
+                            </div>
+                        </div>
+
+                        <div class="btyd-stat-grid" style="margin-top: 1rem;">
+                            <div class="btyd-stat-box">
+                                <strong>Projected Month-1 Rate</strong>
+                                <div class="stat-val text-blue" id="migProjectedM1Val">--%</div>
+                            </div>
+                            <div class="btyd-stat-box">
+                                <strong>Reactivated Accounts</strong>
+                                <div class="stat-val" id="migRecoveredAccountsVal">--</div>
+                            </div>
+                            <div class="btyd-stat-box" style="grid-column: 1 / -1;">
+                                <strong>Projected Annual Revenue Uplift (&pound;)</strong>
+                                <div class="stat-val text-green" id="migProjectedGainVal">£0</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -1716,6 +1861,7 @@
                                     <option value="pricing">/api/v1/pricing/simulate-price-change (Pricing Elasticity)</option>
                                     <option value="fraud">/api/v1/fraud/score-transaction (Isolation Forest Fraud)</option>
                                     <option value="inventory">/api/v1/inventory/simulate-sku (EOQ &amp; Safety Stock)</option>
+                                    <option value="cohorts">/api/v1/cohorts/retention-report (Cohort Heatmap &amp; NRR)</option>
                                     <option value="rbac">/api/v1/auth/rbac-matrix (RBAC &amp; Tenant Governance)</option>
                                 </select>
                             </div>
@@ -2902,6 +3048,6 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=7.9"></script>
+    <script src="app.js?v=7.10"></script>
 </body>
 </html>

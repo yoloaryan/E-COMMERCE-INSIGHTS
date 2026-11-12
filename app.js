@@ -905,6 +905,362 @@ function initSegmentationTab() {
         searchBtn.addEventListener("click", () => renderCustLookup(searchInput.value));
         renderCustLookup(searchInput.value);
     }
+
+    initCohortAndMigrationAnalytics();
+}
+
+// =============================================================================
+// PHASE 18: COHORT RETENTION HEATMAP & RFM SEGMENT MIGRATION CONTROLLER
+// =============================================================================
+let cohortDecayChartInstance = null;
+let COHORT_METRIC_MODE = "customers";
+let COHORT_MATRIX_CACHE = [];
+let COHORT_INIT_WIRED = false;
+
+function buildLocalCohortFallback(metric = "customers") {
+    const months = ["2010-12", "2011-01", "2011-02", "2011-03", "2011-04", "2011-05", "2011-06", "2011-07", "2011-08", "2011-09", "2011-10", "2011-11"];
+    const baseSizes = [885, 417, 380, 452, 300, 284, 242, 188, 169, 299, 358, 323];
+    const rows = months.map((m, idx) => {
+        const custPcts = [];
+        const revPcts = [];
+        for (let off = 0; off < months.length; off++) {
+            if (idx + off >= months.length) {
+                custPcts.push(null);
+                revPcts.push(null);
+            } else if (off === 0) {
+                custPcts.push(100.0);
+                revPcts.push(100.0);
+            } else {
+                const cVal = parseFloat(Math.max(8.5, (38 - off * 2.1 + (idx === 0 ? 11 : 0))).toFixed(1));
+                const rVal = parseFloat((cVal * 1.14).toFixed(1));
+                custPcts.push(cVal);
+                revPcts.push(rVal);
+            }
+        }
+        return {
+            cohort_month: m,
+            cohort_size: baseSizes[idx],
+            month0_revenue_gbp: baseSizes[idx] * 412.5,
+            customer_retention_pcts: custPcts,
+            revenue_retention_pcts: revPcts,
+        };
+    });
+    const avgCurve = Array.from({ length: 12 }, (_, i) => i === 0 ? 100.0 : parseFloat(Math.max(12, 36 - i * 1.8).toFixed(1)));
+    return {
+        status: "success",
+        metric,
+        available_countries: ["All", "United Kingdom", "Germany", "France", "EIRE"],
+        max_month_index: 11,
+        month_headers: Array.from({ length: 12 }, (_, i) => `M${i}`),
+        summary: {
+            total_cohorts: 12,
+            total_tracked_customers: 4296,
+            avg_month1_retention_pct: 34.2,
+            avg_month3_retention_pct: 28.6,
+            avg_month1_nrr_pct: 38.9,
+            best_cohort_month: "2010-12",
+        },
+        average_curve: {
+            labels: Array.from({ length: 12 }, (_, i) => `Month ${i}`),
+            customer_retention_pct: avgCurve,
+            revenue_retention_pct: avgCurve.map(v => parseFloat((v * 1.14).toFixed(1))),
+        },
+        cohorts: rows,
+    };
+}
+
+function renderCohortHeatmapMatrix(report) {
+    const thead = document.getElementById("cohortHeatmapThead");
+    const tbody = document.getElementById("cohortHeatmapTbody");
+    if (!thead || !tbody) return;
+
+    const headers = report.month_headers || [];
+    const isRev = (COHORT_METRIC_MODE === "revenue");
+    COHORT_MATRIX_CACHE = report.cohorts || [];
+
+    thead.innerHTML = `
+        <tr>
+            <th scope="col">Acquisition Cohort</th>
+            <th scope="col" style="text-align:right;">Size</th>
+            ${headers.map(h => `<th scope="col">${h}</th>`).join("")}
+        </tr>
+    `;
+
+    tbody.innerHTML = (report.cohorts || []).map(row => {
+        const series = isRev ? row.revenue_retention_pcts : row.customer_retention_pcts;
+        const cells = headers.map((_, idx) => {
+            const val = series[idx];
+            if (val === null || val === undefined) {
+                return `<td class="cohort-cell heat-empty">—</td>`;
+            }
+            let bg = "rgba(59, 130, 246, 0.16)";
+            let tier = "heat-low";
+            if (idx === 0) {
+                bg = "#1D4ED8";
+                tier = "heat-hi";
+            } else if (val >= 45) {
+                bg = "#059669";
+                tier = "heat-hi";
+            } else if (val >= 30) {
+                bg = "#2563EB";
+                tier = "heat-hi";
+            } else if (val >= 18) {
+                bg = "rgba(37, 99, 235, 0.62)";
+                tier = "heat-mid";
+            } else if (val >= 10) {
+                bg = "rgba(59, 130, 246, 0.34)";
+                tier = "heat-low";
+            }
+            return `<td class="cohort-cell ${tier}" style="--cell-bg:${bg};" title="${row.cohort_month} • M${idx}: ${val}%">${val}%</td>`;
+        }).join("");
+
+        return `
+            <tr>
+                <th scope="row">${row.cohort_month}</th>
+                <td class="cohort-size-cell">${Number(row.cohort_size).toLocaleString()}</td>
+                ${cells}
+            </tr>
+        `;
+    }).join("");
+
+    const s = report.summary || {};
+    const kM1 = document.getElementById("cohortKpiM1");
+    const kM3 = document.getElementById("cohortKpiM3");
+    const kNrr = document.getElementById("cohortKpiNrr");
+    const kBest = document.getElementById("cohortKpiBestCohort");
+    if (kM1) kM1.textContent = `${s.avg_month1_retention_pct ?? "--"}%`;
+    if (kM3) kM3.textContent = `${s.avg_month3_retention_pct ?? "--"}%`;
+    if (kNrr) kNrr.textContent = `${s.avg_month1_nrr_pct ?? "--"}%`;
+    if (kBest) kBest.textContent = s.best_cohort_month || "--";
+
+    const decayCanvas = document.getElementById("cohortDecayChart");
+    if (decayCanvas && typeof Chart !== "undefined" && report.average_curve) {
+        if (cohortDecayChartInstance) cohortDecayChartInstance.destroy();
+        const isLight = document.documentElement.getAttribute("data-theme") === "light";
+        const textCol = isLight ? "#334155" : "#D4D4D8";
+        const gridCol = isLight ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
+
+        cohortDecayChartInstance = new Chart(decayCanvas.getContext("2d"), {
+            type: "line",
+            data: {
+                labels: report.average_curve.labels,
+                datasets: [
+                    {
+                        label: "Logo Retention (%)",
+                        data: report.average_curve.customer_retention_pct,
+                        borderColor: "#3B82F6",
+                        backgroundColor: "rgba(59, 130, 246, 0.14)",
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.25,
+                    },
+                    {
+                        label: "Net Revenue Retention (%)",
+                        data: report.average_curve.revenue_retention_pct,
+                        borderColor: "#10B981",
+                        borderWidth: 2,
+                        borderDash: [4, 4],
+                        fill: false,
+                        tension: 0.25,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: textCol, font: { size: 11 } } } },
+                scales: {
+                    x: { ticks: { color: textCol }, grid: { color: gridCol } },
+                    y: { beginAtZero: true, ticks: { color: textCol, callback: (v) => `${v}%` }, grid: { color: gridCol } }
+                }
+            }
+        });
+    }
+}
+
+function renderSegmentMigrationTable(mig) {
+    const tbody = document.getElementById("segmentMigrationTbody");
+    if (!tbody || !mig || !Array.isArray(mig.matrix)) return;
+
+    const rank = { Champions: 0, Loyal: 1, "At-Risk": 2, Hibernating: 3 };
+    const segs = mig.segments || ["Champions", "Loyal", "At-Risk", "Hibernating"];
+
+    tbody.innerHTML = mig.matrix.map(row => {
+        const src = row.from_segment;
+        const cells = segs.map(dst => {
+            const cell = row.transitions[dst] || { count: 0, pct: 0 };
+            let cls = "stay";
+            if (src === dst) cls = "stay";
+            else if ((rank[dst] ?? 9) < (rank[src] ?? 9)) cls = "upgrade";
+            else cls = "slip";
+            return `
+                <td class="migration-cell ${cls}">
+                    <strong>${cell.pct}%</strong>
+                    <small>${Number(cell.count).toLocaleString()} accts</small>
+                </td>
+            `;
+        }).join("");
+        return `
+            <tr>
+                <th scope="row"><strong>${src}</strong> <small style="color:var(--text-muted);">(${row.total_accounts})</small></th>
+                ${cells}
+            </tr>
+        `;
+    }).join("");
+
+    const s = mig.summary || {};
+    const stayEl = document.getElementById("migStayRateVal");
+    const stayBadge = document.getElementById("migStayRateBadge");
+    const slipEl = document.getElementById("migSlipCountVal");
+    const winEl = document.getElementById("migWinbackVal");
+    if (stayEl) stayEl.textContent = `${s.champion_stay_rate_pct ?? "--"}%`;
+    if (stayBadge) stayBadge.textContent = `Champion Stay: ${s.champion_stay_rate_pct ?? "--"}%`;
+    if (slipEl) slipEl.textContent = `${Number(s.champions_slipped_count || 0).toLocaleString()} accts`;
+    if (winEl) winEl.textContent = `${Number(s.winback_upgrades_count || 0).toLocaleString()} upgrades`;
+}
+
+async function refreshRetentionLiftSimulator() {
+    const liftEl = document.getElementById("migLiftSlider");
+    const winEl = document.getElementById("migWinbackSlider");
+    if (!liftEl || !winEl) return;
+
+    const liftPp = parseFloat(liftEl.value || "5");
+    const winPct = parseFloat(winEl.value || "20");
+
+    const lVal = document.getElementById("migLiftVal");
+    const wVal = document.getElementById("migWinbackSliderVal");
+    if (lVal) lVal.textContent = `+${liftPp.toFixed(1)} pp`;
+    if (wVal) wVal.textContent = `${winPct.toFixed(0)}%`;
+
+    let sim = null;
+    try {
+        const res = await fetch("http://localhost:8000/api/v1/cohorts/simulate-lift", {
+            method: "POST",
+            headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
+            body: JSON.stringify({ month1_lift_pp: liftPp, winback_recovery_pct: winPct })
+        });
+        if (res.ok) sim = await res.json();
+    } catch (_e) {
+        // Offline calculation fallback below
+    }
+
+    if (!sim) {
+        const extraBuyers = Math.round(4296 * (liftPp / 100));
+        const repeatRev = extraBuyers * 340 * 2.2;
+        const winRev = Math.round(145 * (winPct / 100)) * 980;
+        sim = {
+            outputs: {
+                projected_month1_retention_pct: parseFloat((34.2 + liftPp).toFixed(1)),
+                recovered_slipping_accounts: Math.round(145 * (winPct / 100)),
+                total_annual_revenue_lift_gbp: repeatRev + winRev
+            }
+        };
+    }
+
+    const o = sim.outputs || {};
+    const m1El = document.getElementById("migProjectedM1Val");
+    const recEl = document.getElementById("migRecoveredAccountsVal");
+    const gainEl = document.getElementById("migProjectedGainVal");
+    if (m1El) m1El.textContent = `${o.projected_month1_retention_pct ?? "--"}%`;
+    if (recEl) recEl.textContent = `${Number(o.recovered_slipping_accounts || 0).toLocaleString()} VIPs`;
+    if (gainEl) gainEl.textContent = `£${Number(o.total_annual_revenue_lift_gbp || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+}
+
+async function loadCohortHeatmapFromApi() {
+    const countryEl = document.getElementById("cohortCountryFilter");
+    const selectedCountry = countryEl ? countryEl.value : "All";
+
+    let report = null;
+    try {
+        const res = await fetch(`http://localhost:8000/api/v1/cohorts/retention-report?metric=${COHORT_METRIC_MODE}&country=${encodeURIComponent(selectedCountry)}`);
+        if (res.ok) report = await res.json();
+    } catch (_e) {
+        // Fallback offline matrix
+    }
+
+    if (!report) report = buildLocalCohortFallback(COHORT_METRIC_MODE);
+
+    if (countryEl && Array.isArray(report.available_countries)) {
+        const currentVal = countryEl.value || "All";
+        if (countryEl.options.length <= 1 && report.available_countries.length > 1) {
+            countryEl.innerHTML = report.available_countries.map(c => `<option value="${c}">${c === "All" ? "All Markets" : c}</option>`).join("");
+            if (report.available_countries.includes(currentVal)) countryEl.value = currentVal;
+        }
+    }
+    renderCohortHeatmapMatrix(report);
+}
+
+async function initCohortAndMigrationAnalytics() {
+    const matrixEl = document.getElementById("cohortHeatmapTable");
+    if (!matrixEl) return;
+
+    await loadCohortHeatmapFromApi();
+
+    let mig = null;
+    try {
+        const res = await fetch("http://localhost:8000/api/v1/cohorts/segment-migration");
+        if (res.ok) mig = await res.json();
+    } catch (_e) {
+        // Fallback offline migration
+    }
+    if (!mig) {
+        mig = {
+            segments: ["Champions", "Loyal", "At-Risk", "Hibernating"],
+            summary: { champion_stay_rate_pct: 68.4, champions_slipped_count: 142, winback_upgrades_count: 96 },
+            matrix: [
+                { from_segment: "Champions", total_accounts: 640, transitions: { Champions: { count: 438, pct: 68.4 }, Loyal: { count: 60, pct: 9.4 }, "At-Risk": { count: 142, pct: 22.2 }, Hibernating: { count: 0, pct: 0 } } },
+                { from_segment: "Loyal", total_accounts: 810, transitions: { Champions: { count: 178, pct: 22.0 }, Loyal: { count: 389, pct: 48.0 }, "At-Risk": { count: 243, pct: 30.0 }, Hibernating: { count: 0, pct: 0 } } },
+                { from_segment: "At-Risk", total_accounts: 920, transitions: { Champions: { count: 44, pct: 4.8 }, Loyal: { count: 52, pct: 5.7 }, "At-Risk": { count: 480, pct: 52.2 }, Hibernating: { count: 344, pct: 37.3 } } },
+                { from_segment: "Hibernating", total_accounts: 1120, transitions: { Champions: { count: 12, pct: 1.1 }, Loyal: { count: 42, pct: 3.8 }, "At-Risk": { count: 108, pct: 9.6 }, Hibernating: { count: 958, pct: 85.5 } } }
+            ]
+        };
+    }
+    renderSegmentMigrationTable(mig);
+    await refreshRetentionLiftSimulator();
+
+    if (!COHORT_INIT_WIRED) {
+        COHORT_INIT_WIRED = true;
+        const btnCust = document.getElementById("btnCohortMetricCustomers");
+        const btnRev = document.getElementById("btnCohortMetricRevenue");
+        const countryEl = document.getElementById("cohortCountryFilter");
+        const exportBtn = document.getElementById("exportCohortCsvBtn");
+        const liftSlider = document.getElementById("migLiftSlider");
+        const winSlider = document.getElementById("migWinbackSlider");
+
+        if (btnCust && btnRev) {
+            btnCust.addEventListener("click", () => {
+                COHORT_METRIC_MODE = "customers";
+                btnCust.classList.add("active");
+                btnRev.classList.remove("active");
+                loadCohortHeatmapFromApi();
+            });
+            btnRev.addEventListener("click", () => {
+                COHORT_METRIC_MODE = "revenue";
+                btnRev.classList.add("active");
+                btnCust.classList.remove("active");
+                loadCohortHeatmapFromApi();
+            });
+        }
+
+        if (countryEl) countryEl.addEventListener("change", loadCohortHeatmapFromApi);
+
+        if (exportBtn) {
+            exportBtn.addEventListener("click", () => {
+                if (COHORT_MATRIX_CACHE.length) {
+                    downloadCSV("cohort_retention_matrix.csv", COHORT_MATRIX_CACHE);
+                    showToast("Cohort Matrix Exported", "cohort_retention_matrix.csv downloaded", "success");
+                    logAuditEvent("Export", "Exported Phase 18 Cohort Retention Heatmap Matrix to CSV");
+                }
+            });
+        }
+
+        [liftSlider, winSlider].forEach(el => {
+            if (el) {
+                el.addEventListener("input", refreshRetentionLiftSimulator);
+                el.addEventListener("change", refreshRetentionLiftSimulator);
+            }
+        });
+    }
 }
 
 // =============================================================================
@@ -4108,6 +4464,13 @@ const API_ENDPOINTS = {
             status: "success",
             policy: { stock_code: req.stock_code || "22423", safety_stock: 62, reorder_point: 328, eoq: 914 }
         })
+    },
+    cohorts: {
+        method: "GET",
+        path: "/api/v1/cohorts/retention-report",
+        url: "http://localhost:8000/api/v1/cohorts/retention-report?metric=customers&country=All",
+        payload: { info: "GET endpoint; query parameters ?metric=customers|revenue&country=All" },
+        handler: () => buildLocalCohortFallback("customers")
     },
     rbac: {
         method: "GET",

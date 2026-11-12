@@ -34,6 +34,7 @@ from src.models.pricing_elasticity import PricingElasticityEngine, ABExperimentE
 from src.api.security import SecurityRegistry, ROLE_DEFINITIONS, AuthError, get_required_principal, require_permission
 from src.models.anomaly_detection import AnomalyDetectionEngine, AnomalyRegistry
 from src.models.inventory_optimization import get_inventory_engine
+from src.models.cohort_analytics import get_cohort_engine
 
 MODELS_DIR = ROOT_DIR / "models"
 MANIFEST_PATH = MODELS_DIR / "model_manifest.json"
@@ -316,6 +317,11 @@ class AddInventorySkuRequest(BaseModel):
     daily_demand_mean: float = Field(..., gt=0.1, le=50000.0)
     daily_demand_std: Optional[float] = Field(default=None, ge=0.1)
     stock_on_hand: int = Field(default=100, ge=0)
+
+
+class SimulateCohortLiftRequest(BaseModel):
+    month1_lift_pp: float = Field(default=5.0, ge=0.0, le=35.0)
+    winback_recovery_pct: float = Field(default=20.0, ge=0.0, le=60.0)
 
 
 # -----------------------------------------------------------------------------
@@ -1822,6 +1828,45 @@ def create_or_update_inventory_sku(
         severity="INFO",
     )
     return {"status": "created", "policy": policy}
+
+
+# -----------------------------------------------------------------------------
+# Phase 18: Cohort Retention Heatmap & RFM Segment Migration Endpoints
+# -----------------------------------------------------------------------------
+@app.get("/api/v1/cohorts/retention-report", tags=["Cohort Retention & Migration Analytics"])
+def get_cohort_retention_report(
+    metric: str = Query(default="customers", description="'customers' or 'revenue'"),
+    country: str = Query(default="All", description="Optional country market filter"),
+):
+    """
+    Returns M0..M12 Monthly Acquisition Cohort matrix for customer repeat retention (%)
+    or Net Revenue Retention (NRR %), plus average retention curve and market choices.
+    """
+    return get_cohort_engine().generate_retention_report(metric=metric, country=country)
+
+
+@app.get("/api/v1/cohorts/segment-migration", tags=["Cohort Retention & Migration Analytics"])
+def get_rfm_segment_migration():
+    """
+    Returns Prior vs. Current window 4x4 RFM Markov transition matrix tracking
+    Champion stay rate, slippage to At-Risk, and Hibernating/At-Risk win-back yield.
+    """
+    return get_cohort_engine().generate_migration_report()
+
+
+@app.post("/api/v1/cohorts/simulate-lift", tags=["Cohort Retention & Migration Analytics"])
+def simulate_cohort_retention_lift(
+    payload: SimulateCohortLiftRequest,
+    _principal: Dict[str, Any] = Depends(require_permission("predict:execute")),
+):
+    """
+    Projects annualized LTV revenue uplift from improving Month-1 repeat retention
+    and reactivating slipping Champions / At-Risk accounts.
+    """
+    return get_cohort_engine().simulate_retention_lift(
+        month1_lift_pp=payload.month1_lift_pp,
+        winback_recovery_pct=payload.winback_recovery_pct,
+    )
 
 
 if __name__ == "__main__":
