@@ -18,6 +18,8 @@ import urllib.error
 from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parents[2]
 
+from src.utils.state_store import get_state_store
+
 
 class VoucherGenerator:
     """
@@ -287,6 +289,20 @@ class CampaignRegistry:
 
         self.dispatched_campaigns: List[Dict[str, Any]] = []
         self.generated_vouchers: Dict[str, Dict[str, Any]] = {}
+        try:
+            store = get_state_store()
+            for cfg in store.load_channel_configs():
+                ch = cfg["channel"]
+                if ch in self.channels:
+                    self.channels[ch]["webhook_url"] = cfg.get("webhook_url") or ""
+                    self.channels[ch]["enabled"] = bool(cfg.get("enabled", 1))
+                    self.channels[ch]["status"] = cfg.get("status", "SIMULATED_DEV")
+                    self.channels[ch]["deliveries"] = int(cfg.get("deliveries", 0))
+            persisted_camps = store.load_campaigns()
+            if persisted_camps:
+                self.dispatched_campaigns = persisted_camps
+        except Exception:
+            pass
 
     def configure_channel(self, channel: str, webhook_url: Optional[str] = None, enabled: bool = True) -> bool:
         channel = channel.lower()
@@ -295,6 +311,10 @@ class CampaignRegistry:
                 self.channels[channel]["webhook_url"] = webhook_url.strip()
                 self.channels[channel]["status"] = "LIVE_CONNECTED" if webhook_url.startswith("http") else "SIMULATED_DEV"
             self.channels[channel]["enabled"] = enabled
+            try:
+                get_state_store().save_channel_config(channel, self.channels[channel])
+            except Exception:
+                pass
             return True
         return False
 
@@ -308,6 +328,10 @@ class CampaignRegistry:
         self.dispatched_campaigns.insert(0, campaign_record)
         if len(self.dispatched_campaigns) > 50:
             self.dispatched_campaigns.pop()
+        try:
+            get_state_store().save_campaign(campaign_record)
+        except Exception:
+            pass
 
     def get_status(self) -> Dict[str, Any]:
         return {
@@ -562,3 +586,4 @@ class WatchdogEvaluator:
                 "channel_results": results
             }
         return None
+

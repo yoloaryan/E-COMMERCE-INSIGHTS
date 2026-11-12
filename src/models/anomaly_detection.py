@@ -14,6 +14,8 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parents[2]
 sys.path.append(str(ROOT_DIR))
 
+from src.utils.state_store import get_state_store
+
 from datetime import datetime, timezone
 import math
 import secrets
@@ -146,11 +148,27 @@ class AnomalyRegistry:
                 "timestamp": "2026-11-11T17:42:00+00:00",
             },
         ]
+        try:
+            persisted = get_state_store().load_fraud_alerts()
+            if persisted:
+                by_id = {item["alert_id"]: item for item in self.quarantine_queue}
+                for p in persisted:
+                    by_id[p["alert_id"]] = p
+                # Preserve newest persisted items ahead of unmodified defaults
+                seen_ids = {p["alert_id"] for p in persisted}
+                merged = list(persisted) + [item for item in self.quarantine_queue if item["alert_id"] not in seen_ids]
+                self.quarantine_queue = merged[:40]
+        except Exception:
+            pass
 
     def enqueue_alert(self, alert: Dict[str, Any]):
         self.quarantine_queue.insert(0, alert)
         if len(self.quarantine_queue) > 40:
             self.quarantine_queue.pop()
+        try:
+            get_state_store().save_fraud_alert(alert)
+        except Exception:
+            pass
 
     def resolve_alert(self, alert_id: str, decision: str, actor_email: str) -> Optional[Dict[str, Any]]:
         clean_decision = decision.strip().upper()
@@ -162,6 +180,10 @@ class AnomalyRegistry:
                 item["status"] = clean_decision
                 item["resolved_by"] = actor_email
                 item["resolved_at"] = datetime.now(timezone.utc).isoformat()
+                try:
+                    get_state_store().save_fraud_alert(item)
+                except Exception:
+                    pass
                 return item
         return None
 

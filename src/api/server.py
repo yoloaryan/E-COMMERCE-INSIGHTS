@@ -35,6 +35,7 @@ from src.api.security import SecurityRegistry, ROLE_DEFINITIONS, AuthError, get_
 from src.models.anomaly_detection import AnomalyDetectionEngine, AnomalyRegistry
 from src.models.inventory_optimization import get_inventory_engine
 from src.models.cohort_analytics import get_cohort_engine
+from src.utils.state_store import get_state_store
 
 MODELS_DIR = ROOT_DIR / "models"
 MANIFEST_PATH = MODELS_DIR / "model_manifest.json"
@@ -1867,6 +1868,38 @@ def simulate_cohort_retention_lift(
         month1_lift_pp=payload.month1_lift_pp,
         winback_recovery_pct=payload.winback_recovery_pct,
     )
+
+
+# -----------------------------------------------------------------------------
+# Phase 19: Persistent SQLite State Store & Storage Telemetry Endpoints
+# -----------------------------------------------------------------------------
+@app.get("/api/v1/system/persistence-status", tags=["System"])
+def get_persistence_status():
+    """
+    Returns ACID SQLite WAL state store health, database file size,
+    and live record counts across all operational tables.
+    """
+    return get_state_store().get_storage_diagnostics()
+
+
+@app.post("/api/v1/system/persistence/checkpoint", tags=["System"])
+def checkpoint_persistence_wal(
+    principal: Dict[str, Any] = Depends(require_permission("mlops:retrain")),
+):
+    """
+    Flushes SQLite Write-Ahead Log (WAL) pages to disk cleanly and records an audit event.
+    """
+    diag = get_state_store().checkpoint()
+    SecurityRegistry().record_audit_event(
+        event_type="STATE_WAL_CHECKPOINT",
+        actor_email=principal.get("email", "admin@nexusretail.ai"),
+        actor_role=principal.get("role", "admin"),
+        tenant_id=principal.get("tenant_id", "tenant_uk_flagship"),
+        action=f"Executed SQLite WAL checkpoint ({diag['total_persisted_records']} persisted rows, {diag['size_kb']} KB)",
+        status_code=200,
+        severity="INFO",
+    )
+    return {**diag, "status": "checkpointed"}
 
 
 if __name__ == "__main__":

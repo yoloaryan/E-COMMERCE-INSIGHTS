@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=7.10">
+    <link rel="stylesheet" href="style.css?v=7.11">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -1222,6 +1222,41 @@
                         <button class="btn btn-primary" id="btnBannerRetrain" onclick="document.getElementById('triggerGlobalRetrainBtn')?.click()">⚡ Run Automated Pipeline Retrain</button>
                     </div>
                 </div>
+
+                <!-- Phase 19: Persistent SQLite State & Operational Telemetry Card -->
+                <div class="table-card" id="persistenceTelemetryCard" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <div>
+                            <h3>🗄️ Persistent SQLite State Store &amp; WAL Telemetry</h3>
+                            <p class="card-sub">ACID disk persistence preserving Purchase Orders, SKUs, Fraud Triage Decisions, Tenants &amp; Security Audit Logs across restarts</p>
+                        </div>
+                        <div class="filter-actions" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+                            <span class="badge-tag green" id="persistenceModeBadge">WAL ENABLED</span>
+                            <button type="button" class="btn btn-secondary btn-sm" id="btnRefreshPersistence">🔄 Refresh Counts</button>
+                            <button type="button" class="btn btn-primary btn-sm" id="btnCheckpointWal">💾 Checkpoint WAL</button>
+                        </div>
+                    </div>
+
+                    <div class="btyd-stat-grid" style="margin-bottom: 0.75rem;">
+                        <div class="btyd-stat-box">
+                            <strong>Total Persisted Rows</strong>
+                            <div class="stat-val text-blue" id="persistTotalRows">--</div>
+                        </div>
+                        <div class="btyd-stat-box">
+                            <strong>Purchase Orders Saved</strong>
+                            <div class="stat-val text-green" id="persistPoCount">--</div>
+                        </div>
+                        <div class="btyd-stat-box">
+                            <strong>Fraud Triage Alerts</strong>
+                            <div class="stat-val text-gold" id="persistFraudCount">--</div>
+                        </div>
+                        <div class="btyd-stat-box">
+                            <strong>Audit Stream &amp; File Size</strong>
+                            <div class="stat-val" id="persistAuditAndSize">--</div>
+                        </div>
+                    </div>
+                    <p style="font-family:var(--font-mono);font-size:0.74rem;color:var(--text-muted);margin:0;" id="persistDbPathLabel">Database Path: Initializing...</p>
+                </div>
             </section>
 
             <!-- ============================================================= -->
@@ -1862,6 +1897,7 @@
                                     <option value="fraud">/api/v1/fraud/score-transaction (Isolation Forest Fraud)</option>
                                     <option value="inventory">/api/v1/inventory/simulate-sku (EOQ &amp; Safety Stock)</option>
                                     <option value="cohorts">/api/v1/cohorts/retention-report (Cohort Heatmap &amp; NRR)</option>
+                                    <option value="persistence">/api/v1/system/persistence-status (SQLite WAL Telemetry)</option>
                                     <option value="rbac">/api/v1/auth/rbac-matrix (RBAC &amp; Tenant Governance)</option>
                                 </select>
                             </div>
@@ -3048,6 +3084,6 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=7.10"></script>
+    <script src="app.js?v=7.11"></script>
 </body>
 </html>

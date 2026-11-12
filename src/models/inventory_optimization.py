@@ -24,6 +24,8 @@ import pandas as pd
 ROOT_DIR = Path(__file__).resolve().parents[2]
 sys.path.append(str(ROOT_DIR))
 
+from src.utils.state_store import SQLiteStateStore, get_state_store
+
 DATA_PROCESSED_PATH = ROOT_DIR / "data" / "processed" / "online_retail_cleaned.parquet"
 
 Z_TABLE = {
@@ -77,12 +79,34 @@ def _normal_cdf(x: float) -> float:
 class InventoryOptimizationEngine:
     """Stateful Inventory & Supply Chain Optimization Engine."""
 
-    def __init__(self, use_parquet: bool = True):
+    def __init__(self, use_parquet: bool = True, state_store: Optional[SQLiteStateStore] = None):
         self.skus: Dict[str, Dict[str, Any]] = {}
         self.purchase_orders: List[Dict[str, Any]] = []
         self.data_source: str = "synthetic_fallback"
+        self.state_store: SQLiteStateStore = state_store or get_state_store()
         self._load_catalog(use_parquet=use_parquet)
+        self._hydrate_persisted_state()
         self._assign_abc_xyz()
+
+    def _hydrate_persisted_state(self) -> None:
+        """Restores custom/updated SKUs and Purchase Orders from SQLite persistence."""
+        try:
+            for row in self.state_store.load_custom_skus():
+                code = str(row["stock_code"]).upper()
+                self.skus[code] = {
+                    "stock_code": code,
+                    "description": row["description"],
+                    "unit_price": float(row["unit_price"]),
+                    "daily_demand_mean": float(row["daily_demand_mean"]),
+                    "daily_demand_std": float(row["daily_demand_std"]),
+                    "stock_on_hand": int(row["stock_on_hand"]),
+                    "in_transit": int(row.get("in_transit", 0)),
+                }
+            pos = self.state_store.load_purchase_orders()
+            if pos:
+                self.purchase_orders = pos
+        except Exception:
+            pass
 
     def _load_catalog(self, use_parquet: bool = True) -> None:
         # Seed baseline flagship SKUs first so known codes always retain realistic stock positions
@@ -457,6 +481,8 @@ class InventoryOptimizationEngine:
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
         self.purchase_orders.append(po)
+        self.state_store.save_purchase_order(po)
+        self.state_store.upsert_sku(self.skus[code])
         return {"purchase_order": po, "updated_policy": policy_after}
 
     def add_sku(
@@ -484,6 +510,7 @@ class InventoryOptimizationEngine:
             "in_transit": 0,
         }
         self._assign_abc_xyz()
+        self.state_store.upsert_sku(self.skus[code])
         return self.compute_sku_policy(self.skus[code])
 
 
@@ -496,3 +523,4 @@ def get_inventory_engine() -> InventoryOptimizationEngine:
     if _INVENTORY_ENGINE_SINGLETON is None:
         _INVENTORY_ENGINE_SINGLETON = InventoryOptimizationEngine()
     return _INVENTORY_ENGINE_SINGLETON
+

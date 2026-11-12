@@ -22,6 +22,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from fastapi import Header, HTTPException, Request, status
 
+from src.utils.state_store import get_state_store
 
 # -----------------------------------------------------------------------------
 # Cryptographic Helpers (PBKDF2-SHA256 & HS256 JWT)
@@ -29,9 +30,7 @@ from fastapi import Header, HTTPException, Request, status
 JWT_ALGORITHM = "HS256"
 JWT_ISSUER = "nexus-retail-ai"
 DEFAULT_JWT_SECRET = os.environ.get(
-    "NEXUS_JWT_SECRET",
-    "nexus-retail-ai-enterprise-jwt-signing-key-v3"
-)
+    "NEXUS_JWT_SECRET", "nexus-retail-ai-enterprise-jwt-signing-key-v3")
 
 
 def _b64url_encode(raw: bytes) -> str:
@@ -45,7 +44,10 @@ def _b64url_decode(segment: str) -> bytes:
 
 class AuthError(Exception):
     """Raised on authentication (401) or authorization (403) failures."""
-    def __init__(self, message: str, status_code: int = status.HTTP_401_UNAUTHORIZED):
+
+    def __init__(self,
+                 message: str,
+                 status_code: int = status.HTTP_401_UNAUTHORIZED):
         super().__init__(message)
         self.message = message
         self.status_code = status_code
@@ -113,10 +115,13 @@ class JWTEngine:
             "exp": now + (expires_minutes * 60),
             "jti": f"jti_{secrets.token_hex(8)}",
         }
-        h_b64 = _b64url_encode(json.dumps(header, separators=(",", ":")).encode("utf-8"))
-        p_b64 = _b64url_encode(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
+        h_b64 = _b64url_encode(
+            json.dumps(header, separators=(",", ":")).encode("utf-8"))
+        p_b64 = _b64url_encode(
+            json.dumps(payload, separators=(",", ":")).encode("utf-8"))
         signing_input = f"{h_b64}.{p_b64}".encode("ascii")
-        sig = hmac.new(self.secret.encode("utf-8"), signing_input, hashlib.sha256).digest()
+        sig = hmac.new(self.secret.encode("utf-8"), signing_input,
+                       hashlib.sha256).digest()
         return f"{h_b64}.{p_b64}.{_b64url_encode(sig)}"
 
     def decode_token(self, token: str) -> Dict[str, Any]:
@@ -136,8 +141,8 @@ class JWTEngine:
 
         signing_input = f"{h_b64}.{p_b64}".encode("ascii")
         expected_sig = _b64url_encode(
-            hmac.new(self.secret.encode("utf-8"), signing_input, hashlib.sha256).digest()
-        )
+            hmac.new(self.secret.encode("utf-8"), signing_input,
+                     hashlib.sha256).digest())
         if not hmac.compare_digest(expected_sig, s_b64):
             raise AuthError("Invalid JWT cryptographic signature.")
 
@@ -153,53 +158,114 @@ class JWTEngine:
 # -----------------------------------------------------------------------------
 ROLE_DEFINITIONS: Dict[str, Dict[str, Any]] = {
     "admin": {
-        "label": "Principal Admin",
-        "description": "Full platform governance, cross-tenant switching, API keys, and MLOps control.",
-        "can_switch_tenants": True,
+        "label":
+        "Principal Admin",
+        "description":
+        "Full platform governance, cross-tenant switching, API keys, and MLOps control.",
+        "can_switch_tenants":
+        True,
         "permissions": ["*"],
         "allowed_tabs": [
-            "overview", "segmentation", "forecasting", "churn", "recommendations",
-            "customer-mgmt", "inventory-mart", "campaign-studio", "pricing-lab", "fraud-radar",
-            "transaction-simulator", "admin-ops", "api-console", "audit-logs",
+            "overview",
+            "segmentation",
+            "forecasting",
+            "churn",
+            "recommendations",
+            "customer-mgmt",
+            "inventory-mart",
+            "campaign-studio",
+            "pricing-lab",
+            "fraud-radar",
+            "transaction-simulator",
+            "admin-ops",
+            "api-console",
+            "audit-logs",
         ],
     },
     "lead_ds": {
-        "label": "Lead Data Scientist",
-        "description": "ML model retraining, drift diagnostics, pricing elasticity, and audit inspection.",
-        "can_switch_tenants": False,
+        "label":
+        "Lead Data Scientist",
+        "description":
+        "ML model retraining, drift diagnostics, pricing elasticity, and audit inspection.",
+        "can_switch_tenants":
+        False,
         "permissions": [
-            "analytics:read", "predict:execute", "mlops:read", "mlops:retrain",
-            "pricing:read", "experiments:run", "copilot:query", "audit:read",
-            "fraud:read", "fraud:resolve",
+            "analytics:read",
+            "predict:execute",
+            "mlops:read",
+            "mlops:retrain",
+            "pricing:read",
+            "experiments:run",
+            "copilot:query",
+            "audit:read",
+            "fraud:read",
+            "fraud:resolve",
         ],
         "allowed_tabs": [
-            "overview", "segmentation", "forecasting", "churn", "recommendations",
-            "pricing-lab", "fraud-radar", "admin-ops", "api-console", "audit-logs",
+            "overview",
+            "segmentation",
+            "forecasting",
+            "churn",
+            "recommendations",
+            "pricing-lab",
+            "fraud-radar",
+            "admin-ops",
+            "api-console",
+            "audit-logs",
         ],
     },
     "growth": {
-        "label": "Growth & Marketing Director",
-        "description": "Customer segments, churn retention campaigns, and pricing experimentation.",
-        "can_switch_tenants": False,
+        "label":
+        "Growth & Marketing Director",
+        "description":
+        "Customer segments, churn retention campaigns, and pricing experimentation.",
+        "can_switch_tenants":
+        False,
         "permissions": [
-            "analytics:read", "predict:execute", "campaigns:read", "campaigns:dispatch",
-            "pricing:read", "experiments:run", "copilot:query", "customers:read",
+            "analytics:read",
+            "predict:execute",
+            "campaigns:read",
+            "campaigns:dispatch",
+            "pricing:read",
+            "experiments:run",
+            "copilot:query",
+            "customers:read",
         ],
         "allowed_tabs": [
-            "overview", "segmentation", "forecasting", "churn", "recommendations",
-            "customer-mgmt", "campaign-studio", "pricing-lab",
+            "overview",
+            "segmentation",
+            "forecasting",
+            "churn",
+            "recommendations",
+            "customer-mgmt",
+            "campaign-studio",
+            "pricing-lab",
         ],
     },
     "supply": {
-        "label": "Supply Chain & Inventory VP",
-        "description": "Demand forecasting, SKU velocity mart, inventory restocks, and POS webhooks.",
-        "can_switch_tenants": False,
+        "label":
+        "Supply Chain & Inventory VP",
+        "description":
+        "Demand forecasting, SKU velocity mart, inventory restocks, and POS webhooks.",
+        "can_switch_tenants":
+        False,
         "permissions": [
-            "analytics:read", "predict:execute", "inventory:read", "inventory:write",
-            "webhooks:read", "copilot:query", "fraud:read", "fraud:resolve",
+            "analytics:read",
+            "predict:execute",
+            "inventory:read",
+            "inventory:write",
+            "webhooks:read",
+            "copilot:query",
+            "fraud:read",
+            "fraud:resolve",
         ],
         "allowed_tabs": [
-            "overview", "forecasting", "recommendations", "inventory-mart", "fraud-radar", "transaction-simulator",
+            "overview",
+            "forecasting",
+            "recommendations",
+            "inventory-mart",
+            "fraud-radar",
+            "transaction-simulator",
         ],
     },
 }
@@ -274,7 +340,8 @@ class SecurityRegistry:
                 "name": "Aryan Gupta",
                 "role": "admin",
                 "tenant_id": "tenant_uk_flagship",
-                "password_hash": PasswordHasher.hash_password("NexusAdmin2026!"),
+                "password_hash":
+                PasswordHasher.hash_password("NexusAdmin2026!"),
             },
             "ds@nexusretail.ai": {
                 "user_id": "usr_ds_02",
@@ -290,7 +357,8 @@ class SecurityRegistry:
                 "name": "Elena Vance",
                 "role": "growth",
                 "tenant_id": "tenant_eu_nordics",
-                "password_hash": PasswordHasher.hash_password("NexusGrowth2026!"),
+                "password_hash":
+                PasswordHasher.hash_password("NexusGrowth2026!"),
             },
             "supply@nexusretail.ai": {
                 "user_id": "usr_supply_04",
@@ -306,20 +374,34 @@ class SecurityRegistry:
         self.api_keys: Dict[str, Dict[str, Any]] = {}
         self._seed_initial_api_keys()
 
+        try:
+            store = get_state_store()
+            for t in store.load_tenants():
+                self.tenants[t["tenant_id"]] = t
+            past_events = store.load_audit_events(limit=100)
+            if past_events:
+                self.audit_events = past_events
+        except Exception:
+            pass
+
         self.record_audit_event(
             event_type="SYSTEM_INIT",
             actor_email="system@nexusretail.ai",
             actor_role="admin",
             tenant_id="tenant_uk_flagship",
-            action="Initialized multi-tenant RBAC registry (4 roles, 3 tenant isolates)",
+            action=
+            "Initialized multi-tenant RBAC registry (4 roles, 3 tenant isolates)",
             status_code=200,
             severity="INFO",
         )
 
     def _seed_initial_api_keys(self):
         seed_specs = [
-            ("key_uk_pos_prod", "UK Flagship POS Sync", "tenant_uk_flagship", "admin", "admin@nexusretail.ai", "nxk_live_ukflagship_seeded01"),
-            ("key_eu_growth_bot", "EU Campaign Automation", "tenant_eu_nordics", "growth", "growth@nexusretail.ai", "nxk_live_eunordic_seeded02"),
+            ("key_uk_pos_prod", "UK Flagship POS Sync", "tenant_uk_flagship",
+             "admin", "admin@nexusretail.ai", "nxk_live_ukflagship_seeded01"),
+            ("key_eu_growth_bot", "EU Campaign Automation",
+             "tenant_eu_nordics", "growth", "growth@nexusretail.ai",
+             "nxk_live_eunordic_seeded02"),
         ]
         for key_id, label, tenant_id, role, owner, raw_secret in seed_specs:
             digest = hashlib.sha256(raw_secret.encode("utf-8")).hexdigest()
@@ -360,11 +442,16 @@ class SecurityRegistry:
         self.audit_events.insert(0, entry)
         if len(self.audit_events) > 100:
             self.audit_events.pop()
+        try:
+            get_state_store().append_audit_event(entry)
+        except Exception:
+            pass
 
     def authenticate_user(self, email: str, password: str) -> Dict[str, Any]:
         clean_email = email.strip().lower()
         user = self.users.get(clean_email)
-        if not user or not PasswordHasher.verify_password(password, user["password_hash"]):
+        if not user or not PasswordHasher.verify_password(
+                password, user["password_hash"]):
             self.record_audit_event(
                 event_type="LOGIN_FAILED",
                 actor_email=clean_email or "unknown",
@@ -374,7 +461,8 @@ class SecurityRegistry:
                 status_code=401,
                 severity="WARNING",
             )
-            raise AuthError("Invalid email or password credentials.", status.HTTP_401_UNAUTHORIZED)
+            raise AuthError("Invalid email or password credentials.",
+                            status.HTTP_401_UNAUTHORIZED)
 
         role = user["role"]
         role_meta = ROLE_DEFINITIONS[role]
@@ -393,7 +481,8 @@ class SecurityRegistry:
             actor_email=user["email"],
             actor_role=role,
             tenant_id=tenant_id,
-            action=f"Issued HS256 JWT session for {user['name']} ({role_meta['label']})",
+            action=
+            f"Issued HS256 JWT session for {user['name']} ({role_meta['label']})",
             status_code=200,
             severity="INFO",
         )
@@ -406,7 +495,8 @@ class SecurityRegistry:
             "active_tenant": self.tenants.get(tenant_id),
         }
 
-    def _format_user_profile(self, user: Dict[str, Any], tenant_id: str) -> Dict[str, Any]:
+    def _format_user_profile(self, user: Dict[str, Any],
+                             tenant_id: str) -> Dict[str, Any]:
         role = user["role"]
         role_meta = ROLE_DEFINITIONS[role]
         return {
@@ -416,7 +506,8 @@ class SecurityRegistry:
             "role": role,
             "role_label": role_meta["label"],
             "tenant_id": tenant_id,
-            "tenant_name": self.tenants.get(tenant_id, {}).get("name", tenant_id),
+            "tenant_name": self.tenants.get(tenant_id,
+                                            {}).get("name", tenant_id),
             "can_switch_tenants": role_meta["can_switch_tenants"],
             "permissions": role_meta["permissions"],
             "allowed_tabs": role_meta["allowed_tabs"],
@@ -425,13 +516,15 @@ class SecurityRegistry:
     def verify_bearer_jwt(self, token: str) -> Dict[str, Any]:
         payload = self.jwt_engine.decode_token(token)
         if payload.get("jti") in self.revoked_jtis:
-            raise AuthError("JWT access token has been revoked.", status.HTTP_401_UNAUTHORIZED)
+            raise AuthError("JWT access token has been revoked.",
+                            status.HTTP_401_UNAUTHORIZED)
         return payload
 
     def verify_api_key(self, raw_key: str) -> Dict[str, Any]:
         digest = hashlib.sha256(raw_key.strip().encode("utf-8")).hexdigest()
         for record in self.api_keys.values():
-            if record["active"] and hmac.compare_digest(record["key_hash"], digest):
+            if record["active"] and hmac.compare_digest(
+                    record["key_hash"], digest):
                 record["last_used_at"] = datetime.now(timezone.utc).isoformat()
                 role = record["role"]
                 return {
@@ -443,10 +536,13 @@ class SecurityRegistry:
                     "permissions": ROLE_DEFINITIONS[role]["permissions"],
                     "auth_method": "api_key",
                 }
-        raise AuthError("Invalid or revoked X-API-Key credential.", status.HTTP_401_UNAUTHORIZED)
+        raise AuthError("Invalid or revoked X-API-Key credential.",
+                        status.HTTP_401_UNAUTHORIZED)
 
-    def create_tenant(self, name: str, country: str, currency: str, plan: str, actor: Dict[str, Any]) -> Dict[str, Any]:
-        slug = "".join(ch for ch in name.lower().replace(" ", "_") if ch.isalnum() or ch == "_")[:24].strip("_")
+    def create_tenant(self, name: str, country: str, currency: str, plan: str,
+                      actor: Dict[str, Any]) -> Dict[str, Any]:
+        slug = "".join(ch for ch in name.lower().replace(" ", "_")
+                       if ch.isalnum() or ch == "_")[:24].strip("_")
         tenant_id = f"tenant_{slug or secrets.token_hex(4)}"
         if tenant_id in self.tenants:
             tenant_id = f"{tenant_id}_{secrets.token_hex(2)}"
@@ -461,24 +557,33 @@ class SecurityRegistry:
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
         self.tenants[tenant_id] = tenant
+        try:
+            get_state_store().save_tenant(tenant)
+        except Exception:
+            pass
         self.record_audit_event(
             event_type="TENANT_CREATED",
             actor_email=actor.get("email", "admin"),
             actor_role=actor.get("role", "admin"),
             tenant_id=tenant_id,
-            action=f"Provisioned isolated tenant '{tenant['name']}' ({tenant['currency']})",
+            action=
+            f"Provisioned isolated tenant '{tenant['name']}' ({tenant['currency']})",
             status_code=201,
             severity="INFO",
         )
         return tenant
 
-    def switch_tenant(self, target_tenant_id: str, principal: Dict[str, Any]) -> Dict[str, Any]:
+    def switch_tenant(self, target_tenant_id: str,
+                      principal: Dict[str, Any]) -> Dict[str, Any]:
         if target_tenant_id not in self.tenants:
-            raise AuthError(f"Tenant workspace '{target_tenant_id}' does not exist.", status.HTTP_404_NOT_FOUND)
+            raise AuthError(
+                f"Tenant workspace '{target_tenant_id}' does not exist.",
+                status.HTTP_404_NOT_FOUND)
 
         role = principal.get("role", "")
         current_tenant = principal.get("tenant_id", "")
-        can_switch = ROLE_DEFINITIONS.get(role, {}).get("can_switch_tenants", False)
+        can_switch = ROLE_DEFINITIONS.get(role,
+                                          {}).get("can_switch_tenants", False)
 
         if target_tenant_id != current_tenant and not can_switch:
             self.record_audit_event(
@@ -486,7 +591,8 @@ class SecurityRegistry:
                 actor_email=principal.get("email", "unknown"),
                 actor_role=role,
                 tenant_id=current_tenant,
-                action=f"Blocked cross-tenant switch attempt from {current_tenant} to {target_tenant_id}",
+                action=
+                f"Blocked cross-tenant switch attempt from {current_tenant} to {target_tenant_id}",
                 status_code=403,
                 severity="CRITICAL",
             )
@@ -510,7 +616,8 @@ class SecurityRegistry:
             actor_email=principal.get("email", "admin"),
             actor_role=role,
             tenant_id=target_tenant_id,
-            action=f"Switched active session context to tenant '{target_tenant_id}'",
+            action=
+            f"Switched active session context to tenant '{target_tenant_id}'",
             status_code=200,
             severity="INFO",
         )
@@ -521,15 +628,20 @@ class SecurityRegistry:
             "tenant": self.tenants[target_tenant_id],
         }
 
-    def issue_api_key(self, label: str, tenant_id: str, role: str, actor: Dict[str, Any]) -> Dict[str, Any]:
+    def issue_api_key(self, label: str, tenant_id: str, role: str,
+                      actor: Dict[str, Any]) -> Dict[str, Any]:
         if tenant_id not in self.tenants:
-            raise AuthError(f"Unknown tenant_id '{tenant_id}'.", status.HTTP_400_BAD_REQUEST)
+            raise AuthError(f"Unknown tenant_id '{tenant_id}'.",
+                            status.HTTP_400_BAD_REQUEST)
         if role not in ROLE_DEFINITIONS:
-            raise AuthError(f"Unsupported role '{role}'.", status.HTTP_400_BAD_REQUEST)
+            raise AuthError(f"Unsupported role '{role}'.",
+                            status.HTTP_400_BAD_REQUEST)
 
         # Enforce tenant isolation for non-admin key creation attempts
-        if actor.get("role") != "admin" and tenant_id != actor.get("tenant_id"):
-            raise AuthError("Cross-tenant API key provisioning denied.", status.HTTP_403_FORBIDDEN)
+        if actor.get("role") != "admin" and tenant_id != actor.get(
+                "tenant_id"):
+            raise AuthError("Cross-tenant API key provisioning denied.",
+                            status.HTTP_403_FORBIDDEN)
 
         key_id = f"key_{secrets.token_hex(5)}"
         raw_secret = f"nxk_live_{secrets.token_hex(4)}_{secrets.token_urlsafe(18)}"
@@ -563,12 +675,16 @@ class SecurityRegistry:
         safe_record["raw_secret"] = raw_secret  # Shown once upon creation
         return safe_record
 
-    def revoke_api_key(self, key_id: str, actor: Dict[str, Any]) -> Dict[str, Any]:
+    def revoke_api_key(self, key_id: str, actor: Dict[str,
+                                                      Any]) -> Dict[str, Any]:
         record = self.api_keys.get(key_id)
         if not record:
-            raise AuthError(f"API key '{key_id}' not found.", status.HTTP_404_NOT_FOUND)
-        if actor.get("role") != "admin" and record["tenant_id"] != actor.get("tenant_id"):
-            raise AuthError("Cross-tenant API key revocation denied.", status.HTTP_403_FORBIDDEN)
+            raise AuthError(f"API key '{key_id}' not found.",
+                            status.HTTP_404_NOT_FOUND)
+        if actor.get("role") != "admin" and record["tenant_id"] != actor.get(
+                "tenant_id"):
+            raise AuthError("Cross-tenant API key revocation denied.",
+                            status.HTTP_403_FORBIDDEN)
         record["active"] = False
         self.record_audit_event(
             event_type="API_KEY_REVOKED",
@@ -581,7 +697,9 @@ class SecurityRegistry:
         )
         return {k: v for k, v in record.items() if k != "key_hash"}
 
-    def list_api_keys(self, tenant_id: Optional[str] = None, role: str = "admin") -> List[Dict[str, Any]]:
+    def list_api_keys(self,
+                      tenant_id: Optional[str] = None,
+                      role: str = "admin") -> List[Dict[str, Any]]:
         keys = []
         for rec in self.api_keys.values():
             if role != "admin" and tenant_id and rec["tenant_id"] != tenant_id:
@@ -613,19 +731,22 @@ def _extract_principal(
             principal = registry.verify_bearer_jwt(token)
             principal["auth_method"] = "jwt"
         except AuthError as exc:
-            raise HTTPException(status_code=exc.status_code, detail=exc.message)
+            raise HTTPException(status_code=exc.status_code,
+                                detail=exc.message)
 
     elif x_api_key:
         try:
             principal = registry.verify_api_key(x_api_key)
         except AuthError as exc:
-            raise HTTPException(status_code=exc.status_code, detail=exc.message)
+            raise HTTPException(status_code=exc.status_code,
+                                detail=exc.message)
 
     else:
         if registry.strict_rbac_enabled or not allow_anonymous_dev:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication required: provide Authorization Bearer JWT or X-API-Key.",
+                detail=
+                "Authentication required: provide Authorization Bearer JWT or X-API-Key.",
             )
         # Backward-compatible open dev context when strict RBAC is disabled and no credentials passed
         return {
@@ -646,13 +767,15 @@ def _extract_principal(
                 actor_email=principal.get("email", "unknown"),
                 actor_role=principal.get("role", "unknown"),
                 tenant_id=principal.get("tenant_id", "unknown"),
-                action=f"Blocked X-Tenant-ID spoofing header targeting '{x_tenant_id}'",
+                action=
+                f"Blocked X-Tenant-ID spoofing header targeting '{x_tenant_id}'",
                 status_code=403,
                 severity="CRITICAL",
             )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Tenant isolation violation: credentials scoped to '{principal.get('tenant_id')}' cannot target '{x_tenant_id}'.",
+                detail=
+                f"Tenant isolation violation: credentials scoped to '{principal.get('tenant_id')}' cannot target '{x_tenant_id}'.",
             )
         if x_tenant_id in registry.tenants:
             principal["tenant_id"] = x_tenant_id
@@ -666,16 +789,21 @@ def get_required_principal(
     x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
 ) -> Dict[str, Any]:
     """Dependency requiring valid JWT or API Key regardless of global dev toggle."""
-    return _extract_principal(authorization, x_api_key, x_tenant_id, allow_anonymous_dev=False)
+    return _extract_principal(authorization,
+                              x_api_key,
+                              x_tenant_id,
+                              allow_anonymous_dev=False)
 
 
-def require_permission(permission: str, always_require_auth: bool = False) -> Callable:
+def require_permission(permission: str,
+                       always_require_auth: bool = False) -> Callable:
     """
     FastAPI dependency factory enforcing permission checks & tenant isolation.
     Allows open dev access when strict_rbac_enabled=False and no credentials are supplied
     (preserving backward compatibility), while strictly validating any supplied credential
     and all requests under strict_rbac_enabled=True.
     """
+
     def dependency(
         request: Request,
         authorization: Optional[str] = Header(None, alias="Authorization"),
@@ -700,13 +828,15 @@ def require_permission(permission: str, always_require_auth: bool = False) -> Ca
                 actor_email=principal.get("email", "unknown"),
                 actor_role=role,
                 tenant_id=principal.get("tenant_id", "unknown"),
-                action=f"Denied {request.method} {request.url.path} (missing scope '{permission}')",
+                action=
+                f"Denied {request.method} {request.url.path} (missing scope '{permission}')",
                 status_code=403,
                 severity="CRITICAL",
             )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"RBAC Forbidden: role '{role}' lacks required permission '{permission}'.",
+                detail=
+                f"RBAC Forbidden: role '{role}' lacks required permission '{permission}'.",
             )
         return principal
 

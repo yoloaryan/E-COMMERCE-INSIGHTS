@@ -2409,6 +2409,59 @@ function initMLOpsConsole() {
 // =============================================================================
 function initDriftRadar() {
     evaluateDriftScenario("baseline");
+    initPersistenceTelemetry();
+}
+
+let PERSISTENCE_WIRED = false;
+
+async function refreshPersistenceStatus(checkpoint = false) {
+    const modeBadge = document.getElementById("persistenceModeBadge");
+    const totalEl = document.getElementById("persistTotalRows");
+    const poEl = document.getElementById("persistPoCount");
+    const fraudEl = document.getElementById("persistFraudCount");
+    const auditEl = document.getElementById("persistAuditAndSize");
+    const pathEl = document.getElementById("persistDbPathLabel");
+    if (!totalEl) return;
+
+    try {
+        const url = checkpoint
+            ? "http://localhost:8000/api/v1/system/persistence/checkpoint"
+            : "http://localhost:8000/api/v1/system/persistence-status";
+        const res = await fetch(url, {
+            method: checkpoint ? "POST" : "GET",
+            headers: window.getAuthHeaders({ "Content-Type": "application/json" })
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            if (checkpoint) showToast("WAL Checkpoint Blocked", err.detail || `HTTP ${res.status}`, "alert");
+            return;
+        }
+        const diag = await res.json();
+        const tbl = diag.tables || {};
+        if (modeBadge) modeBadge.textContent = `${diag.engine || "SQLite"} • ${diag.journal_mode || "WAL"}`;
+        totalEl.textContent = Number(diag.total_persisted_records || 0).toLocaleString();
+        if (poEl) poEl.textContent = Number(tbl.purchase_orders || 0).toLocaleString();
+        if (fraudEl) fraudEl.textContent = Number(tbl.fraud_alerts || 0).toLocaleString();
+        if (auditEl) auditEl.textContent = `${Number(tbl.audit_events || 0).toLocaleString()} (${diag.size_kb || 0} KB)`;
+        if (pathEl) pathEl.textContent = `Database Path: ${diag.db_path}`;
+        if (checkpoint) {
+            showToast("WAL Checkpointed", `Flushed ${diag.total_persisted_records} records cleanly (${diag.size_kb} KB)`, "success");
+        }
+    } catch (_e) {
+        if (modeBadge) modeBadge.textContent = "OFFLINE LOCAL";
+        totalEl.textContent = "—";
+        if (pathEl) pathEl.textContent = "Database Path: Backend :8000 offline";
+    }
+}
+
+function initPersistenceTelemetry() {
+    refreshPersistenceStatus(false);
+    if (PERSISTENCE_WIRED) return;
+    PERSISTENCE_WIRED = true;
+    const refreshBtn = document.getElementById("btnRefreshPersistence");
+    const checkpointBtn = document.getElementById("btnCheckpointWal");
+    if (refreshBtn) refreshBtn.addEventListener("click", () => refreshPersistenceStatus(false));
+    if (checkpointBtn) checkpointBtn.addEventListener("click", () => refreshPersistenceStatus(true));
 }
 
 async function evaluateDriftScenario(scenario, clickedBtn = null) {
@@ -4471,6 +4524,13 @@ const API_ENDPOINTS = {
         url: "http://localhost:8000/api/v1/cohorts/retention-report?metric=customers&country=All",
         payload: { info: "GET endpoint; query parameters ?metric=customers|revenue&country=All" },
         handler: () => buildLocalCohortFallback("customers")
+    },
+    persistence: {
+        method: "GET",
+        path: "/api/v1/system/persistence-status",
+        url: "http://localhost:8000/api/v1/system/persistence-status",
+        payload: { info: "GET endpoint; returns SQLite WAL size and persisted row counts." },
+        handler: () => ({ status: "persistent", engine: "SQLite3", journal_mode: "WAL", total_persisted_records: 0 })
     },
     rbac: {
         method: "GET",
