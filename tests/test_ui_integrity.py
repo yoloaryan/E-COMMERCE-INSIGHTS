@@ -73,3 +73,17 @@ def test_native_auth_dialog_accessibility_contract():
     assert 'aria-labelledby="authDialogTitle"' in tag
     assert 'role="dialog"' not in tag
     assert 'aria-modal=' not in tag
+
+
+def test_liquid_glass_design_system_and_fallbacks():
+    """Verify Liquid Glass tokens, dark/light color-scheme parity, and accessibility fallbacks."""
+    html = INDEX_HTML.read_text(encoding="utf-8")
+    css = STYLE_CSS.read_text(encoding="utf-8")
+
+    assert '<meta name="color-scheme" content="light dark">' in html
+    assert "--glass-bg:" in css
+    assert "--glass-shadow:" in css
+    assert "backdrop-filter: var(--glass-backdrop)" in css
+    assert "@media (prefers-reduced-transparency: reduce)" in css
+    assert "@supports not (backdrop-filter: blur(1px))" in css
+    assert "@media (forced-colors: active)" in css
