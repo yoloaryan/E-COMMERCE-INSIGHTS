@@ -22,11 +22,13 @@ function yieldToMain() {
 }
 
 const MODULE_LOADERS = {
-    "pricing-lab": { path: "./js/modules/pricing-lab.js?v=7.24", initName: "initPricingLab" },
-    "fraud-radar": { path: "./js/modules/fraud-radar.js?v=7.24", initName: "initFraudRadar" },
-    "data-warehouse": { path: "./js/modules/warehouse-lab.js?v=7.24", initName: "initDataWarehouseTab" },
-    "churn": { path: "./js/modules/survival-xai.js?v=7.24", initName: "initSurvivalXaiLab" },
-    "transaction-simulator": { path: "./js/modules/tax-invoice.js?v=7.24", initName: "initTaxInvoiceStudio" },
+    "pricing-lab": { path: "./js/modules/pricing-lab.js?v=7.25", initName: "initPricingLab" },
+    "fraud-radar": { path: "./js/modules/fraud-radar.js?v=7.25", initName: "initFraudRadar" },
+    "data-warehouse": { path: "./js/modules/warehouse-lab.js?v=7.25", initName: "initDataWarehouseTab" },
+    "churn": { path: "./js/modules/survival-xai.js?v=7.25", initName: "initSurvivalXaiLab" },
+    "transaction-simulator": { path: "./js/modules/tax-invoice.js?v=7.25", initName: "initTaxInvoiceStudio" },
+    "forecasting": { path: "./js/modules/conformal-budget.js?v=7.25", initName: "initConformalForecastLab" },
+    "campaign-studio": { path: "./js/modules/conformal-budget.js?v=7.25", initName: "initBudgetOptimizerLab" },
 };
 const LOADED_MODULES = new Map();
 
@@ -5251,6 +5253,20 @@ const API_ENDPOINTS = {
         url: nexusApiUrl("/api/v1/invoices/gstr1-return?period=All&supply_mode=MIXED"),
         payload: { info: "GET endpoint; returns GSTR-1 Table 4/7/9B reconciliation and Table 12 HSN tax summary." },
         handler: () => ({ status: "healthy", tax_regime: "GST", return_type: "GSTR-1" })
+    },
+    conformal_forecast: {
+        method: "GET",
+        path: "/api/v1/forecast/conformal-intervals",
+        url: nexusApiUrl("/api/v1/forecast/conformal-intervals?confidence_pct=80"),
+        payload: { info: "GET endpoint; returns Split-Conformal P10/P50/P90 uncertainty bands and empirical coverage %." },
+        handler: () => ({ status: "healthy", method: "Split-Conformal Residual Calibration" })
+    },
+    optimize_budget: {
+        method: "POST",
+        path: "/api/v1/campaigns/optimize-budget",
+        url: nexusApiUrl("/api/v1/campaigns/optimize-budget"),
+        payload: { total_budget_inr: 250000, min_roi_multiple: 1.5 },
+        handler: (req) => ({ status: "healthy", allocated_budget_inr: req.total_budget_inr || 250000 })
     },
     rbac: {
         method: "GET",

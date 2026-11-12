@@ -48,6 +48,7 @@ from src.data.warehouse import get_warehouse
 from src.models.causal_uplift import get_causal_engine
 from src.models.survival_xai import get_survival_xai_engine
 from src.api.invoices import get_invoice_engine
+from src.models.conformal_optimizer import get_conformal_optimizer
 
 MODELS_DIR = ROOT_DIR / "models"
 MANIFEST_PATH = MODELS_DIR / "model_manifest.json"
@@ -429,6 +430,11 @@ class GenerateTaxInvoiceRequest(BaseModel):
     supply_state: str = Field(default="Karnataka")
     is_credit_note: bool = Field(default=False)
     items: List[InvoiceLineItemRequest] = Field(..., min_length=1)
+
+
+class OptimizeBudgetRequest(BaseModel):
+    total_budget_inr: float = Field(default=250000.0, ge=10000.0, le=5000000.0)
+    min_roi_multiple: float = Field(default=1.5, ge=1.0, le=6.0)
 
 
 # -----------------------------------------------------------------------------
@@ -2415,6 +2421,35 @@ def get_tax_invoice_json(
     if inv is None:
         raise HTTPException(status_code=404, detail=f"Invoice '{invoice_no}' not found.")
     return inv
+
+
+# -----------------------------------------------------------------------------
+# Phase 30: Split-Conformal Demand Uncertainty & KKT Budget Allocator
+# -----------------------------------------------------------------------------
+@app.get("/api/v1/forecast/conformal-intervals", tags=["Sales Forecasting"])
+def get_conformal_forecast_intervals(
+    confidence_pct: float = Query(default=80.0, ge=50.0, le=98.0),
+):
+    """
+    Computes finite-sample Split-Conformal prediction bands (P10/P50/P90) over
+    out-of-sample Random Forest daily revenue residuals & empirical coverage %.
+    """
+    return get_conformal_optimizer().compute_conformal_intervals(confidence_pct=confidence_pct)
+
+
+@app.post("/api/v1/campaigns/optimize-budget", tags=["Campaign Automation & Uplift"])
+def optimize_campaign_marketing_budget(
+    payload: OptimizeBudgetRequest,
+    _principal: Dict[str, Any] = Depends(require_permission("predict:execute")),
+):
+    """
+    Solves KKT concave water-filling budget optimization across customer cohorts
+    subject to total INR cap and minimum CFO marginal ROAS hurdle rate.
+    """
+    return get_conformal_optimizer().optimize_marketing_budget(
+        total_budget_inr=payload.total_budget_inr,
+        min_roi_multiple=payload.min_roi_multiple,
+    )
 
 
 if __name__ == "__main__":

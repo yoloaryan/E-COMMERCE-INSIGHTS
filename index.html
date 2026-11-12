@@ -13,7 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=7.24">
+    <link rel="stylesheet" href="style.css?v=7.25">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -766,6 +766,7 @@
                     <button class="subnav-pill" onclick="jumpToSection('forecastTrackingCard', this)">📈 Chronological Tracking</button>
                     <button class="subnav-pill" onclick="jumpToSection('driversCard', this)">⚡ Gini Drivers</button>
                     <button class="subnav-pill" onclick="jumpToSection('whatIfSimCard', this)">🔮 What-If Simulator</button>
+                    <button class="subnav-pill" onclick="jumpToSection('conformalUncertaintyCard', this)">📐 Conformal P10–P90</button>
                 </div>
 
                 <div class="kpi-grid" id="forecastingKpiGrid">
@@ -884,6 +885,44 @@
                     </div>
                     <div class="sim-outcome-panel" id="simOutcomePanel">
                         <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Phase 30: Split-Conformal Demand Uncertainty (P10 / P50 / P90) -->
+                <div class="interactive-card" id="conformalUncertaintyCard" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <div>
+                            <h3>📐 Split-Conformal Prediction Intervals (P10 / P50 / P90 Uncertainty Bands)</h3>
+                            <p class="card-sub">Finite-sample out-of-sample residual calibration quantifying daily revenue Value-at-Risk &amp; working-capital buffers</p>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:0.65rem; flex-wrap:wrap;">
+                            <label for="conformalConfidenceSelect" style="font-size:0.78rem; color:var(--text-secondary);">Coverage Target:</label>
+                            <select id="conformalConfidenceSelect" class="form-input-sm" style="width:auto;">
+                                <option value="80" selected>80% (P10 – P90)</option>
+                                <option value="90">90% (P5 – P95)</option>
+                                <option value="95">95% (P2.5 – P97.5)</option>
+                            </select>
+                            <span class="badge live-badge" id="conformalCoverageBadge">Conformal Calibrated</span>
+                        </div>
+                    </div>
+
+                    <div class="survival-kpi-strip">
+                        <div class="survival-kpi-box">
+                            <div class="kpi-label">Empirical Eval Coverage</div>
+                            <div class="kpi-value" id="conformalEmpiricalVal">—</div>
+                        </div>
+                        <div class="survival-kpi-box">
+                            <div class="kpi-label">Avg Half-Width (±)</div>
+                            <div class="kpi-value" id="conformalWidthVal">—</div>
+                        </div>
+                        <div class="survival-kpi-box">
+                            <div class="kpi-label">Downside VaR Capital Buffer</div>
+                            <div class="kpi-value" id="conformalVarBufferVal" style="color:var(--warning, #F59E0B);">—</div>
+                        </div>
+                    </div>
+
+                    <div class="chart-wrapper" style="height:290px;">
+                        <canvas id="conformalBandChart" aria-label="Split-conformal demand uncertainty chart"></canvas>
                     </div>
                 </div>
             </section>
@@ -1965,6 +2004,68 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Phase 30: Concave KKT Marketing Budget Optimizer -->
+                <div class="interactive-card" id="budgetOptimizerCard" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <div>
+                            <h3>💰 KKT Cohort Marketing Budget Allocator (Diminishing-Returns Optimizer)</h3>
+                            <p class="card-sub">Solves exact water-filling allocation across Michaelis-Menten cohort curves subject to budget cap &amp; CFO ROAS hurdle</p>
+                        </div>
+                        <span class="badge live-badge">KKT Optimal Solver</span>
+                    </div>
+
+                    <div class="simulator-controls-grid">
+                        <div class="sim-control-box">
+                            <label for="optBudgetSlider">Total Campaign Budget: <strong id="optBudgetLbl">₹2,50,000</strong></label>
+                            <input type="range" id="optBudgetSlider" min="25000" max="1000000" step="25000" value="250000">
+                        </div>
+                        <div class="sim-control-box">
+                            <label for="optHurdleSlider">Min Marginal ROAS Hurdle: <strong id="optHurdleLbl">1.5x</strong></label>
+                            <input type="range" id="optHurdleSlider" min="1.0" max="4.0" step="0.1" value="1.5">
+                        </div>
+                    </div>
+
+                    <div class="survival-kpi-strip" style="margin-top:1rem;">
+                        <div class="survival-kpi-box">
+                            <div class="kpi-label">Expected Incremental Margin</div>
+                            <div class="kpi-value" id="optMarginOutVal" style="color:var(--accent-green, #10B981);">—</div>
+                        </div>
+                        <div class="survival-kpi-box">
+                            <div class="kpi-label">Gain vs Equal Split</div>
+                            <div class="kpi-value" id="optLiftVsEqualVal" style="color:var(--accent-green, #10B981);">—</div>
+                        </div>
+                        <div class="survival-kpi-box">
+                            <div class="kpi-label">Blended Portfolio ROAS</div>
+                            <div class="kpi-value" id="optPortfolioRoasVal">—</div>
+                        </div>
+                        <div class="survival-kpi-box">
+                            <div class="kpi-label">Unallocated Hurdle Reserve</div>
+                            <div class="kpi-value" id="optReserveVal">—</div>
+                        </div>
+                    </div>
+
+                    <div class="chart-wrapper" style="height:240px; margin-bottom:1rem;">
+                        <canvas id="budgetAllocationChart" aria-label="Optimal vs equal-split cohort marketing budget chart"></canvas>
+                    </div>
+
+                    <div tabindex="0" role="region" aria-labelledby="budgetAllocCaption" class="invoice-table-wrapper">
+                        <table class="data-table" id="budgetAllocationTable">
+                            <caption id="budgetAllocCaption" class="survival-caption">KKT Water-Filling Spend Allocation &amp; Marginal ROAS by Cohort (INR)</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Cohort Segment</th>
+                                    <th scope="col">Optimal Spend</th>
+                                    <th scope="col">Equal Split</th>
+                                    <th scope="col">Expected Margin</th>
+                                    <th scope="col">Avg / Marginal ROAS</th>
+                                    <th scope="col">Recommended Channel</th>
+                                </tr>
+                            </thead>
+                            <tbody id="budgetAllocationTbody"></tbody>
+                        </table>
+                    </div>
+                </div>
             </section>
 
             <!-- ============================================================= -->
@@ -2400,6 +2501,8 @@
                                     <option value="survival_xai">/api/v1/survival/kaplan-meier-report (Kaplan-Meier &amp; XAI)</option>
                                     <option value="tax_invoice">/api/v1/invoices/536365 (Indian GST &amp; VAT Invoice)</option>
                                     <option value="gstr1_return">/api/v1/invoices/gstr1-return (Monthly GSTR-1 &amp; HSN Ledger)</option>
+                                    <option value="conformal_forecast">/api/v1/forecast/conformal-intervals (Split-Conformal P10/P90)</option>
+                                    <option value="optimize_budget">/api/v1/campaigns/optimize-budget (KKT Cohort Budget Optimizer)</option>
                                     <option value="rbac">/api/v1/auth/rbac-matrix (RBAC &amp; Tenant Governance)</option>
                                 </select>
                             </div>
@@ -3711,7 +3814,7 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script defer src="js/core/api-config.js?v=7.24"></script>
-    <script defer src="app.js?v=7.24"></script>
+    <script defer src="js/core/api-config.js?v=7.25"></script>
+    <script defer src="app.js?v=7.25"></script>
 </body>
 </html>
