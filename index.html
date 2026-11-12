@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=7.17">
+    <link rel="stylesheet" href="style.css?v=7.18">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -1777,6 +1777,85 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Phase 26: Causal Uplift Modeling (T-Learner CATE) & DiD Incrementality Lab -->
+                <div class="charts-row" id="causalUpliftSection" style="margin-top: 1.5rem;">
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <div>
+                                <h3>🎯 T-Learner Causal Uplift &amp; Margin Defense</h3>
+                                <p class="card-sub">Separate true Persuadables from Sure Things (who convert without discounts) &amp; Sleeping Dogs</p>
+                            </div>
+                            <span class="badge-tag blue">Two-Model CATE</span>
+                        </div>
+
+                        <div class="pricing-controls-stack">
+                            <div class="pricing-field-group">
+                                <div class="pricing-slider-label-row">
+                                    <label for="causalTopKSlider">Target Top Persuadables (%)</label>
+                                    <span class="pricing-slider-readout" id="causalTopKVal">30%</span>
+                                </div>
+                                <input type="range" id="causalTopKSlider" class="modern-range-slider" min="10" max="100" step="10" value="30">
+                            </div>
+
+                            <div class="pricing-field-group">
+                                <div class="pricing-slider-label-row">
+                                    <label for="causalDiscountSlider">Voucher Discount Depth (%)</label>
+                                    <span class="pricing-slider-readout" id="causalDiscountVal">15%</span>
+                                </div>
+                                <input type="range" id="causalDiscountSlider" class="modern-range-slider" min="5" max="30" step="5" value="15">
+                            </div>
+                        </div>
+
+                        <div class="btyd-stat-grid" style="margin-top: 1rem;">
+                            <div class="btyd-stat-box">
+                                <strong>Persuadable Cohort</strong>
+                                <div class="stat-val text-blue" id="causalPersuadablesVal">--</div>
+                            </div>
+                            <div class="btyd-stat-box">
+                                <strong>Saved Margin (Sure Things)</strong>
+                                <div class="stat-val text-green" id="causalMarginSavedVal">£0</div>
+                            </div>
+                            <div class="btyd-stat-box">
+                                <strong>Causal Net Profit</strong>
+                                <div class="stat-val" id="causalNetProfitVal">£0</div>
+                            </div>
+                            <div class="btyd-stat-box">
+                                <strong>DiD Causal Lift</strong>
+                                <div class="stat-val text-gold" id="causalDidLiftVal">--%</div>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn btn-primary btn-sm" id="btnApplyCausalAudienceBtn" style="margin-top:0.85rem;width:100%;">✨ Load Persuadables Cohort into Campaign Studio</button>
+                    </div>
+
+                    <div class="chart-card flex-2">
+                        <div class="card-header">
+                            <div>
+                                <h3>📈 Cumulative Qini Profit Curve &amp; Causal Quadrants</h3>
+                                <p class="card-sub">Net incremental profit of T-Learner CATE targeting vs. random blanket discounting</p>
+                            </div>
+                            <span class="badge-tag green" id="causalAdvantageBadge">Outperforming Blanket</span>
+                        </div>
+                        <div class="chart-wrapper" style="height:220px;">
+                            <canvas id="causalUpliftChart"></canvas>
+                        </div>
+                        <div class="table-responsive" style="margin-top:1rem;">
+                            <table class="data-table" id="causalQuadrantsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Causal Quadrant</th>
+                                        <th>Accounts</th>
+                                        <th>Share</th>
+                                        <th>Avg CATE (£)</th>
+                                        <th>Recommended Policy</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="causalQuadrantsTbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- ============================================================= -->
@@ -2071,6 +2150,7 @@
                                     <option value="briefing">/api/v1/reports/executive-briefing (6-Engine Boardroom Memo)</option>
                                     <option value="customer_360">/api/v1/customers/14646/360 (Customer-360 Dossier)</option>
                                     <option value="warehouse_dq">/api/v1/warehouse/data-quality (7-Rule Star Schema DQ)</option>
+                                    <option value="causal">/api/v1/causal/uplift-report (T-Learner Uplift &amp; DiD)</option>
                                     <option value="rbac">/api/v1/auth/rbac-matrix (RBAC &amp; Tenant Governance)</option>
                                 </select>
                             </div>
@@ -3382,6 +3462,6 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=7.17"></script>
+    <script src="app.js?v=7.18"></script>
 </body>
 </html>

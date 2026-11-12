@@ -4010,6 +4010,156 @@ function initCampaignStudio() {
             }
         });
     }
+
+    initCausalUpliftLab();
+}
+
+// =============================================================================
+// PHASE 26: CAUSAL UPLIFT MODELING & DID INCREMENTALITY LAB
+// =============================================================================
+let causalUpliftChartInstance = null;
+let CAUSAL_LATEST_REPORT = null;
+let CAUSAL_WIRED = false;
+
+async function refreshCausalUpliftLab() {
+    const topKSlider = document.getElementById("causalTopKSlider");
+    const discSlider = document.getElementById("causalDiscountSlider");
+    const canvas = document.getElementById("causalUpliftChart");
+    if (!canvas) return;
+
+    const topK = parseFloat(topKSlider ? topKSlider.value : "30");
+    const disc = parseFloat(discSlider ? discSlider.value : "15");
+    const topKValEl = document.getElementById("causalTopKVal");
+    const discValEl = document.getElementById("causalDiscountVal");
+    if (topKValEl) topKValEl.textContent = `${topK.toFixed(0)}%`;
+    if (discValEl) discValEl.textContent = `${disc.toFixed(0)}%`;
+
+    let rep = null;
+    try {
+        const res = await fetch(`http://localhost:8000/api/v1/causal/uplift-report?top_k_pct=${topK}&discount_pct=${disc}`);
+        if (res.ok) rep = await res.json();
+    } catch (_e) {
+        // Offline causal fallback below
+    }
+
+    if (!rep) {
+        rep = {
+            summary: { persuadable_count: 285, sure_things_excluded_count: 310, saved_promo_margin_gbp: 9420, causal_net_profit_gbp: 18640, incremental_advantage_gbp: 7210, did_lift_pct: 14.8 },
+            quadrants: [
+                { quadrant: "Persuadables", account_count: 285, share_pct: 35.6, avg_cate_gbp: 92.4, recommended_policy: "Send Discount Voucher" },
+                { quadrant: "Sure Things", account_count: 310, share_pct: 38.8, avg_cate_gbp: 11.2, recommended_policy: "Withhold Discount (Save Margin)" },
+                { quadrant: "Lost Causes", account_count: 165, share_pct: 20.6, avg_cate_gbp: 4.5, recommended_policy: "Suppress Marketing Spend" },
+                { quadrant: "Sleeping Dogs", account_count: 40, share_pct: 5.0, avg_cate_gbp: -28.4, recommended_policy: "Do Not Contact (Negative Lift)" }
+            ],
+            qini_curve: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map(p => ({
+                label: `Top ${p}%`,
+                causal_net_profit_gbp: Math.round(22000 * Math.sin((p / 100) * 1.9)),
+                random_blanket_profit_gbp: Math.round(115 * p)
+            }))
+        };
+    }
+
+    CAUSAL_LATEST_REPORT = rep;
+    const s = rep.summary || {};
+    const fmt = (v) => `£${Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+    const pEl = document.getElementById("causalPersuadablesVal");
+    const mEl = document.getElementById("causalMarginSavedVal");
+    const nEl = document.getElementById("causalNetProfitVal");
+    const dEl = document.getElementById("causalDidLiftVal");
+    const advEl = document.getElementById("causalAdvantageBadge");
+    if (pEl) pEl.textContent = `${Number(s.persuadable_count || 0).toLocaleString()} accts`;
+    if (mEl) mEl.textContent = fmt(s.saved_promo_margin_gbp);
+    if (nEl) nEl.textContent = fmt(s.causal_net_profit_gbp);
+    if (dEl) dEl.textContent = `+${s.did_lift_pct || 0}%`;
+    if (advEl) advEl.textContent = `Outperforms Blanket by +${fmt(s.incremental_advantage_gbp)}`;
+
+    const qBody = document.getElementById("causalQuadrantsTbody");
+    if (qBody) {
+        qBody.innerHTML = (rep.quadrants || []).map(q => {
+            const tone = q.quadrant === "Persuadables" ? "#10B981" : q.quadrant === "Sure Things" ? "#3B82F6" : q.quadrant === "Sleeping Dogs" ? "#EF4444" : "#94A3B8";
+            return `
+                <tr>
+                    <td><span class="badge-tag" style="background:${tone}22;color:${tone};font-weight:700;">${q.quadrant}</span></td>
+                    <td><strong>${Number(q.account_count).toLocaleString()}</strong></td>
+                    <td>${q.share_pct}%</td>
+                    <td><strong style="color:${q.avg_cate_gbp >= 0 ? '#10B981' : '#EF4444'};">£${q.avg_cate_gbp.toFixed(2)}</strong></td>
+                    <td>${q.recommended_policy}</td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    if (typeof Chart !== "undefined" && Array.isArray(rep.qini_curve)) {
+        if (causalUpliftChartInstance) causalUpliftChartInstance.destroy();
+        const isLight = document.documentElement.getAttribute("data-theme") === "light";
+        const textCol = isLight ? "#334155" : "#D4D4D8";
+        const gridCol = isLight ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
+
+        causalUpliftChartInstance = new Chart(canvas.getContext("2d"), {
+            type: "line",
+            data: {
+                labels: rep.qini_curve.map(pt => pt.label),
+                datasets: [
+                    {
+                        label: "Causal T-Learner Targeting (£ Profit)",
+                        data: rep.qini_curve.map(pt => pt.causal_net_profit_gbp),
+                        borderColor: "#10B981",
+                        backgroundColor: "rgba(16, 185, 129, 0.14)",
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.25
+                    },
+                    {
+                        label: "Random Blanket Discounting (£ Profit)",
+                        data: rep.qini_curve.map(pt => pt.random_blanket_profit_gbp),
+                        borderColor: "#94A3B8",
+                        borderWidth: 2,
+                        borderDash: [5, 4],
+                        fill: false,
+                        tension: 0.1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: textCol, font: { size: 11 } } } },
+                scales: {
+                    x: { ticks: { color: textCol }, grid: { color: gridCol } },
+                    y: { ticks: { color: textCol, callback: (v) => `£${Number(v).toLocaleString()}` }, grid: { color: gridCol } }
+                }
+            }
+        });
+    }
+}
+
+function initCausalUpliftLab() {
+    refreshCausalUpliftLab();
+    if (CAUSAL_WIRED) return;
+    CAUSAL_WIRED = true;
+
+    const topK = document.getElementById("causalTopKSlider");
+    const disc = document.getElementById("causalDiscountSlider");
+    const applyBtn = document.getElementById("btnApplyCausalAudienceBtn");
+
+    [topK, disc].forEach(el => {
+        if (el) {
+            el.addEventListener("input", refreshCausalUpliftLab);
+            el.addEventListener("change", refreshCausalUpliftLab);
+        }
+    });
+
+    if (applyBtn) {
+        applyBtn.addEventListener("click", () => {
+            if (!CAUSAL_LATEST_REPORT) return;
+            const s = CAUSAL_LATEST_REPORT.summary || {};
+            const audSpan = document.getElementById("campAudienceSize");
+            const revSpan = document.getElementById("campRevenueProtected");
+            if (audSpan) audSpan.textContent = `${s.persuadable_count || 200} Persuadables`;
+            if (revSpan) revSpan.textContent = `£${Number(s.causal_net_profit_gbp || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            showToast("Causal Cohort Loaded", `Targeted ${s.persuadable_count} Persuadables while saving £${Number(s.saved_promo_margin_gbp || 0).toLocaleString()} from Sure Things`, "success");
+        });
+    }
 }
 
 // =============================================================================
@@ -5000,6 +5150,13 @@ const API_ENDPOINTS = {
         url: "http://localhost:8000/api/v1/warehouse/data-quality",
         payload: { info: "GET endpoint; executes 7 automated SQL data-quality contracts on the Star Schema." },
         handler: () => ({ status: "CERTIFIED_CLEAN", score_pct: 100.0, passed_checks: 7, total_checks: 7 })
+    },
+    causal: {
+        method: "GET",
+        path: "/api/v1/causal/uplift-report",
+        url: "http://localhost:8000/api/v1/causal/uplift-report?top_k_pct=30&discount_pct=15",
+        payload: { info: "GET endpoint; returns T-Learner 4-quadrant CATE uplift and Difference-in-Differences ROI." },
+        handler: () => ({ status: "healthy", model: "T-Learner (GradientBoostingRegressor)" })
     },
     rbac: {
         method: "GET",

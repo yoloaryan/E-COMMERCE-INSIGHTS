@@ -45,6 +45,7 @@ from src.models.financial_waterfall import get_waterfall_engine
 from src.api.briefing import ExecutiveBriefingGenerator
 from src.models.customer_360 import get_customer_360_engine
 from src.data.warehouse import get_warehouse
+from src.models.causal_uplift import get_causal_engine
 
 MODELS_DIR = ROOT_DIR / "models"
 MANIFEST_PATH = MODELS_DIR / "model_manifest.json"
@@ -387,6 +388,20 @@ class SimulateMarginRecoveryRequest(BaseModel):
 class WarehouseQueryRequest(BaseModel):
     sql: str = Field(..., min_length=6, description="Read-only SELECT or WITH analytical SQL")
     max_rows: int = Field(default=100, ge=1, le=200)
+
+
+class SimulateCausalTargetingRequest(BaseModel):
+    top_k_pct: float = Field(default=30.0, ge=5.0, le=100.0)
+    discount_pct: float = Field(default=15.0, ge=5.0, le=40.0)
+
+
+class DidAttributionRequest(BaseModel):
+    treat_pre: float = Field(..., ge=0.0)
+    treat_post: float = Field(..., ge=0.0)
+    ctrl_pre: float = Field(..., ge=0.0)
+    ctrl_post: float = Field(..., ge=0.0)
+    n_treat: int = Field(default=250, ge=2)
+    n_ctrl: int = Field(default=250, ge=2)
 
 
 # -----------------------------------------------------------------------------
@@ -2202,6 +2217,52 @@ def execute_warehouse_sql(
         return get_warehouse().execute_sql(sql=payload.sql, max_rows=payload.max_rows)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+
+# -----------------------------------------------------------------------------
+# Phase 26: Causal Uplift Modeling & Difference-in-Differences Attribution
+# -----------------------------------------------------------------------------
+@app.get("/api/v1/causal/uplift-report", tags=["Causal Uplift & Incrementality"])
+def get_causal_uplift_report(
+    top_k_pct: float = Query(default=30.0, ge=5.0, le=100.0),
+    discount_pct: float = Query(default=15.0, ge=5.0, le=40.0),
+):
+    """
+    Returns T-Learner CATE 4-quadrant breakdown (Persuadables, Sure Things, Lost Causes,
+    Sleeping Dogs), Qini cumulative profit curves, and Difference-in-Differences ROI.
+    """
+    return get_causal_engine().simulate_targeting_policy(
+        top_k_pct=top_k_pct,
+        discount_pct=discount_pct,
+    )
+
+
+@app.post("/api/v1/causal/simulate-targeting", tags=["Causal Uplift & Incrementality"])
+def simulate_causal_targeting_policy(
+    payload: SimulateCausalTargetingRequest,
+    _principal: Dict[str, Any] = Depends(require_permission("predict:execute")),
+):
+    """
+    Optimizes promotional budget allocation by comparing T-Learner CATE selective
+    targeting against blanket voucher distribution.
+    """
+    return get_causal_engine().simulate_targeting_policy(
+        top_k_pct=payload.top_k_pct,
+        discount_pct=payload.discount_pct,
+    )
+
+
+@app.post("/api/v1/causal/did-attribution", tags=["Causal Uplift & Incrementality"])
+def compute_did_campaign_attribution(payload: DidAttributionRequest):
+    """Computes pre/post Difference-in-Differences treatment effect and statistical p-value."""
+    return get_causal_engine().compute_did_attribution(
+        treat_pre=payload.treat_pre,
+        treat_post=payload.treat_post,
+        ctrl_pre=payload.ctrl_pre,
+        ctrl_post=payload.ctrl_post,
+        n_treat=payload.n_treat,
+        n_ctrl=payload.n_ctrl,
+    )
 
 
 if __name__ == "__main__":
