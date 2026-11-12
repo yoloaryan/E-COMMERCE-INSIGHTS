@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=7.2">
+    <link rel="stylesheet" href="style.css?v=7.3">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -33,8 +33,8 @@
                 <button type="button" class="view-mode-btn active" id="btnModeSimple" onclick="window.setViewMode('simple')" title="5 Core Business Intelligence Modules">
                     <span>🌟</span> Simple View
                 </button>
-                <button type="button" class="view-mode-btn" id="btnModeAll" onclick="window.setViewMode('all')" title="All 12 Operational & MLOps Tools">
-                    <span>⚙️</span> All Tools (12)
+                <button type="button" class="view-mode-btn" id="btnModeAll" onclick="window.setViewMode('all')" title="All 13 Operational & MLOps Tools">
+                    <span>⚙️</span> All Tools (13)
                 </button>
             </div>
 
@@ -87,6 +87,11 @@
                     <span class="nav-icon">🚀</span>
                     <span class="nav-label">Retention Campaigns</span>
                 </button>
+                <button class="nav-item advanced-module" data-tab="pricing-lab">
+                    <span class="nav-icon">💰</span>
+                    <span class="nav-label">Pricing &amp; A/B Lab</span>
+                    <span class="menu-badge blue">Elasticity</span>
+                </button>
                 <button class="nav-item advanced-module" data-tab="transaction-simulator">
                     <span class="nav-icon">🧪</span>
                     <span class="nav-label">Live POS Simulator</span>
@@ -109,7 +114,7 @@
                 </button>
 
                 <div class="advanced-module-hint" id="simpleModeHint">
-                    Showing 5 core intelligence tools. <a href="javascript:void(0)" id="linkSwitchToAll">Show all 12 modules</a>
+                    Showing 5 core intelligence tools. <a href="javascript:void(0)" id="linkSwitchToAll">Show all 13 modules</a>
                 </div>
             </nav>
 
@@ -155,7 +160,7 @@
                     <!-- Workspace View Mode Toggle (Header) -->
                     <div class="view-mode-toggle-header" title="Switch between Simple View and All Tools">
                         <button type="button" class="view-mode-header-btn active" id="headerBtnModeSimple" onclick="window.setViewMode('simple')">🌟 Simple</button>
-                        <button type="button" class="view-mode-header-btn" id="headerBtnModeAll" onclick="window.setViewMode('all')">⚙️ All (12)</button>
+                        <button type="button" class="view-mode-header-btn" id="headerBtnModeAll" onclick="window.setViewMode('all')">⚙️ All (13)</button>
                     </div>
 
                     <!-- Live FastAPI Status Badge -->
@@ -232,7 +237,7 @@
                     <span class="simple-banner-badge">🌟 SIMPLE VIEW</span>
                     <span class="simple-banner-text">Displaying the 5 core business intelligence modules: Overview, RFM Segments, Demand Forecaster, Churn Scanner & Recommender.</span>
                 </div>
-                <button type="button" class="simple-banner-action" onclick="window.setViewMode('all')">Switch to Full Suite (12 Tools) ⚙️</button>
+                <button type="button" class="simple-banner-action" onclick="window.setViewMode('all')">Switch to Full Suite (13 Tools) ⚙️</button>
             </div>
 
             <!-- ============================================================= -->
@@ -1480,6 +1485,356 @@
                     </div>
                 </div>
             </section>
+
+            <!-- ============================================================= -->
+            <!-- TAB 13: DYNAMIC PRICING ELASTICITY & A/B EXPERIMENTATION LAB -->
+            <!-- ============================================================= -->
+            <section id="tab-pricing-lab" class="tab-pane">
+                <!-- In-Page Section Subnav -->
+                <div class="tab-subnav-bar">
+                    <button type="button" class="subnav-pill active" onclick="jumpToSection('pricingElasticityCard', this)">📊 Elasticity Matrix</button>
+                    <button type="button" class="subnav-pill" onclick="jumpToSection('pricingSimulatorCard', this)">🎛️ Margin &amp; Payoff Simulator</button>
+                    <button type="button" class="subnav-pill" onclick="jumpToSection('pricingAbStudioCard', this)">🧪 A/B Experiment &amp; Power Lab</button>
+                </div>
+
+                <!-- Summary KPI Strip -->
+                <div class="kpi-grid" id="pricingKpiGrid">
+                    <div class="kpi-card highlight-glow">
+                        <div class="kpi-label">Portfolio Mean Elasticity (ε)</div>
+                        <div class="kpi-value" id="pricingKpiAvgElasticity">-1.69</div>
+                        <div class="kpi-subtext" id="pricingKpiDataSource">Within-SKU Log-Log OLS</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Identifiable Margin Upside</div>
+                        <div class="kpi-value text-green" id="pricingKpiTotalUplift">+£40,598</div>
+                        <div class="kpi-subtext">Across Bounded Optimal Price Points</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Analyzed SKU Catalog</div>
+                        <div class="kpi-value" id="pricingKpiSkuCount">3,804</div>
+                        <div class="kpi-subtext" id="pricingKpiTxnCount">527k+ Valid Transactions</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Recorded A/B Experiments</div>
+                        <div class="kpi-value" id="pricingKpiExpCount">0 Active</div>
+                        <div class="kpi-subtext">Two-Proportion Z-Test Ledger</div>
+                    </div>
+                </div>
+
+                <!-- Card 1: Category Elasticity Matrix (Responsive Sticky Table) -->
+                <div class="table-card" id="pricingElasticityCard" style="margin-bottom: 1.5rem;">
+                    <div class="card-header">
+                        <div>
+                            <h3 id="pricingMatrixCaption">Category Price Elasticity Matrix &amp; Profit-Optimal Price Points</h3>
+                            <p class="card-sub">Estimated via fixed-effects within-SKU demeaned log-log regression; click any category row to simulate price changes</p>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm" id="btnRefreshElasticity">↻ Recalculate Matrix</button>
+                    </div>
+                    <div tabindex="0" role="region" aria-labelledby="pricingMatrixCaption" class="table-responsive pricing-table-wrapper">
+                        <table class="data-table pricing-elasticity-table" id="pricingElasticityTable">
+                            <caption class="visually-hidden">Category price elasticity coefficients, baseline metrics, and optimal price recommendations</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Category</th>
+                                    <th scope="col">Elasticity (ε)</th>
+                                    <th scope="col">R² Fit</th>
+                                    <th scope="col">Weighted Avg Price</th>
+                                    <th scope="col">Baseline Revenue</th>
+                                    <th scope="col">Optimal Adjustment</th>
+                                    <th scope="col">Max Profit Uplift</th>
+                                    <th scope="col">Inspect</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pricingElasticityTbody">
+                                <tr>
+                                    <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">
+                                        Loading category elasticity regression telemetry...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Card 2: Interactive Isoelastic Margin Simulator + Revenue vs. Profit Payoff Chart -->
+                <div class="charts-row" id="pricingSimulatorCard">
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <div>
+                                <h3>🎛️ Dynamic Margin &amp; Price Elasticity Simulator</h3>
+                                <p class="card-sub">Model isoelastic demand shifts and net gross profit tradeoffs between -20% and +20%</p>
+                            </div>
+                            <span class="badge live-badge" id="pricingRegimeBadge">Elastic Demand</span>
+                        </div>
+
+                        <div class="quick-preset-bar" style="margin-bottom: 1rem;">
+                            <span class="preset-bar-label">⚡ Quick Pricing Tests:</span>
+                            <button type="button" class="preset-chip" id="btnPricingApplyOptimal">🎯 Apply Category Optimum</button>
+                            <button type="button" class="preset-chip" onclick="window.setPricingDeltaPreset(-10)">🏷️ -10% Volume Promo</button>
+                            <button type="button" class="preset-chip" onclick="window.setPricingDeltaPreset(8)">📈 +8% Margin Test</button>
+                            <button type="button" class="preset-chip" onclick="window.setPricingDeltaPreset(0)">↺ Reset 0% Baseline</button>
+                        </div>
+
+                        <div class="pricing-controls-stack">
+                            <div class="pricing-field-group">
+                                <label for="pricingCategorySelect">Target Merchandise Category</label>
+                                <select id="pricingCategorySelect" name="category" class="form-select-sm" style="width: 100%;">
+                                    <option value="Kitchen &amp; Dining">Kitchen &amp; Dining</option>
+                                    <option value="Home Decor &amp; Lighting">Home Decor &amp; Lighting</option>
+                                    <option value="Bags &amp; Storage">Bags &amp; Storage</option>
+                                    <option value="Seasonal &amp; Party">Seasonal &amp; Party</option>
+                                    <option value="Stationery &amp; Craft">Stationery &amp; Craft</option>
+                                    <option value="General Giftware">General Giftware</option>
+                                </select>
+                            </div>
+
+                            <div class="pricing-field-group">
+                                <div class="pricing-slider-label-row">
+                                    <label for="pricingChangeSlider">Simulated Price Adjustment (%)</label>
+                                    <output for="pricingChangeSlider" id="lblPricingChange" class="pricing-slider-readout">0.0%</output>
+                                </div>
+                                <input type="range" id="pricingChangeSlider" name="price_change_pct" class="modern-range-slider" min="-20" max="20" step="0.5" value="0" aria-valuetext="0 percent price adjustment">
+                                <div class="pricing-range-scale">
+                                    <span>-20% Discount</span>
+                                    <span>0% Baseline</span>
+                                    <span>+20% Markup</span>
+                                </div>
+                            </div>
+
+                            <div class="pricing-field-group">
+                                <div class="pricing-slider-label-row">
+                                    <label for="pricingCogsSlider">Estimated Cost of Goods Sold (COGS %)</label>
+                                    <output for="pricingCogsSlider" id="lblPricingCogs" class="pricing-slider-readout">47%</output>
+                                </div>
+                                <input type="range" id="pricingCogsSlider" name="cogs_ratio_pct" class="modern-range-slider" min="25" max="80" step="1" value="47" aria-valuetext="47 percent cost of goods sold">
+                            </div>
+                        </div>
+
+                        <div class="result-grid" id="pricingSimOutcomeGrid" role="status" aria-live="polite" style="margin-top: 1rem;">
+                            <div class="result-stat">
+                                <strong>Simulated Avg Unit Price</strong>
+                                <span id="simUnitPriceOut">£2.24</span>
+                            </div>
+                            <div class="result-stat">
+                                <strong>Projected Demand Volume</strong>
+                                <span id="simUnitsOut">1,112,255</span>
+                            </div>
+                            <div class="result-stat">
+                                <strong>Projected Revenue</strong>
+                                <span id="simRevOut">£2,493,144</span>
+                            </div>
+                            <div class="result-stat">
+                                <strong>Projected Gross Profit</strong>
+                                <span id="simProfitOut" style="color: var(--success);">£1,321,366</span>
+                            </div>
+                        </div>
+
+                        <div class="drift-rec-box healthy" id="pricingRecommendationBox" role="status" aria-live="polite" style="margin-top: 1rem;">
+                            <strong>💡 Pricing Strategy Insight:</strong> Select a category or adjust sliders to inspect margin vs. volume tradeoffs.
+                        </div>
+                    </div>
+
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <div>
+                                <h3>Revenue vs. Gross Profit Payoff Curve</h3>
+                                <p class="card-sub">Simulated -20% to +20% pricing frontier highlighting profit-maximizing peak</p>
+                            </div>
+                            <span class="badge blue" id="pricingOptimalBadge">Optimal: +12.0%</span>
+                        </div>
+                        <div class="chart-wrapper" style="height: 360px;">
+                            <canvas id="pricingPayoffChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3: Controlled A/B Experimentation & Statistical Power Engine -->
+                <div class="chart-card" id="pricingAbStudioCard" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <div>
+                            <h3>🧪 Controlled Pricing A/B Experimentation &amp; Statistical Power Lab</h3>
+                            <p class="card-sub">Design randomized holdout experiments, verify sample sizing, and evaluate Z-test significance</p>
+                        </div>
+                    </div>
+
+                    <div class="pricing-ab-tabs">
+                        <div class="pricing-ab-tablist" focusgroup="tablist nomemory" role="tablist" aria-label="A/B Experimentation Tools">
+                            <button type="button" role="tab" id="abRunTabBtn" aria-selected="true" focusgroupstart>🧪 Run Controlled Holdout Test</button>
+                            <button type="button" role="tab" id="abPowerTabBtn" aria-selected="false">📐 Sample Size &amp; Power Calculator</button>
+                        </div>
+
+                        <!-- Panel 1: Run A/B Experiment -->
+                        <div role="tabpanel" id="abRunPanel" aria-labelledby="abRunTabBtn" tabindex="0">
+                            <div class="pricing-tabpanel-inner">
+                                <div class="charts-row" style="margin-bottom: 0;">
+                                    <form id="abExperimentForm" class="admin-form flex-1" aria-labelledby="abExperimentFormHeading">
+                                        <h4 id="abExperimentFormHeading" class="visually-hidden">Configure A/B Pricing Holdout Experiment</h4>
+                                        <div class="pricing-field-group">
+                                            <label for="abExpName">Experiment Identifier</label>
+                                            <input type="text" id="abExpName" name="experiment_name" value="Q4 Kitchen Margin Lift Holdout" required minlength="3" class="form-input-sm">
+                                        </div>
+
+                                        <div class="form-row">
+                                            <div class="pricing-field-group flex-1">
+                                                <label for="abExpCategory">Test Category</label>
+                                                <select id="abExpCategory" name="category" class="form-select-sm">
+                                                    <option value="Kitchen &amp; Dining">Kitchen &amp; Dining</option>
+                                                    <option value="Home Decor &amp; Lighting">Home Decor &amp; Lighting</option>
+                                                    <option value="Bags &amp; Storage">Bags &amp; Storage</option>
+                                                    <option value="Seasonal &amp; Party">Seasonal &amp; Party</option>
+                                                    <option value="Stationery &amp; Craft">Stationery &amp; Craft</option>
+                                                    <option value="General Giftware">General Giftware</option>
+                                                </select>
+                                            </div>
+                                            <div class="pricing-field-group flex-1">
+                                                <label for="abExpPriceChange">Variant Price Delta (%)</label>
+                                                <input type="number" id="abExpPriceChange" name="price_change_pct" value="10" min="-40" max="40" step="0.5" required class="form-input-sm">
+                                            </div>
+                                        </div>
+
+                                        <div class="form-row">
+                                            <div class="pricing-field-group flex-1">
+                                                <label for="abExpHoldoutPct">Control Holdout Share (%)</label>
+                                                <input type="number" id="abExpHoldoutPct" name="holdout_pct" value="20" min="5" max="80" step="5" required class="form-input-sm">
+                                            </div>
+                                            <div class="pricing-field-group flex-1">
+                                                <label for="abExpSampleSize">Total Experiment Visitors</label>
+                                                <input type="number" id="abExpSampleSize" name="sample_size" value="12000" min="200" max="1000000" step="500" required class="form-input-sm">
+                                            </div>
+                                            <div class="pricing-field-group flex-1">
+                                                <label for="abExpBaseCvr">Baseline Conversion Rate (%)</label>
+                                                <input type="number" id="abExpBaseCvr" name="baseline_conversion_rate_pct" value="4.5" min="0.5" max="50" step="0.1" required class="form-input-sm">
+                                            </div>
+                                        </div>
+
+                                        <button type="submit" class="btn btn-primary" id="btnLaunchAbExp" style="width: 100%; margin-top: 0.5rem;">
+                                            ⚡ Execute Controlled A/B Experiment
+                                        </button>
+                                    </form>
+
+                                    <div class="flex-1" id="abExperimentResultArea" role="status" aria-live="polite">
+                                        <div class="sim-empty-state" style="padding: 2rem; border: 1px dashed var(--border-color); border-radius: var(--radius-md); text-align: center;">
+                                            <span style="font-size: 2rem;">🧪</span>
+                                            <h4>Ready for Controlled Randomized Split</h4>
+                                            <p style="font-size: 0.85rem; color: var(--text-muted);">Configure your holdout split and variant price delta on the left, then execute to evaluate Z-statistic, p-value, and margin uplift.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Recorded Experiment Ledger -->
+                                <div style="margin-top: 1.5rem;">
+                                    <h4 style="margin-bottom: 0.65rem; font-size: 0.95rem;">Executed A/B Pricing Experiments Ledger</h4>
+                                    <div class="table-responsive" style="max-height: 220px;">
+                                        <table class="data-table" id="abExperimentsLedgerTable" style="font-size: 0.82rem;">
+                                            <thead>
+                                                <tr>
+                                                    <th scope="col">ID</th>
+                                                    <th scope="col">Experiment</th>
+                                                    <th scope="col">Category</th>
+                                                    <th scope="col">Delta</th>
+                                                    <th scope="col">Profit/Visitor Uplift</th>
+                                                    <th scope="col">p-Value</th>
+                                                    <th scope="col">Verdict</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="abExperimentsLedgerBody">
+                                                <tr>
+                                                    <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 1rem;">
+                                                        No experiments executed in this session yet.
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel 2: Sample Size & Statistical Power Calculator -->
+                        <div role="tabpanel" id="abPowerPanel" aria-labelledby="abPowerTabBtn" hidden="until-found">
+                            <div class="pricing-tabpanel-inner">
+                                <div class="charts-row" style="margin-bottom: 0;">
+                                    <form id="abPowerForm" class="admin-form flex-1" aria-labelledby="abPowerFormHeading">
+                                        <h4 id="abPowerFormHeading" class="visually-hidden">Statistical Power &amp; Sample Size Parameters</h4>
+                                        <div class="form-row">
+                                            <div class="pricing-field-group flex-1">
+                                                <label for="powerBaseCvr">Baseline Conversion Rate (%)</label>
+                                                <input type="number" id="powerBaseCvr" name="baseline_cvr" value="4.5" min="0.5" max="60" step="0.1" required class="form-input-sm">
+                                            </div>
+                                            <div class="pricing-field-group flex-1">
+                                                <label for="powerMdePct">Minimum Detectable Lift (%)</label>
+                                                <input type="number" id="powerMdePct" name="mde_pct" value="10" min="1" max="100" step="1" required class="form-input-sm">
+                                            </div>
+                                        </div>
+
+                                        <div class="form-row">
+                                            <div class="pricing-field-group flex-1">
+                                                <label for="powerAlphaSelect">Significance Level (α)</label>
+                                                <select id="powerAlphaSelect" name="alpha" class="form-select-sm">
+                                                    <option value="0.05" selected>α = 0.05 (95% Confidence)</option>
+                                                    <option value="0.01">α = 0.01 (99% Strict)</option>
+                                                    <option value="0.10">α = 0.10 (90% Exploratory)</option>
+                                                </select>
+                                            </div>
+                                            <div class="pricing-field-group flex-1">
+                                                <label for="powerTargetSelect">Statistical Power (1 - β)</label>
+                                                <select id="powerTargetSelect" name="power" class="form-select-sm">
+                                                    <option value="0.80" selected>80% Power (Standard)</option>
+                                                    <option value="0.90">90% Power (High Rigor)</option>
+                                                    <option value="0.95">95% Power (Conservative)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div class="form-row">
+                                            <div class="pricing-field-group flex-1">
+                                                <label for="powerDailyTraffic">Daily Storefront Visitors</label>
+                                                <input type="number" id="powerDailyTraffic" name="daily_traffic" value="2500" min="100" max="1000000" step="100" required class="form-input-sm">
+                                            </div>
+                                            <div class="pricing-field-group flex-1">
+                                                <label for="powerHoldoutSplit">Control Holdout Fraction</label>
+                                                <select id="powerHoldoutSplit" name="holdout_ratio" class="form-select-sm">
+                                                    <option value="0.50" selected>50 / 50 Balanced Split</option>
+                                                    <option value="0.20">20 / 80 Low-Risk Holdout</option>
+                                                    <option value="0.30">30 / 70 Split</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <button type="submit" class="btn btn-primary" id="btnCalcAbPower" style="width: 100%; margin-top: 0.5rem;">
+                                            📐 Compute Required Sample &amp; Power Curve
+                                        </button>
+                                    </form>
+
+                                    <div class="flex-1">
+                                        <div class="result-grid" id="abPowerOutputGrid" role="status" aria-live="polite" style="margin-top: 0; margin-bottom: 1rem;">
+                                            <div class="result-stat">
+                                                <strong>Control Sample Size</strong>
+                                                <span id="powerCtrlNOut">--</span>
+                                            </div>
+                                            <div class="result-stat">
+                                                <strong>Variant Sample Size</strong>
+                                                <span id="powerVarNOut">--</span>
+                                            </div>
+                                            <div class="result-stat">
+                                                <strong>Total Visitors Needed</strong>
+                                                <span id="powerTotalNOut" style="color: var(--primary);">--</span>
+                                            </div>
+                                            <div class="result-stat">
+                                                <strong>Est. Test Duration</strong>
+                                                <span id="powerDaysOut" style="color: var(--success);">--</span>
+                                            </div>
+                                        </div>
+                                        <div class="chart-wrapper" style="height: 230px;">
+                                            <canvas id="abPowerCurveChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </main>
     </div>
 
@@ -2034,6 +2389,6 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=7.2"></script>
+    <script src="app.js?v=7.3"></script>
 </body>
 </html>

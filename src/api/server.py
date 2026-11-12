@@ -30,6 +30,7 @@ from src.data.importer import DatasetImporter
 from src.api.copilot import RetailCopilot
 from src.api.integrations import ECommerceIntegrations, IntegrationRegistry
 from src.api.campaigns import CampaignRegistry, CampaignDispatcher, WatchdogEvaluator, MessageFormatter, VoucherGenerator
+from src.models.pricing_elasticity import PricingElasticityEngine, ABExperimentEngine, PricingExperimentRegistry
 
 MODELS_DIR = ROOT_DIR / "models"
 MANIFEST_PATH = MODELS_DIR / "model_manifest.json"
@@ -215,6 +216,29 @@ class TriggerWatchdogRequest(BaseModel):
     total_spend_gbp: Optional[float] = Field(default=2450.0, ge=0.0)
     psi_score: Optional[float] = Field(default=0.28, ge=0.0)
     shifted_features: Optional[List[str]] = Field(default=["UnitPrice", "Quantity", "Recency"])
+
+
+class SimulatePriceChangeRequest(BaseModel):
+    category: str = Field(default="Kitchen & Dining", description="Retail merchandise category")
+    price_change_pct: float = Field(default=0.0, ge=-50.0, le=50.0, description="Simulated % price change")
+    cogs_ratio: Optional[float] = Field(default=None, ge=0.10, le=0.90, description="Cost-of-goods-sold fraction")
+    promo_discount_pct: float = Field(default=0.0, ge=0.0, le=40.0, description="Optional promo discount % overlay")
+    elasticity_override: Optional[float] = Field(default=None, ge=-5.0, le=-0.05, description="Optional custom elasticity override")
+
+
+class RunABExperimentRequest(BaseModel):
+    experiment_name: str = Field(default="Dynamic Price Elasticity Experiment", min_length=3)
+    category: str = Field(default="Kitchen & Dining")
+    price_change_pct: float = Field(default=5.0, ge=-40.0, le=40.0)
+    holdout_pct: float = Field(default=20.0, ge=5.0, le=80.0, description="Control holdout traffic %")
+    sample_size: int = Field(default=10000, ge=200, le=2000000)
+    baseline_conversion_rate: float = Field(default=0.045, gt=0.001, lt=0.95)
+    cogs_ratio: float = Field(default=0.58, ge=0.10, le=0.90)
+    seed: Optional[int] = Field(default=42)
+    control_visitors: Optional[int] = Field(default=None, ge=10)
+    control_conversions: Optional[int] = Field(default=None, ge=0)
+    variant_visitors: Optional[int] = Field(default=None, ge=10)
+    variant_conversions: Optional[int] = Field(default=None, ge=0)
 
 
 # -----------------------------------------------------------------------------
@@ -1152,6 +1176,106 @@ async def trigger_watchdog_rule(payload: TriggerWatchdogRequest):
 
     else:
         raise HTTPException(status_code=400, detail="watchdog_type must be 'churn' or 'drift'.")
+
+
+# -----------------------------------------------------------------------------
+# Dynamic Pricing Elasticity & A/B Experimentation Endpoints
+# -----------------------------------------------------------------------------
+pricing_engine_instance: Optional[PricingElasticityEngine] = None
+
+def get_pricing_engine() -> PricingElasticityEngine:
+    """Lazy-initializes and caches the PricingElasticityEngine singleton."""
+    global pricing_engine_instance
+    if pricing_engine_instance is None:
+        pricing_engine_instance = PricingElasticityEngine()
+    return pricing_engine_instance
+
+
+@app.get("/api/v1/pricing/elasticity-report", tags=["Pricing & A/B Experimentation"])
+def get_pricing_elasticity_report(min_sku_obs: int = Query(5, ge=2, le=50)):
+    """
+    Returns category-level price elasticity coefficients, baseline margin telemetry,
+    optimal profit-maximizing price points, and the experiment history ledger.
+    """
+    engine = get_pricing_engine()
+    return engine.generate_elasticity_report(min_sku_obs=min_sku_obs)
+
+
+@app.post("/api/v1/pricing/simulate-price-change", tags=["Pricing & A/B Experimentation"])
+def simulate_pricing_change(payload: SimulatePriceChangeRequest):
+    """
+    Simulates unit demand, gross revenue, and gross profit across price adjustments (-20% to +20%)
+    for a target retail category using estimated isoelastic demand curves.
+    """
+    engine = get_pricing_engine()
+    try:
+        return engine.simulate_price_change(
+            category=payload.category,
+            price_change_pct=payload.price_change_pct,
+            cogs_ratio=payload.cogs_ratio,
+            promo_discount_pct=payload.promo_discount_pct,
+            elasticity_override=payload.elasticity_override,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/api/v1/pricing/ab-test-calculator", tags=["Pricing & A/B Experimentation"])
+def calculate_ab_test_power(
+    baseline_conversion_rate: float = Query(0.045, gt=0.001, lt=0.95),
+    minimum_detectable_effect_pct: float = Query(10.0, ge=1.0, le=100.0),
+    alpha: float = Query(0.05, gt=0.001, lt=0.25),
+    power: float = Query(0.80, ge=0.50, lt=0.999),
+    daily_traffic: int = Query(2500, ge=50, le=5000000),
+    holdout_ratio: float = Query(0.50, ge=0.10, le=0.90),
+):
+    """
+    Calculates required A/B test sample size per arm, estimated runtime in days,
+    and a statistical power saturation curve across traffic volumes.
+    """
+    return ABExperimentEngine.calculate_power_and_sample_size(
+        baseline_conversion_rate=baseline_conversion_rate,
+        minimum_detectable_effect_pct=minimum_detectable_effect_pct,
+        alpha=alpha,
+        power=power,
+        daily_traffic=daily_traffic,
+        holdout_ratio=holdout_ratio,
+    )
+
+
+@app.post("/api/v1/pricing/run-ab-experiment", tags=["Pricing & A/B Experimentation"])
+async def run_pricing_ab_experiment(payload: RunABExperimentRequest):
+    """
+    Executes or evaluates a controlled two-arm pricing A/B experiment (Control Holdout vs Variant),
+    computes two-proportion Z-test significance and margin-per-visitor uplift,
+    records it in the experiment ledger, and broadcasts completion over WebSocket.
+    """
+    engine = get_pricing_engine()
+    try:
+        res = ABExperimentEngine.run_experiment(
+            experiment_name=payload.experiment_name,
+            category=payload.category,
+            price_change_pct=payload.price_change_pct,
+            holdout_pct=payload.holdout_pct,
+            sample_size=payload.sample_size,
+            baseline_conversion_rate=payload.baseline_conversion_rate,
+            cogs_ratio=payload.cogs_ratio,
+            seed=payload.seed,
+            control_visitors=payload.control_visitors,
+            control_conversions=payload.control_conversions,
+            variant_visitors=payload.variant_visitors,
+            variant_conversions=payload.variant_conversions,
+            engine=engine,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    await ws_manager.broadcast({
+        "type": "PRICING_EXPERIMENT_COMPLETED",
+        "data": res["experiment"],
+    })
+
+    return res
 
 
 if __name__ == "__main__":
