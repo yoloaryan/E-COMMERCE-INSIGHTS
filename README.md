@@ -13,7 +13,7 @@
 > [!IMPORTANT]
 > 🚀 **Live Production Web Application:** **[https://e-commerce-insights.onrender.com/](https://e-commerce-insights.onrender.com/)**
 >
-> The full enterprise platform is built as a Carbon Black & Daylight **Liquid Glass** single-page web application (HTML5 / CSS3 / Vanilla JavaScript) backed by FastAPI microservices. Experience all 14 operational intelligence modules, real-time RFM & BTYD CLV lookups, Cohort & Markov migration heatmaps, Inventory EOQ optimization, Apriori basket rules, Return & P&L financial waterfalls, Fraud radar, Autonomous Watchdog telemetry, SQLite WAL persistence, and live Executive Boardroom briefing exports.
+> Built as a responsive, compositor-optimized **Liquid Glass** single-page web application (HTML5 / CSS3 / Vanilla JavaScript) backed by FastAPI & DuckDB microservices (`v4.5.0`, **28 Phases**, **142+ automated tests**). Experience **15 operational intelligence modules**: Executive BI & Boardroom Briefing Exports, Customer Segmentation & Cohort Retention Heatmaps, Demand Forecasting, Churn Early-Warning with **Kaplan-Meier Survival & Exact Shapley XAI**, Item-Item & Apriori Market Basket Rules, **Kimball Star-Schema SQL Workbench + 7-Rule DQ Suite**, Customer-360 Dossier, Inventory EOQ, **Causal T-Learner Uplift & DiD Incrementality**, Dynamic Pricing & A/B Labs, Isolation Forest Fraud Radar, Live POS Simulator & **Indian GST (`CGST/SGST/IGST + HSN`) Tax Invoice Studio**, Autonomous Watchdog, SQLite WAL Persistence, and Multi-Tenant RBAC Security.
 
 An industry-grade Data Science, Machine Learning, and Business Intelligence platform built on **541,909 real-world transnational e-commerce records**. 
 
@@ -152,19 +152,44 @@ In non-contractual e-commerce, businesses face four core existential bottlenecks
 │   ├── 04_churn_prediction.ipynb
 │   └── 05_product_recommendation.ipynb
 ├── src/                               # Modular Python packages
-│   ├── data/                          # Ingestion, cleaning, audit, and EDA modules
+│   ├── data/                          # Ingestion, cleaning, EDA, upload importer & Kimball warehouse
 │   │   ├── ingest.py
 │   │   ├── clean.py
-│   │   └── eda.py
+│   │   ├── eda.py
+│   │   ├── importer.py
+│   │   ├── run_queries.py
+│   │   └── warehouse.py               # DuckDB Star Schema (4 Dim, 2 Fact) + 7 SQL DQ checks
 │   ├── features/                      # Feature stores (RFM, Time-Series lags, Churn)
 │   │   ├── rfm.py
 │   │   ├── sales_features.py
 │   │   └── churn_features.py
-│   └── models/                        # Model training, hyperparameter tuning, inference
-│       ├── segmentation.py
-│       ├── sales_forecasting.py
-│       ├── churn_prediction.py
-│       └── recommender.py
+│   ├── models/                        # Predictive, Causal, Survival, Supply & Finance ML engines
+│   │   ├── segmentation.py
+│   │   ├── sales_forecasting.py
+│   │   ├── churn_prediction.py
+│   │   ├── clv_btyd.py                # BG/NBD + Gamma-Gamma Probabilistic CLV
+│   │   ├── recommender.py
+│   │   ├── basket_rules.py            # Apriori Association Rules & Bundle Evaluator
+│   │   ├── cohort_analytics.py        # Cohort Retention & Markov Migration Engine
+│   │   ├── customer_360.py            # Unified Customer-360 Financial & Action Dossier
+│   │   ├── pricing_elasticity.py      # Elasticity & Frequentist A/B Power/Test Engine
+│   │   ├── inventory_optimization.py  # ABC/XYZ Classification & EOQ / Safety Stock
+│   │   ├── financial_waterfall.py     # Return & Refund P&L Margin Waterfall
+│   │   ├── anomaly_detection.py       # Isolation Forest Fraud & Quarantine Scoring
+│   │   ├── causal_uplift.py           # Dual-Model T-Learner CATE, Qini & DiD Attribution
+│   │   ├── survival_xai.py            # Kaplan-Meier, Weibull Hazard & Exact Shapley XAI
+│   │   └── drift_monitor.py           # PSI / KS-Test Data Drift & MLOps Retrain
+│   ├── api/                           # FastAPI Microservices, Security, Watchdog, Invoices
+│   │   ├── server.py
+│   │   ├── security.py                # PBKDF2, JWT, Multi-Tenant RBAC & Audit Stream
+│   │   ├── copilot.py                 # DuckDB Text-to-SQL AI Copilot
+│   │   ├── campaigns.py               # Retention Dispatch & Voucher Engine
+│   │   ├── integrations.py            # Shopify / Stripe / WooCommerce Signed Webhooks
+│   │   ├── watchdog.py                # Autonomous 4-Engine Telemetry Watchdog
+│   │   ├── briefing.py                # 6-Engine Executive Boardroom Pack Generator
+│   │   └── invoices.py                # Indian GST (CGST/SGST/IGST + HSN) & VAT Engine
+│   └── utils/
+│       └── state_store.py             # Persistent SQLite WAL State Store
 ├── models/                            # Serialized model binaries (.joblib)
 │   ├── kmeans_rfm_model.joblib
 │   ├── rfm_scaler.joblib
@@ -173,6 +198,7 @@ In non-contractual e-commerce, businesses face four core existential bottlenecks
 │   ├── churn_scaler.joblib
 │   ├── item_similarity_matrix.joblib
 │   └── product_catalog.joblib
+├── tests/                             # 142+ Pytest Unit, Integration & UI Integrity Checks
 ├── sql/
 │   └── schema_and_queries.sql         # Production MySQL table schema & analytical queries
 └── app/
@@ -243,13 +269,16 @@ Open your browser at `http://localhost:8501`.
 uvicorn src.api.server:app --host 0.0.0.0 --port 8000 --reload
 ```
 Interactive Swagger OpenAPI documentation available at `http://localhost:8000/docs`.
-- `POST /api/v1/forecast/sales`: Time-series demand forecasting with Random Forest.
-- `POST /api/v1/churn/predict`: Real-time churn probability and risk tier scoring.
-- `GET  /api/v1/clv/summary`: BTYD 12-month expected Customer Lifetime Value metrics.
-- `GET  /api/v1/clv/customer/{id}`: Individual customer P(Alive) and CLV projections.
-- `GET  /api/v1/recommend/item/{stock_code}`: Real-time item-to-item cross-sell recommendations.
-- `POST /api/v1/segment/rfm`: Instant customer persona classification.
-- `GET  /api/v1/analytics/kpis`: In-memory DuckDB analytical metrics.
+- **Core ML & Forecasting**: `POST /api/v1/forecast/sales`, `POST /api/v1/churn/predict`, `POST /api/v1/segment/rfm`, `GET /api/v1/clv/summary`, `GET /api/v1/recommend/item/{stock_code}`, `GET /api/v1/analytics/kpis`.
+- **Kimball Warehouse & Customer-360**: `GET /api/v1/warehouse/schema`, `GET /api/v1/warehouse/data-quality`, `POST /api/v1/warehouse/query`, `GET /api/v1/customers/{customer_id}/360`.
+- **Causal ML & Survival XAI**: `GET /api/v1/causal/uplift-report`, `POST /api/v1/causal/did-attribution`, `GET /api/v1/survival/kaplan-meier-report`, `GET /api/v1/survival/explain/{customer_id}`, `POST /api/v1/survival/simulate-intervention`.
+- **Indian GST Tax Invoicing & Finance**: `GET /api/v1/invoices/recent`, `GET /api/v1/invoices/{invoice_no}`, `POST /api/v1/invoices/generate`, `GET /api/v1/invoices/{invoice_no}/html`, `GET /api/v1/finance/waterfall-report`.
+- **Operations, Security & Telemetry**: `POST /api/v1/pricing/ab-test/run`, `GET /api/v1/inventory/optimization`, `POST /api/v1/fraud/score-transaction`, `GET /api/v1/watchdog/status`, `GET /api/v1/auth/rbac-matrix`.
+
+Execute full CI & UI integrity checks anytime:
+```bash
+make ci
+```
 
 #### E. One-Click Full-Stack Docker Compose
 ```bash

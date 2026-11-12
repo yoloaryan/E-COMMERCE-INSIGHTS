@@ -1041,7 +1041,6 @@ body:not(.simple-view-active) .simple-view-banner {
 }
 
 .kpi-card:hover {
-    transform: translateY(-2px);
     border-color: var(--primary);
     box-shadow: var(--shadow-md);
 }
@@ -4242,23 +4241,7 @@ body::after {
         linear-gradient(135deg var(--in-oklab), rgba(255, 255, 255, 0.45) 0%, rgba(224, 242, 254, 0.25) 100%);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    body::before {
-        animation: liquidAmbientDrift 24s ease-in-out infinite alternate;
-    }
-}
-
-@keyframes liquidAmbientDrift {
-    0% {
-        transform: translate3d(0, 0, 0) scale(1);
-    }
-    50% {
-        transform: translate3d(1.5%, -1.5%, 0) scale(1.03);
-    }
-    100% {
-        transform: translate3d(-1.5%, 1.5%, 0) scale(1.01);
-    }
-}
+/* Static ambient background mesh (avoids continuous compositor backdrop-filter invalidation) */
 
 /* Frosted Translucent Navigation Sidebar */
 .sidebar {
@@ -4446,11 +4429,9 @@ body::after {
 .api-editor-wrap,
 .api-response-window {
     background: var(--glass-bg-subtle);
-    -webkit-backdrop-filter: var(--glass-blur-light);
-    backdrop-filter: var(--glass-blur-light);
     border: 1px solid var(--border-color);
     box-shadow:
-        0 4px 16px rgba(2, 6, 23, 0.08),
+        0 4px 14px rgba(2, 6, 23, 0.08),
         inset 0 1px 0 var(--glass-specular);
     border-radius: var(--radius-sm);
 }
@@ -4460,7 +4441,7 @@ body::after {
     border-color: rgba(16, 185, 129, 0.45);
 }
 
-/* Glossy Liquid Glass Pills, Preset Chips & Interactive Controls */
+/* Glossy Liquid Glass Pills, Preset Chips & Interactive Controls (compositor-friendly, zero nested blur) */
 .btn,
 .btn-pill,
 .date-preset-btn,
@@ -4472,9 +4453,7 @@ body::after {
 .copilot-prompt-chip,
 .copilot-followup-pill,
 .pricing-ab-tablist [role="tab"] {
-    transition: all var(--transition-fast);
-    backdrop-filter: var(--glass-blur-light);
-    -webkit-backdrop-filter: var(--glass-blur-light);
+    transition: transform 0.14s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.14s ease, border-color 0.14s ease, background-color 0.14s ease;
 }
 
 .btn-primary {
@@ -4549,13 +4528,11 @@ body::after {
 .enterprise-auth-dialog input,
 .enterprise-auth-dialog select {
     background: var(--glass-bg-subtle);
-    -webkit-backdrop-filter: var(--glass-blur-light);
-    backdrop-filter: var(--glass-blur-light);
     border: 1px solid var(--border-color);
     box-shadow: inset 0 1px 0 var(--glass-specular), inset 0 1px 3px rgba(2, 6, 23, 0.08);
     border-radius: var(--radius-sm);
     color: var(--text-primary);
-    transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+    transition: border-color 0.14s ease, box-shadow 0.14s ease, background-color 0.14s ease;
 }
 
 :is(
@@ -5126,4 +5103,42 @@ body::after {
     border-radius: 8px;
     padding: 0.85rem 1rem;
     background: var(--bg-surface);
+}
+
+/* --------------------------------------------------------------------------
+   Performance & Scroll-Jank Containment (Interactions in Complex Layouts)
+   -------------------------------------------------------------------------- */
+.kpi-card,
+.chart-card,
+.admin-card,
+.webhook-card {
+    contain: layout style;
+}
+
+.table-card,
+.interactive-card,
+.invoice-sheet {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 360px;
+}
+
+@supports not (content-visibility: auto) {
+    .table-card,
+    .interactive-card,
+    .invoice-sheet {
+        contain: layout style paint;
+    }
+}
+
+.tab-pane {
+    contain: layout style;
+}
+
+/* Eliminate layout/paint thrashing on rapid table hovers */
+.data-table th,
+.pricing-elasticity-table thead,
+.pricing-elasticity-table tbody th,
+.copilot-table th {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
 }

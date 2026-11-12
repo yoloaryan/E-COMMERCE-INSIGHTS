@@ -3,7 +3,26 @@
  * Production Client-Side Architecture, Visualizations & Operations Logic
  */
 
-document.addEventListener("DOMContentLoaded", () => {
+function nexusDebounce(fn, delayMs = 150) {
+    let timerId = null;
+    return function debouncedHandler(...args) {
+        if (timerId) clearTimeout(timerId);
+        timerId = setTimeout(() => {
+            timerId = null;
+            fn.apply(this, args);
+        }, delayMs);
+    };
+}
+
+function yieldToMain() {
+    if (typeof window !== "undefined" && "scheduler" in window && typeof window.scheduler.yield === "function") {
+        return window.scheduler.yield();
+    }
+    return new Promise(resolve => setTimeout(resolve, 0));
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+    // Immediate critical shell & visible landing module
     initChartDefaults();
     initThemeManager();
     initViewMode();
@@ -13,36 +32,49 @@ document.addEventListener("DOMContentLoaded", () => {
     initNavigation();
     initScrollToTop();
     initOverviewTab();
-    initCohortHeatmap();
-    initSegmentationTab();
-    initCustomSegmentBuilder();
-    initForecastingTab();
-    initWhatIfSimulator();
-    initChurnTab();
-    initBTYDCLVExplorer();
-    initCLVCalculator();
-    initRecommenderTab();
-    initLiveCartSimulator();
-    initMLOpsConsole();
-    initCustomerLedger();
-    initCustomerDrawer();
-    initInventoryMart();
-    initSkuAndRestockModals();
-    initCampaignStudio();
-    initTransactionSimulator();
-    if (typeof initTaxInvoiceStudio === "function") initTaxInvoiceStudio();
-    initLiveOrderWebSocket();
-    initAuditLogger();
-    initApiConsole();
-    initExecutiveReportModal();
-    initDatasetImporter();
-    initAiCopilot();
-    initWebhooksHub();
-    initPricingLab();
-    initFraudRadar();
-    initEnterpriseSecurity();
-    initDataWarehouseTab();
     initLivePipelineSync();
+
+    // Yield to main thread between deferred background tab initializers to maintain <50ms INP
+    const deferredTasks = [
+        initCohortHeatmap,
+        initSegmentationTab,
+        initCustomSegmentBuilder,
+        initForecastingTab,
+        initWhatIfSimulator,
+        initChurnTab,
+        initBTYDCLVExplorer,
+        initCLVCalculator,
+        initRecommenderTab,
+        initLiveCartSimulator,
+        initMLOpsConsole,
+        initCustomerLedger,
+        initCustomerDrawer,
+        initInventoryMart,
+        initSkuAndRestockModals,
+        initCampaignStudio,
+        initTransactionSimulator,
+        () => { if (typeof initTaxInvoiceStudio === "function") initTaxInvoiceStudio(); },
+        initLiveOrderWebSocket,
+        initAuditLogger,
+        initApiConsole,
+        initExecutiveReportModal,
+        initDatasetImporter,
+        initAiCopilot,
+        initWebhooksHub,
+        initPricingLab,
+        initFraudRadar,
+        initEnterpriseSecurity,
+        initDataWarehouseTab,
+    ];
+
+    for (let i = 0; i < deferredTasks.length; i++) {
+        try {
+            deferredTasks[i]();
+        } catch (_e) {}
+        if (i % 3 === 2) {
+            await yieldToMain();
+        }
+    }
 });
 
 // =============================================================================
@@ -951,7 +983,7 @@ function initFinancialWaterfall() {
     const sliderEl = document.getElementById("finReturnReductionSlider");
     if (countryEl) countryEl.addEventListener("change", refreshFinancialWaterfall);
     if (sliderEl) {
-        sliderEl.addEventListener("input", refreshFinancialWaterfall);
+        sliderEl.addEventListener("input", nexusDebounce(refreshFinancialWaterfall, 140));
         sliderEl.addEventListener("change", refreshFinancialWaterfall);
     }
 }
@@ -1426,9 +1458,10 @@ async function initCohortAndMigrationAnalytics() {
             });
         }
 
+        const debouncedLift = nexusDebounce(refreshRetentionLiftSimulator, 140);
         [liftSlider, winSlider].forEach(el => {
             if (el) {
-                el.addEventListener("input", refreshRetentionLiftSimulator);
+                el.addEventListener("input", debouncedLift);
                 el.addEventListener("change", refreshRetentionLiftSimulator);
             }
         });
@@ -2319,7 +2352,7 @@ function initMarketBasketRules() {
     const exportBtn = document.getElementById("exportBasketRulesBtn");
 
     if (slider) {
-        slider.addEventListener("input", refreshMarketBasketRules);
+        slider.addEventListener("input", nexusDebounce(refreshMarketBasketRules, 150));
         slider.addEventListener("change", refreshMarketBasketRules);
     }
     if (exportBtn) {
@@ -3368,7 +3401,7 @@ function initCustomerLedger() {
     }
 
     if (filterSelect) filterSelect.addEventListener("change", renderLedger);
-    if (searchInput) searchInput.addEventListener("input", renderLedger);
+    if (searchInput) searchInput.addEventListener("input", nexusDebounce(renderLedger, 120));
     if (exportBtn) {
         exportBtn.addEventListener("click", () => {
             downloadCSV("customer_ledger_export.csv", ledgerExportCache);
@@ -3744,9 +3777,10 @@ async function initInventoryMart() {
             });
         }
 
+        const debouncedInv = nexusDebounce(refreshInventorySimulator, 140);
         [skuSelect, slSelect, ltSlider, multSlider].forEach(el => {
             if (el) {
-                el.addEventListener("input", refreshInventorySimulator);
+                el.addEventListener("input", debouncedInv);
                 el.addEventListener("change", refreshInventorySimulator);
             }
         });
@@ -4145,9 +4179,10 @@ function initCausalUpliftLab() {
     const disc = document.getElementById("causalDiscountSlider");
     const applyBtn = document.getElementById("btnApplyCausalAudienceBtn");
 
+    const debouncedCausal = nexusDebounce(refreshCausalUpliftLab, 140);
     [topK, disc].forEach(el => {
         if (el) {
-            el.addEventListener("input", refreshCausalUpliftLab);
+            el.addEventListener("input", debouncedCausal);
             el.addEventListener("change", refreshCausalUpliftLab);
         }
     });
@@ -5425,6 +5460,7 @@ function initChartDefaults() {
     if (window.Chart) {
         Chart.defaults.font.family = "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif";
         Chart.defaults.color = "#A1A1AA";
+        Chart.defaults.animation = { duration: 160 };
         Chart.defaults.plugins.tooltip.backgroundColor = "rgba(10, 10, 12, 0.94)";
         Chart.defaults.plugins.tooltip.titleColor = "#FFFFFF";
         Chart.defaults.plugins.tooltip.bodyColor = "#F1F5F9";
@@ -5442,12 +5478,19 @@ function initScrollToTop() {
     const btn = document.getElementById("scrollToTopBtn");
     if (!btn) return;
 
+    let isVisible = false;
+    let rafPending = false;
     window.addEventListener("scroll", () => {
-        if (window.scrollY > 350) {
-            btn.classList.add("visible");
-        } else {
-            btn.classList.remove("visible");
-        }
+        if (rafPending) return;
+        rafPending = true;
+        requestAnimationFrame(() => {
+            rafPending = false;
+            const shouldShow = window.scrollY > 350;
+            if (shouldShow !== isVisible) {
+                isVisible = shouldShow;
+                btn.classList.toggle("visible", shouldShow);
+            }
+        });
     }, { passive: true });
 
     btn.addEventListener("click", () => {
@@ -8422,8 +8465,20 @@ function initSurvivalXaiLab() {
 
     if (cohortSelect) cohortSelect.addEventListener("change", refreshKaplanMeierCohortCharts);
     if (explainBtn) explainBtn.addEventListener("click", refreshCustomerXaiAndCounterfactual);
+    const debouncedSurvival = nexusDebounce(refreshCustomerXaiAndCounterfactual, 150);
     [recSlider, freqSlider, aovSlider].forEach(el => {
-        if (el) el.addEventListener("input", refreshCustomerXaiAndCounterfactual);
+        if (el) {
+            el.addEventListener("input", () => {
+                const rLbl = document.getElementById("xaiRecencyLbl");
+                const fLbl = document.getElementById("xaiFreqLbl");
+                const aLbl = document.getElementById("xaiAovLbl");
+                if (rLbl && recSlider) rLbl.textContent = `${recSlider.value} days`;
+                if (fLbl && freqSlider) fLbl.textContent = `+${freqSlider.value} orders`;
+                if (aLbl && aovSlider) aLbl.textContent = `+${aovSlider.value}%`;
+                debouncedSurvival();
+            });
+            el.addEventListener("change", refreshCustomerXaiAndCounterfactual);
+        }
     });
 }
 
