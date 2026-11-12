@@ -2456,12 +2456,115 @@ async function refreshPersistenceStatus(checkpoint = false) {
 
 function initPersistenceTelemetry() {
     refreshPersistenceStatus(false);
+    initAutonomousWatchdog();
     if (PERSISTENCE_WIRED) return;
     PERSISTENCE_WIRED = true;
     const refreshBtn = document.getElementById("btnRefreshPersistence");
     const checkpointBtn = document.getElementById("btnCheckpointWal");
     if (refreshBtn) refreshBtn.addEventListener("click", () => refreshPersistenceStatus(false));
     if (checkpointBtn) checkpointBtn.addEventListener("click", () => refreshPersistenceStatus(true));
+}
+
+// =============================================================================
+// PHASE 20: AUTONOMOUS CROSS-ENGINE TELEMETRY WATCHDOG
+// =============================================================================
+let WATCHDOG_WIRED = false;
+
+function renderWatchdogSnapshot(snap) {
+    const badge = document.getElementById("watchdogOverallBadge");
+    const grid = document.getElementById("watchdogSubsystemsGrid");
+    const list = document.getElementById("watchdogDirectivesList");
+    if (!snap || !grid || !list) return;
+
+    const score = Number(snap.health_score ?? 100);
+    if (badge) {
+        badge.textContent = `HEALTH SCORE: ${score.toFixed(1)}/100 (${snap.overall_status})`;
+        badge.className = `badge-tag ${score < 60 ? "red" : score < 85 ? "gold" : "green"}`;
+    }
+
+    grid.innerHTML = (snap.subsystems || []).map(sub => {
+        const cls = sub.status === "CRITICAL" ? "text-red" : sub.status === "WARNING" ? "text-gold" : "text-green";
+        return `
+            <div class="btyd-stat-box">
+                <strong>${sub.name}</strong>
+                <div class="stat-val ${cls}" style="font-size:1.05rem;">${sub.metric}</div>
+                <small style="color:var(--text-muted);">${sub.status}</small>
+            </div>
+        `;
+    }).join("");
+
+    const dirs = snap.directives || [];
+    if (!dirs.length) {
+        list.innerHTML = `<div class="notif-item success"><strong>All 4 Subsystems Nominal</strong><p>Inventory EOQ, Cohort Retention, MLOps Drift PSI, and Fraud Quarantine are within safe operational thresholds.</p></div>`;
+    } else {
+        list.innerHTML = dirs.map(d => {
+            const cls = d.severity === "CRITICAL" ? "critical" : "info";
+            return `
+                <div class="notif-item ${cls}" style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:0;">
+                    <div>
+                        <div class="notif-badge">${d.subsystem} • ${d.severity}</div>
+                        <strong>${d.title}</strong>
+                        <p style="margin-top:0.15rem;">${d.detail}</p>
+                    </div>
+                    <button type="button" class="btn btn-outline btn-xs" onclick="switchTab('${d.target_tab}')">${d.cta_label} &rarr;</button>
+                </div>
+            `;
+        }).join("");
+    }
+}
+
+async function runAutonomousWatchdog(triggerPost = false, simulateStress = false) {
+    let snap = null;
+    try {
+        const url = triggerPost
+            ? "http://localhost:8000/api/v1/watchdog/sweep"
+            : "http://localhost:8000/api/v1/watchdog/status";
+        const opts = triggerPost
+            ? {
+                method: "POST",
+                headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
+                body: JSON.stringify({ simulate_stress: simulateStress, auto_remediate: simulateStress })
+            }
+            : { method: "GET", headers: window.getAuthHeaders() };
+        const res = await fetch(url, opts);
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            if (triggerPost) showToast("Watchdog Blocked", err.detail || `HTTP ${res.status}`, "alert");
+            return;
+        }
+        const data = await res.json();
+        snap = triggerPost ? data.sweep : data.latest;
+        if (triggerPost && snap) {
+            showToast("4-Engine Watchdog Sweep Complete", `Health Score: ${snap.health_score}/100 (${(snap.directives || []).length} directives)`, snap.health_score < 70 ? "alert" : "info");
+            logAuditEvent("Watchdog", `Executed Phase 20 4-Engine Sweep (${snap.sweep_id}, Health ${snap.health_score}/100)`);
+        }
+    } catch (_e) {
+        snap = {
+            sweep_id: "SWP-LOCAL",
+            health_score: simulateStress ? 48.5 : 86.0,
+            overall_status: simulateStress ? "CRITICAL" : "HEALTHY",
+            subsystems: [
+                { key: "inventory", name: "Inventory & Stockout", status: simulateStress ? "CRITICAL" : "WARNING", metric: simulateStress ? "5 SKUs <= ROP" : "3 SKUs <= ROP" },
+                { key: "cohorts", name: "Cohort Retention", status: "HEALTHY", metric: "75.5% Champion Stay" },
+                { key: "drift", name: "MLOps Drift PSI", status: simulateStress ? "CRITICAL" : "HEALTHY", metric: simulateStress ? "4 Shifted Features" : "0 Shifted Features" },
+                { key: "fraud", name: "Fraud Quarantine", status: "WARNING", metric: "2 Pending Holds" }
+            ],
+            directives: [
+                { severity: simulateStress ? "CRITICAL" : "WARNING", subsystem: "Inventory EOQ", title: "Flagship SKUs approaching ROP", detail: "Approve EOQ replenishment POs in Inventory Mart.", target_tab: "inventory-mart", cta_label: "Open EOQ Optimizer" }
+            ]
+        };
+    }
+    if (snap) renderWatchdogSnapshot(snap);
+}
+
+function initAutonomousWatchdog() {
+    runAutonomousWatchdog(false, false);
+    if (WATCHDOG_WIRED) return;
+    WATCHDOG_WIRED = true;
+    const sweepBtn = document.getElementById("btnRunWatchdogSweep");
+    const stressBtn = document.getElementById("btnRunStressWatchdogSweep");
+    if (sweepBtn) sweepBtn.addEventListener("click", () => runAutonomousWatchdog(true, false));
+    if (stressBtn) stressBtn.addEventListener("click", () => runAutonomousWatchdog(true, true));
 }
 
 async function evaluateDriftScenario(scenario, clickedBtn = null) {
@@ -4531,6 +4634,13 @@ const API_ENDPOINTS = {
         url: "http://localhost:8000/api/v1/system/persistence-status",
         payload: { info: "GET endpoint; returns SQLite WAL size and persisted row counts." },
         handler: () => ({ status: "persistent", engine: "SQLite3", journal_mode: "WAL", total_persisted_records: 0 })
+    },
+    watchdog: {
+        method: "GET",
+        path: "/api/v1/watchdog/status",
+        url: "http://localhost:8000/api/v1/watchdog/status",
+        payload: { info: "GET endpoint; returns 4-engine Watchdog health score and remediation directives." },
+        handler: () => ({ status: "online", latest: { health_score: 84.0, overall_status: "ATTENTION" } })
     },
     rbac: {
         method: "GET",

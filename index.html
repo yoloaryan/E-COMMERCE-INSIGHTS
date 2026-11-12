@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=7.11">
+    <link rel="stylesheet" href="style.css?v=7.12">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -1257,6 +1257,29 @@
                     </div>
                     <p style="font-family:var(--font-mono);font-size:0.74rem;color:var(--text-muted);margin:0;" id="persistDbPathLabel">Database Path: Initializing...</p>
                 </div>
+
+                <!-- Phase 20: Autonomous Telemetry Watchdog & Cross-Engine Digest -->
+                <div class="table-card" id="autonomousWatchdogCard" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <div>
+                            <h3>🤖 Autonomous Cross-Engine Telemetry Watchdog</h3>
+                            <p class="card-sub">Unified health sweep spanning Inventory EOQ Stockouts, Cohort Migration, MLOps Drift &amp; Fraud Quarantine</p>
+                        </div>
+                        <div class="filter-actions" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+                            <span class="badge-tag green" id="watchdogOverallBadge">HEALTH SCORE: --/100</span>
+                            <button type="button" class="btn btn-primary btn-sm" id="btnRunWatchdogSweep">⚡ Run 4-Engine Sweep</button>
+                            <button type="button" class="btn btn-secondary btn-sm" id="btnRunStressWatchdogSweep">🧪 Stress Sweep</button>
+                        </div>
+                    </div>
+
+                    <div class="btyd-stat-grid" id="watchdogSubsystemsGrid" style="margin-bottom: 1rem;">
+                        <!-- Populated dynamically by app.js -->
+                    </div>
+
+                    <div id="watchdogDirectivesList" style="display:flex;flex-direction:column;gap:0.65rem;">
+                        <!-- Prioritized directives rendered here -->
+                    </div>
+                </div>
             </section>
 
             <!-- ============================================================= -->
@@ -1898,6 +1921,7 @@
                                     <option value="inventory">/api/v1/inventory/simulate-sku (EOQ &amp; Safety Stock)</option>
                                     <option value="cohorts">/api/v1/cohorts/retention-report (Cohort Heatmap &amp; NRR)</option>
                                     <option value="persistence">/api/v1/system/persistence-status (SQLite WAL Telemetry)</option>
+                                    <option value="watchdog">/api/v1/watchdog/status (4-Engine Health Watchdog)</option>
                                     <option value="rbac">/api/v1/auth/rbac-matrix (RBAC &amp; Tenant Governance)</option>
                                 </select>
                             </div>
@@ -3084,6 +3108,6 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=7.11"></script>
+    <script src="app.js?v=7.12"></script>
 </body>
 </html>

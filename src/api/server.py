@@ -14,7 +14,10 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parents[2]
 sys.path.append(str(ROOT_DIR))
 
+from contextlib import asynccontextmanager
+import asyncio
 import json
+import os
 from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
@@ -36,15 +39,45 @@ from src.models.anomaly_detection import AnomalyDetectionEngine, AnomalyRegistry
 from src.models.inventory_optimization import get_inventory_engine
 from src.models.cohort_analytics import get_cohort_engine
 from src.utils.state_store import get_state_store
+from src.api.watchdog import get_watchdog_engine
 
 MODELS_DIR = ROOT_DIR / "models"
 MANIFEST_PATH = MODELS_DIR / "model_manifest.json"
+
+
+@asynccontextmanager
+async def _app_lifespan(_app: FastAPI):
+    """Starts non-blocking autonomous watchdog sweep loop outside pytest runs."""
+    task = None
+    if not os.environ.get("PYTEST_CURRENT_TEST"):
+        async def _watchdog_loop():
+            # Initial baseline snapshot without stalling startup
+            await asyncio.sleep(2)
+            while True:
+                engine = get_watchdog_engine()
+                if engine.enabled:
+                    snap = engine.run_sweep(simulate_stress=False, auto_remediate=False, actor="scheduler")
+                    await ws_manager.broadcast({"type": "WATCHDOG_SWEEP_COMPLETED", "data": snap})
+                await asyncio.sleep(max(15, engine.interval_seconds))
+
+        task = asyncio.create_task(_watchdog_loop())
+    try:
+        yield
+    finally:
+        if task is not None:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
 
 # Initialize FastAPI App
 app = FastAPI(
     title="Nexus Retail AI | ML Serving Engine",
     description="Enterprise REST API for E-Commerce Customer Intelligence & Sales Prediction",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=_app_lifespan,
 )
 
 # Enable CORS for local development and cloud static hosting
@@ -323,6 +356,16 @@ class AddInventorySkuRequest(BaseModel):
 class SimulateCohortLiftRequest(BaseModel):
     month1_lift_pp: float = Field(default=5.0, ge=0.0, le=35.0)
     winback_recovery_pct: float = Field(default=20.0, ge=0.0, le=60.0)
+
+
+class WatchdogSweepRequest(BaseModel):
+    simulate_stress: bool = Field(default=False)
+    auto_remediate: bool = Field(default=False)
+
+
+class WatchdogConfigRequest(BaseModel):
+    enabled: Optional[bool] = Field(default=None)
+    interval_seconds: Optional[int] = Field(default=None, ge=15, le=3600)
 
 
 # -----------------------------------------------------------------------------
@@ -1900,6 +1943,70 @@ def checkpoint_persistence_wal(
         severity="INFO",
     )
     return {**diag, "status": "checkpointed"}
+
+
+# -----------------------------------------------------------------------------
+# Phase 20: Autonomous Telemetry Watchdog & Cross-Engine Digest Endpoints
+# -----------------------------------------------------------------------------
+@app.get("/api/v1/watchdog/status", tags=["Autonomous Telemetry Watchdog"])
+def get_watchdog_status():
+    """
+    Returns scheduler status, composite Executive Health Score, 4-subsystem badges,
+    prioritized action directives, and recent sweep history.
+    """
+    return get_watchdog_engine().get_status()
+
+
+@app.post("/api/v1/watchdog/sweep", tags=["Autonomous Telemetry Watchdog"])
+async def trigger_watchdog_sweep(
+    payload: WatchdogSweepRequest,
+    principal: Dict[str, Any] = Depends(require_permission("mlops:retrain")),
+):
+    """
+    Executes an on-demand 4-engine Watchdog sweep across Inventory, Cohorts, Drift & Fraud,
+    broadcasts real-time WebSocket updates, and records an audit event.
+    """
+    snapshot = get_watchdog_engine().run_sweep(
+        simulate_stress=payload.simulate_stress,
+        auto_remediate=payload.auto_remediate,
+        actor=principal.get("email", "admin@nexusretail.ai"),
+    )
+    SecurityRegistry().record_audit_event(
+        event_type="WATCHDOG_SWEEP",
+        actor_email=principal.get("email", "admin@nexusretail.ai"),
+        actor_role=principal.get("role", "admin"),
+        tenant_id=principal.get("tenant_id", "tenant_uk_flagship"),
+        action=f"Watchdog Sweep {snapshot['sweep_id']} completed (Health {snapshot['health_score']}/100, {len(snapshot['directives'])} directives)",
+        status_code=200,
+        severity="WARNING" if snapshot["health_score"] < 75.0 else "INFO",
+    )
+    await ws_manager.broadcast({
+        "type": "WATCHDOG_SWEEP_COMPLETED",
+        "data": snapshot,
+    })
+    return {"status": "success", "sweep": snapshot}
+
+
+@app.post("/api/v1/watchdog/config", tags=["Autonomous Telemetry Watchdog"])
+def configure_watchdog_scheduler(
+    payload: WatchdogConfigRequest,
+    principal: Dict[str, Any] = Depends(require_permission("mlops:retrain")),
+):
+    """Updates periodic Watchdog scheduler enablement and interval seconds."""
+    cfg = get_watchdog_engine().configure(
+        enabled=payload.enabled,
+        interval_seconds=payload.interval_seconds,
+    )
+    SecurityRegistry().record_audit_event(
+        event_type="WATCHDOG_CONFIG",
+        actor_email=principal.get("email", "admin@nexusretail.ai"),
+        actor_role=principal.get("role", "admin"),
+        tenant_id=principal.get("tenant_id", "tenant_uk_flagship"),
+        action=f"Updated Watchdog scheduler (enabled={cfg['enabled']}, interval={cfg['interval_seconds']}s)",
+        status_code=200,
+        severity="INFO",
+    )
+    return {"status": "updated", "scheduler": cfg}
 
 
 if __name__ == "__main__":
