@@ -21,6 +21,34 @@ function yieldToMain() {
     return new Promise(resolve => setTimeout(resolve, 0));
 }
 
+const MODULE_LOADERS = {
+    "pricing-lab": { path: "./js/modules/pricing-lab.js?v=7.23", initName: "initPricingLab" },
+    "fraud-radar": { path: "./js/modules/fraud-radar.js?v=7.23", initName: "initFraudRadar" },
+    "data-warehouse": { path: "./js/modules/warehouse-lab.js?v=7.23", initName: "initDataWarehouseTab" },
+    "churn": { path: "./js/modules/survival-xai.js?v=7.23", initName: "initSurvivalXaiLab" },
+    "transaction-simulator": { path: "./js/modules/tax-invoice.js?v=7.23", initName: "initTaxInvoiceStudio" },
+};
+const LOADED_MODULES = new Map();
+
+function ensureTabModuleLoaded(tabKey) {
+    const spec = MODULE_LOADERS[tabKey];
+    if (!spec) return Promise.resolve(null);
+    if (!LOADED_MODULES.has(tabKey)) {
+        const modPromise = import(spec.path)
+            .then(mod => {
+                if (typeof mod[spec.initName] === "function") mod[spec.initName]();
+                return mod;
+            })
+            .catch(err => {
+                console.warn(`[Nexus Loader] Deferred module load failed for ${tabKey}:`, err);
+                LOADED_MODULES.delete(tabKey);
+                return null;
+            });
+        LOADED_MODULES.set(tabKey, modPromise);
+    }
+    return LOADED_MODULES.get(tabKey);
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     // Immediate critical shell & visible landing module
     initChartDefaults();
@@ -34,7 +62,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     initOverviewTab();
     initLivePipelineSync();
 
-    // Yield to main thread between deferred background tab initializers to maintain <50ms INP
+    // Yield to main thread between core tab initializers to maintain <50ms INP
     const deferredTasks = [
         initCohortHeatmap,
         initSegmentationTab,
@@ -53,7 +81,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         initSkuAndRestockModals,
         initCampaignStudio,
         initTransactionSimulator,
-        () => { if (typeof initTaxInvoiceStudio === "function") initTaxInvoiceStudio(); },
         initLiveOrderWebSocket,
         initAuditLogger,
         initApiConsole,
@@ -61,10 +88,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         initDatasetImporter,
         initAiCopilot,
         initWebhooksHub,
-        initPricingLab,
-        initFraudRadar,
         initEnterpriseSecurity,
-        initDataWarehouseTab,
     ];
 
     for (let i = 0; i < deferredTasks.length; i++) {
@@ -74,6 +98,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (i % 3 === 2) {
             await yieldToMain();
         }
+    }
+
+    // If user jumped directly via hash/quick-action, ensure active tab's split bundle is mounted
+    const activeNav = document.querySelector(".nav-item.active");
+    if (activeNav) {
+        ensureTabModuleLoaded(activeNav.getAttribute("data-tab"));
     }
 });
 
@@ -576,6 +606,8 @@ function switchTab(targetTab) {
         else p.classList.remove("active");
     });
 
+    ensureTabModuleLoaded(targetTab);
+
     if (tabMeta[targetTab]) {
         if (crumbCurrent) crumbCurrent.textContent = tabMeta[targetTab].title.split(" &")[0];
         if (crumbSection) {
@@ -610,8 +642,11 @@ function initNavigation() {
     }
 
     navItems.forEach(item => {
+        const tabKey = item.getAttribute("data-tab");
+        item.addEventListener("mouseenter", () => ensureTabModuleLoaded(tabKey), { once: true, passive: true });
+        item.addEventListener("focus", () => ensureTabModuleLoaded(tabKey), { once: true, passive: true });
         item.addEventListener("click", () => {
-            switchTab(item.getAttribute("data-tab"));
+            switchTab(tabKey);
             if (window.innerWidth <= 1024) {
                 closeMobileSidebar();
             }
@@ -866,8 +901,8 @@ async function refreshFinancialWaterfall() {
     let sim = null;
     try {
         const [rRes, sRes] = await Promise.all([
-            fetch(`http://localhost:8000/api/v1/finance/waterfall-report?country=${encodeURIComponent(country)}`),
-            fetch("http://localhost:8000/api/v1/finance/simulate-margin-recovery", {
+            fetch(nexusApiUrl(`/api/v1/finance/waterfall-report?country=${encodeURIComponent(country)}`)),
+            fetch(nexusApiUrl("/api/v1/finance/simulate-margin-recovery"), {
                 method: "POST",
                 headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
                 body: JSON.stringify({ return_reduction_pct: redPct, country, cogs_ratio: 0.58 })
@@ -1338,7 +1373,7 @@ async function refreshRetentionLiftSimulator() {
 
     let sim = null;
     try {
-        const res = await fetch("http://localhost:8000/api/v1/cohorts/simulate-lift", {
+        const res = await fetch(nexusApiUrl("/api/v1/cohorts/simulate-lift"), {
             method: "POST",
             headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({ month1_lift_pp: liftPp, winback_recovery_pct: winPct })
@@ -1376,7 +1411,7 @@ async function loadCohortHeatmapFromApi() {
 
     let report = null;
     try {
-        const res = await fetch(`http://localhost:8000/api/v1/cohorts/retention-report?metric=${COHORT_METRIC_MODE}&country=${encodeURIComponent(selectedCountry)}`);
+        const res = await fetch(nexusApiUrl(`/api/v1/cohorts/retention-report?metric=${COHORT_METRIC_MODE}&country=${encodeURIComponent(selectedCountry)}`));
         if (res.ok) report = await res.json();
     } catch (_e) {
         // Fallback offline matrix
@@ -1402,7 +1437,7 @@ async function initCohortAndMigrationAnalytics() {
 
     let mig = null;
     try {
-        const res = await fetch("http://localhost:8000/api/v1/cohorts/segment-migration");
+        const res = await fetch(nexusApiUrl("/api/v1/cohorts/segment-migration"));
         if (res.ok) mig = await res.json();
     } catch (_e) {
         // Fallback offline migration
@@ -1815,7 +1850,7 @@ async function renderBTYDDiagnostic(cid) {
 
     // 1. Attempt live inference from FastAPI ML microservice
     try {
-        const res = await fetch(`http://localhost:8000/api/v1/clv/customer/${cid}`, { mode: "cors" });
+        const res = await fetch(nexusApiUrl(`/api/v1/clv/customer/${cid}`), { mode: "cors" });
         if (res.ok) {
             data = await res.json();
             isLiveApi = true;
@@ -2284,7 +2319,7 @@ async function refreshMarketBasketRules() {
 
     let report = null;
     try {
-        const res = await fetch(`http://localhost:8000/api/v1/recommendations/basket-rules?min_lift=${minLift}&min_support_pct=0.5&limit=18`);
+        const res = await fetch(nexusApiUrl(`/api/v1/recommendations/basket-rules?min_lift=${minLift}&min_support_pct=0.5&limit=18`));
         if (res.ok) report = await res.json();
     } catch (_e) {
         // Offline association rules fallback below
@@ -2601,7 +2636,7 @@ async function openCustomerDrawer(cid) {
     if (backdrop) backdrop.classList.add("open");
 
     try {
-        const res = await fetch(`http://localhost:8000/api/v1/customers/${encodeURIComponent(String(cid))}/360`);
+        const res = await fetch(nexusApiUrl(`/api/v1/customers/${encodeURIComponent(String(cid))}/360`));
         if (res.ok) {
             const payload = await res.json();
             if (payload && payload.profile) {
@@ -2671,7 +2706,7 @@ function initMLOpsConsole() {
             appendTermLog("[Pipeline] Step 2/4: Rebuilding RFM feature stores and 7-day lagged windows...");
 
             try {
-                const res = await fetch("http://localhost:8000/api/v1/mlops/retrain", {
+                const res = await fetch(nexusApiUrl("/api/v1/mlops/retrain"), {
                     method: "POST",
                     headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
                     body: JSON.stringify({ trigger_source: "admin_web_console", model_types: ["all"] })
@@ -2762,8 +2797,8 @@ async function refreshPersistenceStatus(checkpoint = false) {
 
     try {
         const url = checkpoint
-            ? "http://localhost:8000/api/v1/system/persistence/checkpoint"
-            : "http://localhost:8000/api/v1/system/persistence-status";
+            ? nexusApiUrl("/api/v1/system/persistence/checkpoint")
+            : nexusApiUrl("/api/v1/system/persistence-status");
         const res = await fetch(url, {
             method: checkpoint ? "POST" : "GET",
             headers: window.getAuthHeaders({ "Content-Type": "application/json" })
@@ -2854,8 +2889,8 @@ async function runAutonomousWatchdog(triggerPost = false, simulateStress = false
     let snap = null;
     try {
         const url = triggerPost
-            ? "http://localhost:8000/api/v1/watchdog/sweep"
-            : "http://localhost:8000/api/v1/watchdog/status";
+            ? nexusApiUrl("/api/v1/watchdog/sweep")
+            : nexusApiUrl("/api/v1/watchdog/status");
         const opts = triggerPost
             ? {
                 method: "POST",
@@ -2945,7 +2980,7 @@ async function evaluateDriftScenario(scenario, clickedBtn = null) {
 
     // 1. Attempt live query to FastAPI MLOps endpoint
     try {
-        const resp = await fetch(`http://localhost:8000/api/v1/mlops/drift-report?scenario=${scenario}`);
+        const resp = await fetch(nexusApiUrl(`/api/v1/mlops/drift-report?scenario=${scenario}`));
         if (resp.ok) {
             report = await resp.json();
             if (apiBadge) {
@@ -3351,7 +3386,7 @@ function initCustomerLedger() {
 
         let rows = null;
         try {
-            const res = await fetch(`http://localhost:8000/api/v1/customers/ledger?segment=${encodeURIComponent(filter)}&search=${encodeURIComponent(query)}&limit=40`);
+            const res = await fetch(nexusApiUrl(`/api/v1/customers/ledger?segment=${encodeURIComponent(filter)}&search=${encodeURIComponent(query)}&limit=40`));
             if (res.ok) {
                 const payload = await res.json();
                 if (Array.isArray(payload.customers)) {
@@ -3620,7 +3655,7 @@ async function refreshInventorySimulator() {
 
     let simData = null;
     try {
-        const res = await fetch("http://localhost:8000/api/v1/inventory/simulate-sku", {
+        const res = await fetch(nexusApiUrl("/api/v1/inventory/simulate-sku"), {
             method: "POST",
             headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({
@@ -3709,7 +3744,7 @@ async function initInventoryMart() {
 
     let report = null;
     try {
-        const res = await fetch(`http://localhost:8000/api/v1/inventory/optimization-report?service_level=${serviceLevel}&lead_time_days=${leadDays}`);
+        const res = await fetch(nexusApiUrl(`/api/v1/inventory/optimization-report?service_level=${serviceLevel}&lead_time_days=${leadDays}`));
         if (res.ok) report = await res.json();
     } catch (_e) {
         // Fallback offline computation
@@ -3800,7 +3835,7 @@ async function initInventoryMart() {
                 const lt = parseInt(ltSlider ? ltSlider.value : "7", 10);
                 issuePoBtn.disabled = true;
                 try {
-                    const res = await fetch("http://localhost:8000/api/v1/inventory/purchase-orders", {
+                    const res = await fetch(nexusApiUrl("/api/v1/inventory/purchase-orders"), {
                         method: "POST",
                         headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
                         body: JSON.stringify({
@@ -3911,7 +3946,7 @@ function initCampaignStudio() {
             const original = btn.textContent;
             btn.textContent = "⏳ Ping...";
             try {
-                const res = await fetch("http://localhost:8000/api/v1/campaigns/test-channel", {
+                const res = await fetch(nexusApiUrl("/api/v1/campaigns/test-channel"), {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ channel: ch })
@@ -3934,7 +3969,7 @@ function initCampaignStudio() {
             btnTestWatchdog.disabled = true;
             btnTestWatchdog.textContent = "⏳ Triggering...";
             try {
-                const res = await fetch("http://localhost:8000/api/v1/campaigns/trigger-watchdog", {
+                const res = await fetch(nexusApiUrl("/api/v1/campaigns/trigger-watchdog"), {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -3980,7 +4015,7 @@ function initCampaignStudio() {
             launchBtn.textContent = "⏳ Dispatching Across Channels...";
 
             try {
-                const res = await fetch("http://localhost:8000/api/v1/campaigns/dispatch", {
+                const res = await fetch(nexusApiUrl("/api/v1/campaigns/dispatch"), {
                     method: "POST",
                     headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
                     body: JSON.stringify({
@@ -4073,7 +4108,7 @@ async function refreshCausalUpliftLab() {
 
     let rep = null;
     try {
-        const res = await fetch(`http://localhost:8000/api/v1/causal/uplift-report?top_k_pct=${topK}&discount_pct=${disc}`);
+        const res = await fetch(nexusApiUrl(`/api/v1/causal/uplift-report?top_k_pct=${topK}&discount_pct=${disc}`));
         if (res.ok) rep = await res.json();
     } catch (_e) {
         // Offline causal fallback below
@@ -4325,10 +4360,10 @@ function initLiveOrderWebSocket() {
         }
 
         try {
-            liveOrderSocket = new WebSocket("ws://localhost:8000/ws/live-orders");
+            liveOrderSocket = new WebSocket(nexusWsUrl("/ws/live-orders"));
 
             liveOrderSocket.onopen = () => {
-                console.log("[Nexus WebSocket] Connected to live retail order stream (ws://localhost:8000/ws/live-orders)");
+                console.log(`[Nexus WebSocket] Connected to live retail order stream (${nexusWsUrl('/ws/live-orders')})`);
                 if (wsBadge) {
                     wsBadge.textContent = "● WS STREAM ACTIVE :8000";
                     wsBadge.className = "badge green ws-live-pulse";
@@ -4469,7 +4504,7 @@ function initTransactionSimulator() {
         // 1. Attempt broadcast via FastAPI REST endpoint (which relays to all WebSockets)
         let broadcasted = false;
         try {
-            const res = await fetch("http://localhost:8000/api/v1/orders/inject", {
+            const res = await fetch(nexusApiUrl("/api/v1/orders/inject"), {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
@@ -4899,7 +4934,7 @@ function initSkuAndRestockModals() {
             const burn = parseInt(document.getElementById("modalSkuBurn").value, 10) || 10;
 
             try {
-                const res = await fetch("http://localhost:8000/api/v1/inventory/skus", {
+                const res = await fetch(nexusApiUrl("/api/v1/inventory/skus"), {
                     method: "POST",
                     headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
                     body: JSON.stringify({
@@ -4983,7 +5018,7 @@ function initSkuAndRestockModals() {
             const targetCode = currentRestockItem.code;
 
             try {
-                const res = await fetch("http://localhost:8000/api/v1/inventory/purchase-orders", {
+                const res = await fetch(nexusApiUrl("/api/v1/inventory/purchase-orders"), {
                     method: "POST",
                     headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
                     body: JSON.stringify({
@@ -5022,7 +5057,7 @@ const API_ENDPOINTS = {
     churn: {
         method: "POST",
         path: "/api/v1/churn/predict",
-        url: "http://localhost:8000/api/v1/churn/predict",
+        url: nexusApiUrl("/api/v1/churn/predict"),
         payload: {
             Recency: 84,
             HistoricalFrequency: 17,
@@ -5050,7 +5085,7 @@ const API_ENDPOINTS = {
     forecast: {
         method: "POST",
         path: "/api/v1/forecast/sales",
-        url: "http://localhost:8000/api/v1/forecast/sales",
+        url: nexusApiUrl("/api/v1/forecast/sales"),
         payload: {
             DayOfWeek: 3,
             DayOfMonth: 15,
@@ -5078,7 +5113,7 @@ const API_ENDPOINTS = {
     recommend: {
         method: "GET",
         path: "/api/v1/recommend/item/22423",
-        url: "http://localhost:8000/api/v1/recommend/item/22423?top_n=4",
+        url: nexusApiUrl("/api/v1/recommend/item/22423?top_n=4"),
         payload: { stock_code: "22423", top_n: 4 },
         handler: (req) => {
             const code = req.stock_code || "22423";
@@ -5093,7 +5128,7 @@ const API_ENDPOINTS = {
     segment: {
         method: "POST",
         path: "/api/v1/segment/rfm",
-        url: "http://localhost:8000/api/v1/segment/rfm",
+        url: nexusApiUrl("/api/v1/segment/rfm"),
         payload: { Recency: 10, Frequency: 15, Monetary: 6500.0 },
         handler: (req) => ({
             cluster_id: (req.Monetary || 0) > 2500 ? 1 : 3,
@@ -5104,7 +5139,7 @@ const API_ENDPOINTS = {
     pricing: {
         method: "POST",
         path: "/api/v1/pricing/simulate-price-change",
-        url: "http://localhost:8000/api/v1/pricing/simulate-price-change",
+        url: nexusApiUrl("/api/v1/pricing/simulate-price-change"),
         payload: { category: "Kitchen & Dining", price_change_pct: 12.0, cogs_ratio: 0.47 },
         handler: (req) => ({
             status: "success",
@@ -5116,7 +5151,7 @@ const API_ENDPOINTS = {
     fraud: {
         method: "POST",
         path: "/api/v1/fraud/score-transaction",
-        url: "http://localhost:8000/api/v1/fraud/score-transaction",
+        url: nexusApiUrl("/api/v1/fraud/score-transaction"),
         payload: { amount_gbp: 18500.0, total_units: 6200, line_items: 1, customer_id: "Guest", hour_of_day: 2, is_guest: true, auto_quarantine: false },
         handler: (req) => ({
             status: "success",
@@ -5126,7 +5161,7 @@ const API_ENDPOINTS = {
     inventory: {
         method: "POST",
         path: "/api/v1/inventory/simulate-sku",
-        url: "http://localhost:8000/api/v1/inventory/simulate-sku",
+        url: nexusApiUrl("/api/v1/inventory/simulate-sku"),
         payload: { stock_code: "22423", service_level: 0.95, lead_time_days: 7, demand_multiplier: 1.0, horizon_days: 30 },
         handler: (req) => ({
             status: "success",
@@ -5136,84 +5171,84 @@ const API_ENDPOINTS = {
     cohorts: {
         method: "GET",
         path: "/api/v1/cohorts/retention-report",
-        url: "http://localhost:8000/api/v1/cohorts/retention-report?metric=customers&country=All",
+        url: nexusApiUrl("/api/v1/cohorts/retention-report?metric=customers&country=All"),
         payload: { info: "GET endpoint; query parameters ?metric=customers|revenue&country=All" },
         handler: () => buildLocalCohortFallback("customers")
     },
     persistence: {
         method: "GET",
         path: "/api/v1/system/persistence-status",
-        url: "http://localhost:8000/api/v1/system/persistence-status",
+        url: nexusApiUrl("/api/v1/system/persistence-status"),
         payload: { info: "GET endpoint; returns SQLite WAL size and persisted row counts." },
         handler: () => ({ status: "persistent", engine: "SQLite3", journal_mode: "WAL", total_persisted_records: 0 })
     },
     watchdog: {
         method: "GET",
         path: "/api/v1/watchdog/status",
-        url: "http://localhost:8000/api/v1/watchdog/status",
+        url: nexusApiUrl("/api/v1/watchdog/status"),
         payload: { info: "GET endpoint; returns 4-engine Watchdog health score and remediation directives." },
         handler: () => ({ status: "online", latest: { health_score: 84.0, overall_status: "ATTENTION" } })
     },
     basket_rules: {
         method: "GET",
         path: "/api/v1/recommendations/basket-rules",
-        url: "http://localhost:8000/api/v1/recommendations/basket-rules?min_lift=1.2&limit=12",
+        url: nexusApiUrl("/api/v1/recommendations/basket-rules?min_lift=1.2&limit=12"),
         payload: { info: "GET endpoint; mines pairwise Support, Confidence, and Lift across checkout baskets." },
         handler: () => ({ status: "healthy", summary: { top_lift: 4.18, total_matching_rules: 4 } })
     },
     finance: {
         method: "GET",
         path: "/api/v1/finance/waterfall-report",
-        url: "http://localhost:8000/api/v1/finance/waterfall-report?country=All&cogs_ratio=0.58",
+        url: nexusApiUrl("/api/v1/finance/waterfall-report?country=All&cogs_ratio=0.58"),
         payload: { info: "GET endpoint; returns Gross-to-Net P&L margin waterfall and high-return SKUs." },
         handler: () => ({ status: "healthy", summary: { return_rate_pct: 8.42 } })
     },
     briefing: {
         method: "GET",
         path: "/api/v1/reports/executive-briefing",
-        url: "http://localhost:8000/api/v1/reports/executive-briefing?country=All",
+        url: nexusApiUrl("/api/v1/reports/executive-briefing?country=All"),
         payload: { info: "GET endpoint; aggregates all 6 core operational engines into a Boardroom Briefing." },
         handler: () => ({ status: "success", platform_version: "Nexus Retail AI v4.0-prod" })
     },
     customer_360: {
         method: "GET",
         path: "/api/v1/customers/14646/360",
-        url: "http://localhost:8000/api/v1/customers/14646/360",
+        url: nexusApiUrl("/api/v1/customers/14646/360"),
         payload: { info: "GET endpoint; retrieves full Customer-360 dossier, return rate, and NBA." },
         handler: () => ({ status: "success", profile: MASTER_CUSTOMERS[1] })
     },
     warehouse_dq: {
         method: "GET",
         path: "/api/v1/warehouse/data-quality",
-        url: "http://localhost:8000/api/v1/warehouse/data-quality",
+        url: nexusApiUrl("/api/v1/warehouse/data-quality"),
         payload: { info: "GET endpoint; executes 7 automated SQL data-quality contracts on the Star Schema." },
         handler: () => ({ status: "CERTIFIED_CLEAN", score_pct: 100.0, passed_checks: 7, total_checks: 7 })
     },
     causal: {
         method: "GET",
         path: "/api/v1/causal/uplift-report",
-        url: "http://localhost:8000/api/v1/causal/uplift-report?top_k_pct=30&discount_pct=15",
+        url: nexusApiUrl("/api/v1/causal/uplift-report?top_k_pct=30&discount_pct=15"),
         payload: { info: "GET endpoint; returns T-Learner 4-quadrant CATE uplift and Difference-in-Differences ROI." },
         handler: () => ({ status: "healthy", model: "T-Learner (GradientBoostingRegressor)" })
     },
     survival_xai: {
         method: "GET",
         path: "/api/v1/survival/kaplan-meier-report",
-        url: "http://localhost:8000/api/v1/survival/kaplan-meier-report?segment=All",
+        url: nexusApiUrl("/api/v1/survival/kaplan-meier-report?segment=All"),
         payload: { info: "GET endpoint; returns Kaplan-Meier cohort S(t) curves, Greenwood 95% CIs, and RMST-365 benchmarks." },
         handler: () => ({ status: "healthy", estimator: "Kaplan-Meier + Weibull AFT + Exact Shapley" })
     },
     tax_invoice: {
         method: "GET",
         path: "/api/v1/invoices/536365",
-        url: "http://localhost:8000/api/v1/invoices/536365?tax_regime=GST&supply_state=Karnataka",
+        url: nexusApiUrl("/api/v1/invoices/536365?tax_regime=GST&supply_state=Karnataka"),
         payload: { info: "GET endpoint; returns Indian GST (CGST/SGST/IGST + HSN) & VAT breakdown." },
         handler: () => ({ status: "success", document_type: "TAX INVOICE", tax_regime: "GST" })
     },
     rbac: {
         method: "GET",
         path: "/api/v1/auth/rbac-matrix",
-        url: "http://localhost:8000/api/v1/auth/rbac-matrix",
+        url: nexusApiUrl("/api/v1/auth/rbac-matrix"),
         payload: { info: "GET endpoint; no request body needed." },
         handler: () => ({ status: "success", roles: ["admin", "lead_ds", "growth", "supply"] })
     }
@@ -5234,14 +5269,23 @@ function initApiConsole() {
 
     if (!endpointSelect || !requestJson || !responseJson) return;
 
+    function getLiveEndpointUrl(ep) {
+        if (!ep) return "";
+        const raw = ep.url || ep.path || "";
+        const qIdx = raw.indexOf("?");
+        const query = qIdx >= 0 ? raw.slice(qIdx) : "";
+        return typeof nexusApiUrl === "function" ? nexusApiUrl((ep.path || "") + query) : raw;
+    }
+
     function setEndpoint(key) {
         const ep = API_ENDPOINTS[key];
         if (!ep) return;
+        const resolvedUrl = getLiveEndpointUrl(ep);
         if (methodBadge) {
             methodBadge.textContent = ep.method;
             methodBadge.className = `method-badge ${ep.method.toLowerCase()}`;
         }
-        if (responseUrl) responseUrl.textContent = ep.url;
+        if (responseUrl) responseUrl.textContent = resolvedUrl;
         requestJson.value = JSON.stringify(ep.payload, null, 2);
         executeEndpoint(key, true);
     }
@@ -5249,6 +5293,8 @@ function initApiConsole() {
     async function executeEndpoint(key, quiet = false) {
         const ep = API_ENDPOINTS[key || endpointSelect.value];
         if (!ep) return;
+        const resolvedUrl = getLiveEndpointUrl(ep);
+        if (responseUrl) responseUrl.textContent = resolvedUrl;
 
         let parsedBody = ep.payload;
         try {
@@ -5267,7 +5313,7 @@ function initApiConsole() {
             if (ep.method !== "GET") {
                 fetchOpts.body = JSON.stringify(parsedBody);
             }
-            const res = await fetch(ep.url, fetchOpts);
+            const res = await fetch(resolvedUrl, fetchOpts);
             const elapsed = (performance.now() - t0).toFixed(1);
             const data = await res.json();
             if (statusPill) {
@@ -5319,10 +5365,12 @@ function initApiConsole() {
         copyCurlBtn.addEventListener("click", () => {
             const ep = API_ENDPOINTS[endpointSelect.value];
             if (!ep) return;
+            const resolvedUrl = getLiveEndpointUrl(ep);
+            const absUrl = resolvedUrl.startsWith("/") ? `${window.location.origin}${resolvedUrl}` : resolvedUrl;
             const bodyStr = requestJson.value.replace(/\n/g, "").replace(/\s+/g, " ");
             const curl = ep.method === "GET" 
-                ? `curl -X GET "${ep.url}"`
-                : `curl -X POST "${ep.url}" \\\n  -H "Content-Type: application/json" \\\n  -d '${bodyStr}'`;
+                ? `curl -X GET "${absUrl}"`
+                : `curl -X POST "${absUrl}" \\\n  -H "Content-Type: application/json" \\\n  -d '${bodyStr}'`;
             navigator.clipboard.writeText(curl).then(() => {
                 showToast("cURL Copied", "cURL command copied to clipboard", "success");
             });
@@ -5354,7 +5402,7 @@ function initExecutiveReportModal() {
 
     async function hydrateLiveBriefing() {
         try {
-            const res = await fetch("http://localhost:8000/api/v1/reports/executive-briefing?country=All");
+            const res = await fetch(nexusApiUrl("/api/v1/reports/executive-briefing?country=All"));
             if (!res.ok) return;
             const data = await res.json();
 
@@ -5435,7 +5483,7 @@ function initExecutiveReportModal() {
     if (downloadMdBtn) {
         downloadMdBtn.addEventListener("click", async () => {
             try {
-                const res = await fetch("http://localhost:8000/api/v1/reports/executive-briefing/download?format=markdown");
+                const res = await fetch(nexusApiUrl("/api/v1/reports/executive-briefing/download?format=markdown"));
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const text = await res.text();
                 const blob = new Blob([text], { type: "text/markdown;charset=utf-8;" });
@@ -5591,12 +5639,13 @@ async function initLivePipelineSync() {
         console.warn("[Nexus LiveSync] Using offline defaults:", e.message);
     }
 
-    // 2. Check if FastAPI ML Inference Server is online (localhost:8000)
+    // 2. Check if FastAPI ML Inference Server is online via unified cloud/local resolver
     const headerApi = document.getElementById("headerApiStatus");
     try {
-        const apiCheck = await fetch("http://localhost:8000/health", { mode: "cors" });
+        const apiCheck = await fetch(nexusApiUrl("/health"), { mode: "cors" });
         if (apiCheck.ok) {
-            console.log("[Nexus LiveSync] Connected to FastAPI ML Inference Engine at http://localhost:8000");
+            const activeBase = typeof nexusGetApiBase === "function" ? nexusGetApiBase() : "";
+            console.log(`[Nexus LiveSync] Connected to FastAPI ML Inference Engine (${activeBase || "same-origin proxy"})`);
             const statusBadge = document.querySelector(".live-pill");
             if (statusBadge) {
                 statusBadge.innerHTML = '<span class="status-dot"></span> LIVE: FASTAPI ML ENGINE CONNECTED';
@@ -5607,7 +5656,7 @@ async function initLivePipelineSync() {
             if (headerApi) {
                 headerApi.classList.remove("offline");
                 const text = headerApi.querySelector(".api-live-text");
-                if (text) text.textContent = "API Live :8000";
+                if (text) text.textContent = activeBase ? "API Live :8000" : "API Live (Cloud)";
             }
         } else {
             throw new Error("API non-200");
@@ -5725,14 +5774,14 @@ function initDatasetImporter() {
     // Template downloads
     if (downloadCsvBtn) {
         downloadCsvBtn.addEventListener("click", () => {
-            window.location.href = "http://localhost:8000/api/v1/data/download-template?format=csv";
+            window.location.href = nexusApiUrl("/api/v1/data/download-template?format=csv");
             showToast("Template Downloaded", "Sample CSV transactions template ready for data entry", "info");
         });
     }
 
     if (downloadXlsxBtn) {
         downloadXlsxBtn.addEventListener("click", () => {
-            window.location.href = "http://localhost:8000/api/v1/data/download-template?format=xlsx";
+            window.location.href = nexusApiUrl("/api/v1/data/download-template?format=xlsx");
             showToast("Template Downloaded", "Sample Excel (.xlsx) transactions workbook ready for data entry", "info");
         });
     }
@@ -5741,7 +5790,7 @@ function initDatasetImporter() {
     if (demoBatchBtn) {
         demoBatchBtn.addEventListener("click", async () => {
             try {
-                const res = await fetch("http://localhost:8000/api/v1/data/demo-batch");
+                const res = await fetch(nexusApiUrl("/api/v1/data/demo-batch"));
                 if (res.ok) {
                     const json = await res.json();
                     const records = json.data || [];
@@ -5801,7 +5850,7 @@ function initDatasetImporter() {
         formData.append("file", file);
 
         try {
-            const resp = await fetch("http://localhost:8000/api/v1/data/validate-upload", {
+            const resp = await fetch(nexusApiUrl("/api/v1/data/validate-upload"), {
                 method: "POST",
                 body: formData
             });
@@ -5970,7 +6019,7 @@ function initDatasetImporter() {
             }, 500);
 
             try {
-                const res = await fetch("http://localhost:8000/api/v1/data/ingest-upload", {
+                const res = await fetch(nexusApiUrl("/api/v1/data/ingest-upload"), {
                     method: "POST",
                     body: formData
                 });
@@ -6076,7 +6125,7 @@ function initAiCopilot() {
 
         // 3. Attempt query to FastAPI Copilot endpoint
         try {
-            const resp = await fetch("http://localhost:8000/api/v1/copilot/query", {
+            const resp = await fetch(nexusApiUrl("/api/v1/copilot/query"), {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ query: queryText })
@@ -6326,7 +6375,7 @@ function initWebhooksHub() {
             btn.disabled = true;
 
             try {
-                const res = await fetch("http://localhost:8000/api/v1/integrations/webhook/simulate-sample", {
+                const res = await fetch(nexusApiUrl("/api/v1/integrations/webhook/simulate-sample"), {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ provider })
@@ -6366,7 +6415,7 @@ function initWebhooksHub() {
 
     window.refreshWebhooksTelemetry = async function() {
         try {
-            const res = await fetch("http://localhost:8000/api/v1/integrations/status");
+            const res = await fetch(nexusApiUrl("/api/v1/integrations/status"));
             if (!res.ok) return;
             const data = await res.json();
 
@@ -6468,670 +6517,8 @@ function handlePricingExperimentBroadcast(exp) {
     );
 }
 
-const PRICING_OFFLINE_CATEGORIES = [
-    { category: "Kitchen & Dining", elasticity_coefficient: -1.723, r_squared: 0.5066, demand_regime: "Elastic (Volume Sensitive)", baseline_avg_price_gbp: 2.24, baseline_total_units: 1112255, baseline_revenue_gbp: 2493143.89, baseline_cogs_ratio: 0.47, baseline_gross_margin_gbp: 1321366.26, optimal_price_change_pct: 12.0, optimal_price_gbp: 2.51, margin_uplift_gbp: 11719.37, margin_uplift_pct: 0.89 },
-    { category: "Home Decor & Lighting", elasticity_coefficient: -1.757, r_squared: 0.5171, demand_regime: "Elastic (Volume Sensitive)", baseline_avg_price_gbp: 1.90, baseline_total_units: 1324278, baseline_revenue_gbp: 2511398.72, baseline_cogs_ratio: 0.44, baseline_gross_margin_gbp: 1406383.28, optimal_price_change_pct: 2.0, optimal_price_gbp: 1.93, margin_uplift_gbp: 419.31, margin_uplift_pct: 0.03 },
-    { category: "Bags & Storage", elasticity_coefficient: -1.694, r_squared: 0.4242, demand_regime: "Elastic (Volume Sensitive)", baseline_avg_price_gbp: 2.09, baseline_total_units: 585811, baseline_revenue_gbp: 1222326.21, baseline_cogs_ratio: 0.49, baseline_gross_margin_gbp: 623386.37, optimal_price_change_pct: 20.0, optimal_price_gbp: 2.50, margin_uplift_gbp: 13867.44, margin_uplift_pct: 2.22 },
-    { category: "Seasonal & Party", elasticity_coefficient: -1.628, r_squared: 0.5066, demand_regime: "Elastic (Volume Sensitive)", baseline_avg_price_gbp: 1.45, baseline_total_units: 294157, baseline_revenue_gbp: 427986.53, baseline_cogs_ratio: 0.36, baseline_gross_margin_gbp: 273911.38, optimal_price_change_pct: -7.0, optimal_price_gbp: 1.35, margin_uplift_gbp: 634.36, margin_uplift_pct: 0.23 },
-    { category: "Stationery & Craft", elasticity_coefficient: -1.688, r_squared: 0.5001, demand_regime: "Elastic (Volume Sensitive)", baseline_avg_price_gbp: 1.09, baseline_total_units: 626868, baseline_revenue_gbp: 680314.90, baseline_cogs_ratio: 0.34, baseline_gross_margin_gbp: 449007.83, optimal_price_change_pct: -17.0, optimal_price_gbp: 0.90, margin_uplift_gbp: 7556.78, margin_uplift_pct: 1.68 },
-    { category: "General Giftware", elasticity_coefficient: -1.643, r_squared: 0.5020, demand_regime: "Elastic (Volume Sensitive)", baseline_avg_price_gbp: 2.06, baseline_total_units: 1081846, baseline_revenue_gbp: 2225737.60, baseline_cogs_ratio: 0.43, baseline_gross_margin_gbp: 1268670.43, optimal_price_change_pct: 10.0, optimal_price_gbp: 2.26, margin_uplift_gbp: 6418.82, margin_uplift_pct: 0.51 }
-];
 
-function initPricingLab() {
-    const tbody = document.getElementById("pricingElasticityTbody");
-    const catSelect = document.getElementById("pricingCategorySelect");
-    const priceSlider = document.getElementById("pricingChangeSlider");
-    const cogsSlider = document.getElementById("pricingCogsSlider");
-    const lblPriceChange = document.getElementById("lblPricingChange");
-    const lblCogs = document.getElementById("lblPricingCogs");
-    const btnApplyOptimal = document.getElementById("btnPricingApplyOptimal");
-    const btnRefresh = document.getElementById("btnRefreshElasticity");
-
-    if (!tbody || !catSelect || !priceSlider || !cogsSlider) return;
-
-    let elasticityReport = {
-        avg_portfolio_elasticity: -1.689,
-        total_skus_analyzed: 3804,
-        total_transactions_analyzed: 527573,
-        data_source: "calibrated_matrix",
-        categories: PRICING_OFFLINE_CATEGORIES,
-        experiments_ledger: []
-    };
-
-    let payoffChartInstance = null;
-    let powerChartInstance = null;
-    let simTimer = null;
-
-    function escapePricingHtml(str) {
-        return String(str ?? "")
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-    }
-
-    function syncModernSlider(slider) {
-        if (!slider) return;
-        slider.style.setProperty("--attr-min", slider.min || 0);
-        slider.style.setProperty("--attr-max", slider.max || 100);
-        slider.style.setProperty("--control-value", slider.value);
-    }
-
-    function getSelectedCategoryMeta() {
-        const cats = elasticityReport.categories || PRICING_OFFLINE_CATEGORIES;
-        return cats.find(c => c.category === catSelect.value) || cats[0];
-    }
-
-    function renderElasticityTable() {
-        const cats = elasticityReport.categories || [];
-        const selectedName = catSelect.value;
-
-        const kpiAvgE = document.getElementById("pricingKpiAvgElasticity");
-        const kpiSource = document.getElementById("pricingKpiDataSource");
-        const kpiUplift = document.getElementById("pricingKpiTotalUplift");
-        const kpiSkus = document.getElementById("pricingKpiSkuCount");
-        const kpiTxns = document.getElementById("pricingKpiTxnCount");
-        const kpiExps = document.getElementById("pricingKpiExpCount");
-
-        if (kpiAvgE) kpiAvgE.textContent = Number(elasticityReport.avg_portfolio_elasticity || -1.69).toFixed(2);
-        if (kpiSource) kpiSource.textContent = elasticityReport.data_source === "production_parquet" ? "Live Parquet Fixed-Effects OLS" : "Within-SKU Log-Log OLS";
-        if (kpiUplift) {
-            const totalGain = cats.reduce((acc, c) => acc + (c.margin_uplift_gbp || 0), 0);
-            kpiUplift.textContent = `+₹${Math.round(totalGain).toLocaleString("en-IN")}`;
-        }
-        if (kpiSkus) kpiSkus.textContent = Number(elasticityReport.total_skus_analyzed || 3804).toLocaleString("en-IN");
-        if (kpiTxns) kpiTxns.textContent = `${Number(elasticityReport.total_transactions_analyzed || 527573).toLocaleString("en-IN")} Valid Rows`;
-        if (kpiExps) kpiExps.textContent = `${(elasticityReport.experiments_ledger || []).length} Recorded`;
-
-        tbody.innerHTML = cats.map(c => {
-            const isSelected = c.category === selectedName;
-            const optSign = c.optimal_price_change_pct > 0 ? `+${c.optimal_price_change_pct}%` : `${c.optimal_price_change_pct}%`;
-            const optBadgeColor = c.optimal_price_change_pct > 0 ? "green" : c.optimal_price_change_pct < 0 ? "gold" : "blue";
-
-            return `
-                <tr class="${isSelected ? "selected-category-row" : ""}" data-pricing-category="${c.category}">
-                    <th scope="row">${c.category}</th>
-                    <td><code>${Number(c.elasticity_coefficient).toFixed(3)}</code></td>
-                    <td>${Number(c.r_squared || 0.48).toFixed(2)}</td>
-                    <td>₹${Number(c.baseline_avg_price_gbp).toFixed(2)}</td>
-                    <td>₹${Math.round(c.baseline_revenue_gbp).toLocaleString("en-IN")}</td>
-                    <td><span class="badge ${optBadgeColor}">${optSign} → ₹${Number(c.optimal_price_gbp).toFixed(2)}</span></td>
-                    <td style="color: var(--success); font-weight: 700;">+₹${Math.round(c.margin_uplift_gbp).toLocaleString("en-IN")} (+${Number(c.margin_uplift_pct).toFixed(2)}%)</td>
-                    <td><button type="button" class="btn btn-outline btn-xs btn-select-pricing-cat" data-cat="${c.category}">Simulate</button></td>
-                </tr>
-            `;
-        }).join("");
-
-        tbody.querySelectorAll("tr[data-pricing-category]").forEach(row => {
-            row.addEventListener("click", () => {
-                const catName = row.getAttribute("data-pricing-category");
-                if (catName) selectPricingCategory(catName);
-            });
-        });
-
-        renderExperimentLedger(elasticityReport.experiments_ledger || []);
-    }
-
-    function selectPricingCategory(catName, applyOptimal = false) {
-        catSelect.value = catName;
-        const meta = getSelectedCategoryMeta();
-        if (meta) {
-            cogsSlider.value = Math.round((meta.baseline_cogs_ratio || 0.45) * 100);
-            syncModernSlider(cogsSlider);
-            if (applyOptimal) {
-                priceSlider.value = meta.optimal_price_change_pct;
-                syncModernSlider(priceSlider);
-            }
-        }
-        renderElasticityTable();
-        runPriceSimulation();
-    }
-
-    async function loadElasticityReport() {
-        try {
-            const res = await fetch("http://localhost:8000/api/v1/pricing/elasticity-report");
-            if (res.ok) {
-                const data = await res.json();
-                if (data.categories && data.categories.length > 0) {
-                    elasticityReport = data;
-                    const optCats = data.categories.map(c => `<option value="${c.category}">${c.category}</option>`).join("");
-                    const prevCat = catSelect.value;
-                    catSelect.innerHTML = optCats;
-                    if (data.categories.some(c => c.category === prevCat)) catSelect.value = prevCat;
-
-                    const abCat = document.getElementById("abExpCategory");
-                    if (abCat) {
-                        const prevAb = abCat.value;
-                        abCat.innerHTML = optCats;
-                        if (data.categories.some(c => c.category === prevAb)) abCat.value = prevAb;
-                    }
-                }
-            }
-        } catch (err) {
-            console.warn("[PricingLab] Backend offline, using calibrated dataset metrics.");
-        }
-        const meta = getSelectedCategoryMeta();
-        if (meta) {
-            cogsSlider.value = Math.round((meta.baseline_cogs_ratio || 0.47) * 100);
-        }
-        syncModernSlider(priceSlider);
-        syncModernSlider(cogsSlider);
-        renderElasticityTable();
-        runPriceSimulation();
-    }
-
-    function computeLocalSimulation(catMeta, priceChangePct, cogsRatio) {
-        const e = catMeta.elasticity_coefficient;
-        const basePrice = catMeta.baseline_avg_price_gbp;
-        const baseUnits = catMeta.baseline_total_units;
-        const unitCost = basePrice * cogsRatio;
-
-        const pointAt = (pct) => {
-            const mult = Math.max(0.2, 1 + pct / 100);
-            const p = basePrice * mult;
-            const u = baseUnits * Math.pow(mult, e);
-            const rev = p * u;
-            const profit = (p - unitCost) * u;
-            return {
-                price_change_pct: pct,
-                unit_price_gbp: Number(p.toFixed(2)),
-                projected_units: Math.round(u),
-                revenue_gbp: Number(rev.toFixed(2)),
-                gross_profit_gbp: Number(profit.toFixed(2)),
-                margin_pct: Number((((p - unitCost) / p) * 100).toFixed(2))
-            };
-        };
-
-        const baseline = pointAt(0);
-        const sim = pointAt(priceChangePct);
-        const curve = [];
-        let optPt = baseline;
-        for (let pct = -20; pct <= 20; pct += 2) {
-            const pt = pointAt(pct);
-            curve.push(pt);
-            if (pt.gross_profit_gbp > optPt.gross_profit_gbp) optPt = pt;
-        }
-
-        const revDelta = sim.revenue_gbp - baseline.revenue_gbp;
-        const profitDelta = sim.gross_profit_gbp - baseline.gross_profit_gbp;
-
-        return {
-            category: catMeta.category,
-            demand_regime: catMeta.demand_regime,
-            elasticity_used: e,
-            baseline: { avg_price_gbp: baseline.unit_price_gbp, total_units: baseline.projected_units, revenue_gbp: baseline.revenue_gbp, gross_profit_gbp: baseline.gross_profit_gbp },
-            simulated: {
-                new_price_gbp: sim.unit_price_gbp,
-                projected_units: sim.projected_units,
-                projected_revenue_gbp: sim.revenue_gbp,
-                projected_gross_profit_gbp: sim.gross_profit_gbp,
-                margin_pct: sim.margin_pct,
-                unit_delta_pct: Number((((sim.projected_units - baseline.projected_units) / baseline.projected_units) * 100).toFixed(2)),
-                revenue_delta_gbp: Number(revDelta.toFixed(2)),
-                revenue_delta_pct: Number(((revDelta / baseline.revenue_gbp) * 100).toFixed(2)),
-                profit_delta_gbp: Number(profitDelta.toFixed(2)),
-                profit_delta_pct: Number(((profitDelta / baseline.gross_profit_gbp) * 100).toFixed(2))
-            },
-            optimal_point: {
-                price_change_pct: optPt.price_change_pct,
-                optimal_price_gbp: optPt.unit_price_gbp,
-                max_gross_profit_gbp: optPt.gross_profit_gbp,
-                profit_gain_gbp: Number((optPt.gross_profit_gbp - baseline.gross_profit_gbp).toFixed(2))
-            },
-            payoff_curve: curve,
-            recommendation: `${catMeta.category} (ε=${e.toFixed(2)}) maximizes bounded gross profit at ${optPt.price_change_pct > 0 ? "+" : ""}${optPt.price_change_pct}% adjustment (+₹${Math.round(optPt.gross_profit_gbp - baseline.gross_profit_gbp).toLocaleString("en-IN")}).`
-        };
-    }
-
-    async function runPriceSimulation() {
-        const deltaPct = parseFloat(priceSlider.value) || 0;
-        const cogsPct = parseFloat(cogsSlider.value) || 47;
-        const cogsRatio = cogsPct / 100;
-
-        syncModernSlider(priceSlider);
-        syncModernSlider(cogsSlider);
-
-        if (lblPriceChange) {
-            lblPriceChange.textContent = `${deltaPct > 0 ? "+" : ""}${deltaPct.toFixed(1)}%`;
-            priceSlider.setAttribute("aria-valuetext", `${deltaPct > 0 ? "plus " : ""}${deltaPct.toFixed(1)} percent price adjustment`);
-        }
-        if (lblCogs) {
-            lblCogs.textContent = `${Math.round(cogsPct)}%`;
-            cogsSlider.setAttribute("aria-valuetext", `${Math.round(cogsPct)} percent cost of goods sold`);
-        }
-
-        const meta = getSelectedCategoryMeta();
-        let simData = null;
-
-        try {
-            const res = await fetch("http://localhost:8000/api/v1/pricing/simulate-price-change", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    category: catSelect.value,
-                    price_change_pct: deltaPct,
-                    cogs_ratio: cogsRatio
-                })
-            });
-            if (res.ok) simData = await res.json();
-        } catch (err) {
-            // Fallback below
-        }
-
-        if (!simData && meta) {
-            simData = computeLocalSimulation(meta, deltaPct, cogsRatio);
-        }
-        if (!simData) return;
-
-        const s = simData.simulated;
-        const opt = simData.optimal_point;
-
-        const outPrice = document.getElementById("simUnitPriceOut");
-        const outUnits = document.getElementById("simUnitsOut");
-        const outRev = document.getElementById("simRevOut");
-        const outProfit = document.getElementById("simProfitOut");
-        const regimeBadge = document.getElementById("pricingRegimeBadge");
-        const optBadge = document.getElementById("pricingOptimalBadge");
-        const recBox = document.getElementById("pricingRecommendationBox");
-
-        if (outPrice) outPrice.innerHTML = `₹${Number(s.new_price_gbp).toFixed(2)} <small style="font-size:0.72rem;color:var(--text-muted);">${deltaPct >= 0 ? "+" : ""}${deltaPct}%</small>`;
-        if (outUnits) outUnits.innerHTML = `${Number(s.projected_units).toLocaleString("en-IN")} <small style="font-size:0.72rem;color:${s.unit_delta_pct >= 0 ? "var(--success)" : "var(--warning)"};">(${s.unit_delta_pct >= 0 ? "+" : ""}${s.unit_delta_pct}%)</small>`;
-        if (outRev) outRev.innerHTML = `₹${Math.round(s.projected_revenue_gbp).toLocaleString("en-IN")} <small style="font-size:0.72rem;color:${s.revenue_delta_gbp >= 0 ? "var(--success)" : "var(--warning)"};">(${s.revenue_delta_pct >= 0 ? "+" : ""}${s.revenue_delta_pct}%)</small>`;
-        if (outProfit) {
-            outProfit.style.color = s.profit_delta_gbp >= 0 ? "var(--success)" : "var(--danger)";
-            outProfit.innerHTML = `₹${Math.round(s.projected_gross_profit_gbp).toLocaleString("en-IN")} <small style="font-size:0.72rem;">(${s.profit_delta_gbp >= 0 ? "+" : "-"}₹${Math.abs(Math.round(s.profit_delta_gbp)).toLocaleString("en-IN")})</small>`;
-        }
-        if (regimeBadge) regimeBadge.textContent = `${simData.demand_regime} (ε=${Number(simData.elasticity_used).toFixed(2)})`;
-        if (optBadge) optBadge.textContent = `Optimal: ${opt.price_change_pct > 0 ? "+" : ""}${opt.price_change_pct}% (₹${Number(opt.optimal_price_gbp).toFixed(2)})`;
-        if (recBox) recBox.innerHTML = `<strong>💡 Pricing Strategy Insight:</strong> ${simData.recommendation}`;
-
-        renderPayoffCurveChart(simData.payoff_curve, deltaPct, opt.price_change_pct);
-    }
-
-    function renderPayoffCurveChart(curve, activeDelta, optDelta) {
-        const canvas = document.getElementById("pricingPayoffChart");
-        if (!canvas || typeof Chart === "undefined") return;
-
-        const labels = curve.map(pt => `${pt.price_change_pct > 0 ? "+" : ""}${pt.price_change_pct}%`);
-        const revs = curve.map(pt => pt.revenue_gbp);
-        const profits = curve.map(pt => pt.gross_profit_gbp);
-
-        const profitRadii = curve.map(pt => {
-            if (Math.abs(pt.price_change_pct - activeDelta) <= 1.0) return 7;
-            if (Math.abs(pt.price_change_pct - optDelta) <= 1.0) return 6;
-            return 2.5;
-        });
-
-        const profitColors = curve.map(pt => {
-            if (Math.abs(pt.price_change_pct - activeDelta) <= 1.0) return "#F59E0B";
-            if (Math.abs(pt.price_change_pct - optDelta) <= 1.0) return "#10B981";
-            return "#34D399";
-        });
-
-        if (payoffChartInstance) {
-            payoffChartInstance.destroy();
-            payoffChartInstance = null;
-        }
-
-        payoffChartInstance = new Chart(canvas, {
-            type: "line",
-            data: {
-                labels,
-                datasets: [
-                    {
-                        label: "Projected Gross Revenue (₹)",
-                        data: revs,
-                        borderColor: "#38BDF8",
-                        backgroundColor: "rgba(56, 189, 248, 0.08)",
-                        borderWidth: 2,
-                        tension: 0.25,
-                        pointRadius: 2
-                    },
-                    {
-                        label: "Projected Gross Profit (₹)",
-                        data: profits,
-                        borderColor: "#10B981",
-                        backgroundColor: "rgba(16, 185, 129, 0.14)",
-                        fill: true,
-                        borderWidth: 3,
-                        tension: 0.25,
-                        pointRadius: profitRadii,
-                        pointBackgroundColor: profitColors
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: "top", labels: { color: "#94A3B8" } },
-                    tooltip: {
-                        callbacks: {
-                            label: ctx => `${ctx.dataset.label}: ₹${Math.round(ctx.parsed.y).toLocaleString("en-IN")}`
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        ticks: { callback: v => `₹${(v / 100000).toFixed(1)}L` },
-                        grid: { color: "rgba(255,255,255,0.06)" }
-                    },
-                    x: { grid: { display: false } }
-                }
-            }
-        });
-    }
-
-    function scheduleSimulation() {
-        syncModernSlider(priceSlider);
-        syncModernSlider(cogsSlider);
-        const deltaPct = parseFloat(priceSlider.value) || 0;
-        if (lblPriceChange) lblPriceChange.textContent = `${deltaPct > 0 ? "+" : ""}${deltaPct.toFixed(1)}%`;
-        if (lblCogs) lblCogs.textContent = `${Math.round(parseFloat(cogsSlider.value) || 47)}%`;
-
-        clearTimeout(simTimer);
-        simTimer = setTimeout(runPriceSimulation, 80);
-    }
-
-    priceSlider.addEventListener("input", scheduleSimulation);
-    cogsSlider.addEventListener("input", scheduleSimulation);
-    catSelect.addEventListener("change", () => selectPricingCategory(catSelect.value, false));
-
-    if (btnApplyOptimal) {
-        btnApplyOptimal.addEventListener("click", () => {
-            const meta = getSelectedCategoryMeta();
-            if (meta) {
-                priceSlider.value = meta.optimal_price_change_pct;
-                syncModernSlider(priceSlider);
-                runPriceSimulation();
-                showToast("Optimal Price Loaded", `Applied ${meta.optimal_price_change_pct > 0 ? "+" : ""}${meta.optimal_price_change_pct}% margin-maximizing price for ${meta.category}`, "success");
-            }
-        });
-    }
-
-    if (btnRefresh) {
-        btnRefresh.addEventListener("click", () => {
-            loadElasticityReport();
-            showToast("Matrix Recalculated", "Refreshed category within-SKU log-log elasticity regressions", "info");
-        });
-    }
-
-    window.setPricingDeltaPreset = function(pct) {
-        priceSlider.value = pct;
-        syncModernSlider(priceSlider);
-        runPriceSimulation();
-    };
-
-    // Accessible A/B Testing Sub-tabs (focusgroup + keyboard fallback + until-found sync)
-    const abTabs = [
-        { btn: document.getElementById("abRunTabBtn"), panel: document.getElementById("abRunPanel") },
-        { btn: document.getElementById("abPowerTabBtn"), panel: document.getElementById("abPowerPanel") }
-    ];
-
-    function activateAbTab(targetIndex, moveFocus = false) {
-        abTabs.forEach((item, idx) => {
-            const isSelected = idx === targetIndex;
-            if (item.btn) {
-                item.btn.setAttribute("aria-selected", String(isSelected));
-                item.btn.toggleAttribute("focusgroupstart", isSelected);
-                if (isSelected && moveFocus) item.btn.focus();
-            }
-            if (item.panel) {
-                if (isSelected) {
-                    item.panel.removeAttribute("hidden");
-                    item.panel.setAttribute("tabindex", "0");
-                } else {
-                    item.panel.setAttribute("hidden", "until-found");
-                    item.panel.removeAttribute("tabindex");
-                }
-            }
-        });
-    }
-
-    abTabs.forEach((item, idx) => {
-        if (item.btn) {
-            item.btn.addEventListener("click", () => activateAbTab(idx));
-            item.btn.addEventListener("keydown", (e) => {
-                if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
-                    e.preventDefault();
-                    const nextIdx = (idx + 1) % abTabs.length;
-                    activateAbTab(nextIdx, true);
-                } else if (e.key === "Home") {
-                    e.preventDefault();
-                    activateAbTab(0, true);
-                } else if (e.key === "End") {
-                    e.preventDefault();
-                    activateAbTab(abTabs.length - 1, true);
-                }
-            });
-        }
-        if (item.panel) {
-            item.panel.addEventListener("beforematch", () => activateAbTab(idx));
-        }
-    });
-
-    // Controlled Holdout A/B Experiment Form
-    const abExpForm = document.getElementById("abExperimentForm");
-    const abResultArea = document.getElementById("abExperimentResultArea");
-
-    function renderExperimentLedger(list) {
-        const ledgerBody = document.getElementById("abExperimentsLedgerBody");
-        const kpiExps = document.getElementById("pricingKpiExpCount");
-        if (kpiExps) kpiExps.textContent = `${list.length} Recorded`;
-        if (!ledgerBody) return;
-
-        if (!list.length) {
-            ledgerBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:1rem;">No experiments executed in this session yet.</td></tr>`;
-            return;
-        }
-
-        ledgerBody.innerHTML = list.map(exp => {
-            const st = exp.statistics || {};
-            const w = st.winner || "INCONCLUSIVE";
-            const badgeCls = w === "VARIANT" ? "green" : w === "CONTROL" ? "gold" : "blue";
-            const uplift = Number(st.relative_profit_per_visitor_uplift_pct || 0);
-            return `
-                <tr>
-                    <td><code>${escapePricingHtml(exp.experiment_id)}</code></td>
-                    <td><strong>${escapePricingHtml(exp.experiment_name)}</strong></td>
-                    <td>${escapePricingHtml(exp.category)}</td>
-                    <td>${exp.price_change_pct > 0 ? "+" : ""}${exp.price_change_pct}%</td>
-                    <td style="color:${uplift >= 0 ? "var(--success)" : "var(--danger)"};font-weight:600;">${uplift >= 0 ? "+" : ""}${uplift.toFixed(2)}%</td>
-                    <td><code>p=${Number(st.p_value).toFixed(4)}</code></td>
-                    <td><span class="badge ${badgeCls}">${escapePricingHtml(w)}</span></td>
-                </tr>
-            `;
-        }).join("");
-    }
-
-    function renderAbExperimentResult(exp) {
-        if (!abResultArea || !exp) return;
-        const c = exp.control;
-        const v = exp.variant;
-        const st = exp.statistics;
-        const verdictColor = st.winner === "VARIANT" ? "var(--success)" : st.winner === "CONTROL" ? "var(--warning)" : "var(--primary)";
-
-        abResultArea.innerHTML = `
-            <div class="ab-arms-comparison-grid">
-                <div class="ab-arm-card ${st.winner === "CONTROL" ? "winner-arm" : ""}">
-                    <div class="ab-arm-header">
-                        <strong>🅰️ Control Holdout (${exp.holdout_pct}%)</strong>
-                        <span class="badge blue">₹${Number(c.unit_price_gbp).toFixed(2)}</span>
-                    </div>
-                    <div class="ab-arm-stats-list">
-                        <div class="ab-arm-stat-row"><span>Visitors:</span><strong>${c.visitors.toLocaleString("en-IN")}</strong></div>
-                        <div class="ab-arm-stat-row"><span>Conversions (CVR):</span><strong>${c.conversions.toLocaleString("en-IN")} (${c.conversion_rate_pct}%)</strong></div>
-                        <div class="ab-arm-stat-row"><span>Revenue / Visitor:</span><strong>₹${Number(c.revenue_per_visitor_gbp).toFixed(2)}</strong></div>
-                        <div class="ab-arm-stat-row"><span>Profit / Visitor:</span><strong>₹${Number(c.profit_per_visitor_gbp).toFixed(2)}</strong></div>
-                    </div>
-                </div>
-                <div class="ab-arm-card ${st.winner === "VARIANT" ? "winner-arm" : ""}">
-                    <div class="ab-arm-header">
-                        <strong>🅱️ Price Variant (${exp.price_change_pct > 0 ? "+" : ""}${exp.price_change_pct}%)</strong>
-                        <span class="badge ${st.winner === "VARIANT" ? "green" : "gold"}">₹${Number(v.unit_price_gbp).toFixed(2)}</span>
-                    </div>
-                    <div class="ab-arm-stats-list">
-                        <div class="ab-arm-stat-row"><span>Visitors:</span><strong>${v.visitors.toLocaleString("en-IN")}</strong></div>
-                        <div class="ab-arm-stat-row"><span>Conversions (CVR):</span><strong>${v.conversions.toLocaleString("en-IN")} (${v.conversion_rate_pct}%)</strong></div>
-                        <div class="ab-arm-stat-row"><span>Revenue / Visitor:</span><strong>₹${Number(v.revenue_per_visitor_gbp).toFixed(2)}</strong></div>
-                        <div class="ab-arm-stat-row"><span>Profit / Visitor:</span><strong>₹${Number(v.profit_per_visitor_gbp).toFixed(2)}</strong></div>
-                    </div>
-                </div>
-            </div>
-            <div style="padding:0.85rem 1rem;background:var(--bg-surface-alt);border-radius:var(--radius-sm);border-left:4px solid ${verdictColor};">
-                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.35rem;">
-                    <strong style="color:${verdictColor};">VERDICT: ${escapePricingHtml(st.winner)} (Z = ${st.z_statistic}, p = ${st.p_value})</strong>
-                    <span class="badge ${st.statistically_significant ? "green" : "gold"}">${st.statistically_significant ? "✓ p < 0.05 Significant" : "Inconclusive"} • Power ${st.achieved_power_pct}%</span>
-                </div>
-                <p style="margin:0;font-size:0.84rem;color:var(--text-primary);">${escapePricingHtml(st.verdict)}</p>
-                <small style="color:var(--text-muted);display:block;margin-top:0.25rem;">95% CVR Uplift CI: [${st.ci_95_cvr_uplift_pct[0]}%, ${st.ci_95_cvr_uplift_pct[1]}%]</small>
-            </div>
-        `;
-    }
-
-    if (abExpForm) {
-        abExpForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const submitBtn = document.getElementById("btnLaunchAbExp");
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.textContent = "⏳ Running Randomized Holdout Split...";
-            }
-
-            const payload = {
-                experiment_name: document.getElementById("abExpName").value.trim(),
-                category: document.getElementById("abExpCategory").value,
-                price_change_pct: parseFloat(document.getElementById("abExpPriceChange").value) || 0,
-                holdout_pct: parseFloat(document.getElementById("abExpHoldoutPct").value) || 20,
-                sample_size: parseInt(document.getElementById("abExpSampleSize").value, 10) || 10000,
-                baseline_conversion_rate: (parseFloat(document.getElementById("abExpBaseCvr").value) || 4.5) / 100,
-                cogs_ratio: (parseFloat(cogsSlider.value) || 47) / 100,
-                seed: Math.floor(Math.random() * 100000)
-            };
-
-            try {
-                const res = await fetch("http://localhost:8000/api/v1/pricing/run-ab-experiment", {
-                    method: "POST",
-                    headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
-                    body: JSON.stringify(payload)
-                });
-                if (res.status === 401 || res.status === 403) {
-                    const errBody = await res.json().catch(() => ({}));
-                    showToast("RBAC Access Denied", errBody.detail || `HTTP ${res.status} on A/B Experiment`, "alert");
-                    return;
-                }
-                if (res.ok) {
-                    const data = await res.json();
-                    const exp = data.experiment;
-                    renderAbExperimentResult(exp);
-                    elasticityReport.experiments_ledger = [exp, ...(elasticityReport.experiments_ledger || [])].slice(0, 25);
-                    renderExperimentLedger(elasticityReport.experiments_ledger);
-                    showToast("A/B Experiment Complete", `${exp.experiment_name}: Verdict ${exp.statistics.winner}`, "success");
-                } else {
-                    showToast("Experiment Error", `Server returned HTTP ${res.status}`, "alert");
-                }
-            } catch (err) {
-                showToast("Experiment Offline Notice", "Start FastAPI :8000 to persist live Z-test holdout splits.", "info");
-            } finally {
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = "⚡ Execute Controlled A/B Experiment";
-                }
-            }
-        });
-    }
-
-    // Statistical Power Calculator Form
-    const abPowerForm = document.getElementById("abPowerForm");
-
-    async function computeAbPower() {
-        const baseCvr = (parseFloat(document.getElementById("powerBaseCvr")?.value) || 4.5) / 100;
-        const mdePct = parseFloat(document.getElementById("powerMdePct")?.value) || 10;
-        const alpha = parseFloat(document.getElementById("powerAlphaSelect")?.value) || 0.05;
-        const power = parseFloat(document.getElementById("powerTargetSelect")?.value) || 0.80;
-        const dailyTraffic = parseInt(document.getElementById("powerDailyTraffic")?.value, 10) || 2500;
-        const holdoutRatio = parseFloat(document.getElementById("powerHoldoutSplit")?.value) || 0.50;
-
-        let powerData = null;
-        try {
-            const url = `http://localhost:8000/api/v1/pricing/ab-test-calculator?baseline_conversion_rate=${baseCvr}&minimum_detectable_effect_pct=${mdePct}&alpha=${alpha}&power=${power}&daily_traffic=${dailyTraffic}&holdout_ratio=${holdoutRatio}`;
-            const res = await fetch(url);
-            if (res.ok) powerData = await res.json();
-        } catch (err) {
-            // Normal approximation fallback
-            const p1 = baseCvr;
-            const p2 = p1 * (1 + mdePct / 100);
-            const nA = Math.ceil((15.6 * p1 * (1 - p1)) / Math.pow(p2 - p1, 2));
-            const k = (1 - holdoutRatio) / holdoutRatio;
-            const nB = Math.ceil(nA * k);
-            powerData = {
-                sample_size_control: nA,
-                sample_size_variant: nB,
-                total_sample_size: nA + nB,
-                estimated_duration_days: Math.ceil((nA + nB) / dailyTraffic),
-                power_curve: [0.25, 0.5, 0.75, 1.0, 1.25, 1.5].map(m => ({
-                    total_visitors: Math.round((nA + nB) * m),
-                    power_pct: Math.min(99, Math.round(power * 100 * Math.sqrt(m)))
-                }))
-            };
-        }
-
-        if (!powerData) return;
-        const ctrlOut = document.getElementById("powerCtrlNOut");
-        const varOut = document.getElementById("powerVarNOut");
-        const totOut = document.getElementById("powerTotalNOut");
-        const daysOut = document.getElementById("powerDaysOut");
-
-        if (ctrlOut) ctrlOut.textContent = `${Number(powerData.sample_size_control).toLocaleString("en-IN")} visitors`;
-        if (varOut) varOut.textContent = `${Number(powerData.sample_size_variant).toLocaleString("en-IN")} visitors`;
-        if (totOut) totOut.textContent = `${Number(powerData.total_sample_size).toLocaleString("en-IN")} total`;
-        if (daysOut) daysOut.textContent = `${powerData.estimated_duration_days} Days`;
-
-        const powerCanvas = document.getElementById("abPowerCurveChart");
-        if (powerCanvas && typeof Chart !== "undefined" && powerData.power_curve) {
-            if (powerChartInstance) {
-                powerChartInstance.destroy();
-                powerChartInstance = null;
-            }
-            powerChartInstance = new Chart(powerCanvas, {
-                type: "line",
-                data: {
-                    labels: powerData.power_curve.map(pt => `${(pt.total_visitors / 1000).toFixed(1)}k`),
-                    datasets: [{
-                        label: "Achieved Statistical Power (%)",
-                        data: powerData.power_curve.map(pt => pt.power_pct),
-                        borderColor: "#8B5CF6",
-                        backgroundColor: "rgba(139, 92, 246, 0.16)",
-                        fill: true,
-                        tension: 0.3,
-                        borderWidth: 2.5
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { min: 0, max: 100, ticks: { callback: v => `${v}%` }, grid: { color: "rgba(255,255,255,0.06)" } },
-                        x: { grid: { display: false } }
-                    }
-                }
-            });
-        }
-    }
-
-    if (abPowerForm) {
-        abPowerForm.addEventListener("submit", (e) => {
-            e.preventDefault();
-            computeAbPower();
-            showToast("Sample Size Computed", "Updated statistical power curve & duration estimate", "info");
-        });
-    }
-
-    loadElasticityReport();
-    computeAbPower();
-}
+// [Lazy-Loaded Module] js/modules/pricing-lab.js
 
 // =============================================================================
 // ENTERPRISE RBAC, JWT AUTHENTICATION & MULTI-TENANT SECURITY CONSOLE
@@ -7318,7 +6705,7 @@ function initEnterpriseSecurity() {
 
     async function loadRbacMatrixAndKeys() {
         try {
-            const matRes = await fetch("http://localhost:8000/api/v1/auth/rbac-matrix");
+            const matRes = await fetch(nexusApiUrl("/api/v1/auth/rbac-matrix"));
             if (matRes.ok) {
                 const matData = await matRes.json();
                 if (strictToggle) strictToggle.checked = Boolean(matData.strict_rbac_enabled);
@@ -7364,7 +6751,7 @@ function initEnterpriseSecurity() {
         }
 
         try {
-            const keysRes = await fetch("http://localhost:8000/api/v1/auth/api-keys", {
+            const keysRes = await fetch(nexusApiUrl("/api/v1/auth/api-keys"), {
                 headers: window.getAuthHeaders()
             });
             if (keysRes.ok && apiKeysTbody) {
@@ -7387,7 +6774,7 @@ function initEnterpriseSecurity() {
                     apiKeysTbody.querySelectorAll(".btn-revoke-apikey").forEach(btn => {
                         btn.addEventListener("click", async () => {
                             const keyId = btn.getAttribute("data-key-id");
-                            const revRes = await fetch(`http://localhost:8000/api/v1/auth/api-keys/${keyId}`, {
+                            const revRes = await fetch(nexusApiUrl(`/api/v1/auth/api-keys/${keyId}`), {
                                 method: "DELETE",
                                 headers: window.getAuthHeaders()
                             });
@@ -7420,7 +6807,7 @@ function initEnterpriseSecurity() {
             }
 
             try {
-                const res = await fetch("http://localhost:8000/api/v1/auth/login", {
+                const res = await fetch(nexusApiUrl("/api/v1/auth/login"), {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -7474,7 +6861,7 @@ function initEnterpriseSecurity() {
             }
 
             try {
-                const res = await fetch("http://localhost:8000/api/v1/auth/switch-tenant", {
+                const res = await fetch(nexusApiUrl("/api/v1/auth/switch-tenant"), {
                     method: "POST",
                     headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
                     body: JSON.stringify({ tenant_id: targetTid })
@@ -7504,7 +6891,7 @@ function initEnterpriseSecurity() {
         strictToggle.addEventListener("change", async () => {
             const desired = strictToggle.checked;
             try {
-                const res = await fetch("http://localhost:8000/api/v1/auth/security-policy", {
+                const res = await fetch(nexusApiUrl("/api/v1/auth/security-policy"), {
                     method: "POST",
                     headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
                     body: JSON.stringify({ strict_rbac_enabled: desired })
@@ -7540,7 +6927,7 @@ function initEnterpriseSecurity() {
     if (signOutBtn) {
         signOutBtn.addEventListener("click", async () => {
             if (APP_STATE.authToken) {
-                await fetch("http://localhost:8000/api/v1/auth/logout", {
+                await fetch(nexusApiUrl("/api/v1/auth/logout"), {
                     method: "POST",
                     headers: window.getAuthHeaders()
                 }).catch(() => {});
@@ -7561,7 +6948,7 @@ function initEnterpriseSecurity() {
             const role = document.getElementById("newKeyRoleSelect")?.value || "lead_ds";
 
             try {
-                const res = await fetch("http://localhost:8000/api/v1/auth/api-keys", {
+                const res = await fetch(nexusApiUrl("/api/v1/auth/api-keys"), {
                     method: "POST",
                     headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
                     body: JSON.stringify({ label, tenant_id: tenantId, role })
@@ -7594,7 +6981,7 @@ function initEnterpriseSecurity() {
     async function restoreExistingJwtSession() {
         if (APP_STATE.authToken) {
             try {
-                const res = await fetch("http://localhost:8000/api/v1/auth/me", {
+                const res = await fetch(nexusApiUrl("/api/v1/auth/me"), {
                     headers: { "Authorization": `Bearer ${APP_STATE.authToken}` }
                 });
                 if (res.ok) {
@@ -7642,1084 +7029,8 @@ function handleQuarantineResolvedBroadcast(alert) {
     }
 }
 
-function initFraudRadar() {
-    const scoreForm = document.getElementById("fraudScoreForm");
-    const riskRing = document.getElementById("fraudRiskRing");
-    const ringScoreText = document.getElementById("fraudRingScoreText");
-    const tierBadge = document.getElementById("fraudResultTierBadge");
-    const actionEl = document.getElementById("fraudRecommendedAction");
-    const signalsList = document.getElementById("fraudTriggeredSignalsList");
-    const quarantineTbody = document.getElementById("fraudQuarantineTbody");
-    const refreshBtn = document.getElementById("btnRefreshFraudReport");
 
-    if (!scoreForm || !riskRing) return;
-
-    let countryCancelChartInstance = null;
-
-    const escapeFraudHtml = (str) => String(str ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-
-    // Fallback for browsers without attr(value type(<number>)) support on <progress>
-    if (!CSS.supports("width: attr(value type(<number>))")) {
-        const observer = new MutationObserver(() => {
-            riskRing.style.setProperty("--value", riskRing.getAttribute("value") || "0");
-        });
-        observer.observe(riskRing, { attributes: true, attributeFilter: ["value"] });
-    }
-
-    function updateRiskRing(scoreVal) {
-        const clamped = Math.min(100, Math.max(0, Math.round(scoreVal)));
-        riskRing.setAttribute("value", String(clamped));
-        riskRing.setAttribute("aria-valuetext", `${clamped} out of 100 risk score`);
-        riskRing.style.setProperty("--value", String(clamped));
-        riskRing.classList.remove("risk-critical", "risk-high", "risk-safe");
-        if (clamped >= 75) riskRing.classList.add("risk-critical");
-        else if (clamped >= 50) riskRing.classList.add("risk-high");
-        else riskRing.classList.add("risk-safe");
-
-        if (ringScoreText) ringScoreText.textContent = String(clamped);
-    }
-
-    function renderAssessment(a) {
-        if (!a) return;
-        updateRiskRing(a.risk_score);
-
-        if (tierBadge) {
-            tierBadge.textContent = a.risk_tier;
-            tierBadge.className = `badge ${a.risk_score >= 75 ? "red" : a.risk_score >= 50 ? "gold" : "green"}`;
-        }
-        if (actionEl) {
-            actionEl.textContent = `${a.recommended_action} (${a.isolation_forest_anomaly ? "Isolation Forest Flagged" : "Inlier Baseline"})`;
-        }
-        if (signalsList) {
-            signalsList.innerHTML = (a.triggered_signals || []).map(s => `<li>${escapeFraudHtml(s)}</li>`).join("");
-        }
-    }
-
-    function renderCountryCancelChart(countries) {
-        const canvas = document.getElementById("countryCancelChart");
-        if (!canvas || typeof Chart === "undefined" || !countries || !countries.length) return;
-
-        if (countryCancelChartInstance) {
-            countryCancelChartInstance.destroy();
-            countryCancelChartInstance = null;
-        }
-
-        countryCancelChartInstance = new Chart(canvas, {
-            type: "bar",
-            data: {
-                labels: countries.map(c => c.country),
-                datasets: [{
-                    label: "Cancellation Rate (%)",
-                    data: countries.map(c => c.cancellation_rate_pct),
-                    backgroundColor: countries.map(c => c.cancellation_rate_pct >= 18 ? "#EF4444" : c.cancellation_rate_pct >= 12 ? "#F59E0B" : "#3B82F6"),
-                    borderRadius: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: { ticks: { callback: v => `${v}%` }, grid: { color: "rgba(255,255,255,0.06)" } },
-                    x: { grid: { display: false } }
-                }
-            }
-        });
-    }
-
-    function renderQuarantineQueue(queue) {
-        const kpiQueue = document.getElementById("fraudKpiQueueCount");
-        const pendingCount = (queue || []).filter(q => q.status === "QUARANTINED").length;
-        if (kpiQueue) kpiQueue.textContent = `${pendingCount} Pending`;
-        if (!quarantineTbody) return;
-
-        if (!queue || !queue.length) {
-            quarantineTbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:1rem;">No anomalies in quarantine queue.</td></tr>`;
-            return;
-        }
-
-        quarantineTbody.innerHTML = queue.map(item => {
-            const st = item.status || "QUARANTINED";
-            const badgeCls = st === "APPROVED" ? "green" : st === "BLOCKED" ? "red" : "gold";
-            const scoreColor = item.risk_score >= 75 ? "#EF4444" : item.risk_score >= 50 ? "#F59E0B" : "#10B981";
-            const firstSignal = (item.triggered_signals && item.triggered_signals[0]) || "Isolation Forest outlier";
-            const actionHtml = st === "QUARANTINED"
-                ? `<div style="display:flex;gap:0.35rem;">
-                    <button type="button" class="btn btn-outline btn-xs btn-resolve-fraud" data-alert-id="${escapeFraudHtml(item.alert_id)}" data-decision="APPROVED">Approve</button>
-                    <button type="button" class="btn btn-secondary btn-xs btn-resolve-fraud" data-alert-id="${escapeFraudHtml(item.alert_id)}" data-decision="BLOCKED" style="color:#ef4444;">Block</button>
-                   </div>`
-                : `<small class="text-muted">Resolved by ${escapeFraudHtml(item.resolved_by || "operator")}</small>`;
-
-            return `
-                <tr>
-                    <td><code>${escapeFraudHtml(item.alert_id)}</code></td>
-                    <td><strong>${escapeFraudHtml(item.invoice_no)}</strong></td>
-                    <td>${escapeFraudHtml(item.customer_id)}</td>
-                    <td>₹${Number(item.amount_gbp || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
-                    <td><strong style="color:${scoreColor};">${Number(item.risk_score).toFixed(1)}</strong></td>
-                    <td><small>${escapeFraudHtml(firstSignal)}</small></td>
-                    <td><span class="badge ${badgeCls}">${escapeFraudHtml(st)}</span></td>
-                    <td>${actionHtml}</td>
-                </tr>
-            `;
-        }).join("");
-
-        quarantineTbody.querySelectorAll(".btn-resolve-fraud").forEach(btn => {
-            btn.addEventListener("click", async () => {
-                const alertId = btn.getAttribute("data-alert-id");
-                const decision = btn.getAttribute("data-decision");
-                try {
-                    const res = await fetch(`http://localhost:8000/api/v1/fraud/quarantine/${alertId}/resolve`, {
-                        method: "POST",
-                        headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
-                        body: JSON.stringify({ decision })
-                    });
-                    if (res.status === 401 || res.status === 403) {
-                        const err = await res.json().catch(() => ({}));
-                        showToast("RBAC Triage Denied", err.detail || `HTTP ${res.status}: Role lacks fraud:resolve scope`, "alert");
-                        return;
-                    }
-                    if (res.ok) {
-                        showToast("Alert Triaged", `Quarantine ${alertId} marked ${decision}`, decision === "BLOCKED" ? "warning" : "success");
-                        loadFraudReport();
-                    }
-                } catch (e) {
-                    showToast("Backend Offline", "Start FastAPI :8000 to persist quarantine triage decisions", "info");
-                }
-            });
-        });
-    }
-
-    async function loadFraudReport() {
-        try {
-            const res = await fetch("http://localhost:8000/api/v1/fraud/anomaly-report");
-            if (res.ok) {
-                const data = await res.json();
-                const s = data.summary || {};
-                const kpiInv = document.getElementById("fraudKpiInvoices");
-                const kpiRate = document.getElementById("fraudKpiCancelRate");
-                const kpiCancelCnt = document.getElementById("fraudKpiCancelCount");
-                const kpiExp = document.getElementById("fraudKpiExposure");
-                const kpiFlagCnt = document.getElementById("fraudKpiAnomalyCount");
-
-                if (kpiInv) kpiInv.textContent = Number(s.total_invoices_scanned || 23218).toLocaleString("en-IN");
-                if (kpiRate) kpiRate.textContent = `${Number(s.cancellation_rate_pct || 14.74).toFixed(2)}%`;
-                if (kpiCancelCnt) kpiCancelCnt.textContent = `${Number(s.cancelled_invoices_count || 3422).toLocaleString("en-IN")} Cancelled Invoices`;
-                if (kpiExp) kpiExp.textContent = `₹${((s.anomaly_revenue_exposure_gbp || 1850000) / 100000).toFixed(2)}L`;
-                if (kpiFlagCnt) kpiFlagCnt.textContent = `${Number(s.flagged_anomalies_count || 1161).toLocaleString("en-IN")} Isolation Outliers (${s.flagged_share_pct || 5.0}%)`;
-
-                renderCountryCancelChart(data.country_cancellation_rates);
-                renderQuarantineQueue(data.quarantine_queue);
-                return;
-            }
-        } catch (err) {
-            // Fallback telemetry if offline
-        }
-        renderCountryCancelChart([
-            { country: "United Kingdom", cancellation_rate_pct: 14.5 },
-            { country: "Germany", cancellation_rate_pct: 24.4 },
-            { country: "France", cancellation_rate_pct: 15.1 },
-            { country: "EIRE", cancellation_rate_pct: 20.6 },
-            { country: "Netherlands", cancellation_rate_pct: 6.3 }
-        ]);
-    }
-
-    window.refreshFraudRadarReport = loadFraudReport;
-
-    window.applyFraudPreset = function(presetKey) {
-        const amt = document.getElementById("fraudAmountInput");
-        const units = document.getElementById("fraudUnitsInput");
-        const lines = document.getElementById("fraudLinesInput");
-        const cid = document.getElementById("fraudCustInput");
-        const hour = document.getElementById("fraudHourInput");
-        const cancelPct = document.getElementById("fraudCancelRateInput");
-        const guestChk = document.getElementById("fraudIsGuestChk");
-
-        if (presetKey === "guest_whale") {
-            if (amt) amt.value = "18500";
-            if (units) units.value = "6200";
-            if (lines) lines.value = "1";
-            if (cid) cid.value = "Guest";
-            if (hour) hour.value = "2";
-            if (cancelPct) cancelPct.value = "0";
-            if (guestChk) guestChk.checked = true;
-        } else if (presetKey === "high_cancel") {
-            if (amt) amt.value = "-3200";
-            if (units) units.value = "420";
-            if (lines) lines.value = "3";
-            if (cid) cid.value = "14096";
-            if (hour) hour.value = "14";
-            if (cancelPct) cancelPct.value = "65";
-            if (guestChk) guestChk.checked = false;
-        } else {
-            if (amt) amt.value = "68.50";
-            if (units) units.value = "14";
-            if (lines) lines.value = "4";
-            if (cid) cid.value = "17850";
-            if (hour) hour.value = "13";
-            if (cancelPct) cancelPct.value = "0";
-            if (guestChk) guestChk.checked = false;
-        }
-        scoreForm.requestSubmit();
-    };
-
-    scoreForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const btn = document.getElementById("btnRunFraudScore");
-        if (btn) {
-            btn.disabled = true;
-            btn.textContent = "⏳ Scoring with Isolation Forest...";
-        }
-
-        const amountVal = parseFloat(document.getElementById("fraudAmountInput")?.value) || 0;
-        const payload = {
-            amount_gbp: amountVal,
-            total_units: parseInt(document.getElementById("fraudUnitsInput")?.value, 10) || 1,
-            line_items: parseInt(document.getElementById("fraudLinesInput")?.value, 10) || 1,
-            customer_id: document.getElementById("fraudCustInput")?.value.trim() || "Guest",
-            hour_of_day: parseFloat(document.getElementById("fraudHourInput")?.value) || 12,
-            historical_cancel_rate: (parseFloat(document.getElementById("fraudCancelRateInput")?.value) || 0) / 100,
-            is_guest: Boolean(document.getElementById("fraudIsGuestChk")?.checked),
-            is_cancelled: amountVal < 0,
-            auto_quarantine: Boolean(document.getElementById("fraudAutoQuarantineChk")?.checked)
-        };
-
-        try {
-            const res = await fetch("http://localhost:8000/api/v1/fraud/score-transaction", {
-                method: "POST",
-                headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
-                body: JSON.stringify(payload)
-            });
-            if (res.status === 401 || res.status === 403) {
-                const err = await res.json().catch(() => ({}));
-                showToast("RBAC Scoring Denied", err.detail || `HTTP ${res.status}`, "alert");
-                return;
-            }
-            if (res.ok) {
-                const data = await res.json();
-                renderAssessment(data.assessment);
-                loadFraudReport();
-                return;
-            }
-        } catch (err) {
-            // Fallback local scoring estimate if offline
-        } finally {
-            if (btn) {
-                btn.disabled = false;
-                btn.textContent = "🛡️ Score Transaction Risk & Inspect Signals";
-            }
-        }
-
-        // Offline deterministic fallback
-        let localScore = 15;
-        const signals = [];
-        if (Math.abs(payload.amount_gbp) > 4000) { localScore += 32; signals.push(`High order value ₹${Math.abs(payload.amount_gbp).toLocaleString("en-IN")}`); }
-        if (payload.is_guest && payload.amount_gbp >= 1500) { localScore += 22; signals.push("High-value guest checkout"); }
-        if (payload.hour_of_day < 6 || payload.hour_of_day >= 22) { localScore += 15; signals.push(`Off-hours timestamp (${payload.hour_of_day}:00 UTC)`); }
-        if (payload.historical_cancel_rate >= 0.25) { localScore += 20; signals.push(`High account cancel rate (${(payload.historical_cancel_rate * 100).toFixed(0)}%)`); }
-        if (!signals.length) signals.push("Order profile aligns with normal baseline");
-        localScore = Math.min(98, localScore);
-
-        renderAssessment({
-            risk_score: localScore,
-            risk_tier: localScore >= 75 ? "CRITICAL_QUARANTINE" : localScore >= 50 ? "HIGH_REVIEW" : "LOW_SAFE",
-            recommended_action: localScore >= 75 ? "QUARANTINE_AND_HOLD" : localScore >= 50 ? "STEP_UP_3DS_VERIFICATION" : "AUTO_APPROVE",
-            isolation_forest_anomaly: localScore >= 50,
-            triggered_signals: signals
-        });
-    });
-
-    refreshBtn?.addEventListener("click", () => {
-        loadFraudReport();
-        showToast("Fraud Radar Synced", "Refreshed Isolation Forest anomalies & quarantine queue", "info");
-    });
-
-    loadFraudReport();
-}
-
-
-
-
-
-
-// =============================================================================
-// PHASE 25: KIMBALL STAR-SCHEMA WAREHOUSE, SQL WORKBENCH & DATA QUALITY
-// =============================================================================
-let whQueryChartInstance = null;
-let WAREHOUSE_CASE_STUDIES_CACHE = [];
-let WAREHOUSE_ROWS_CACHE = [];
-let WAREHOUSE_WIRED = false;
-
-function renderWarehouseChart(cols, rows, numericCols) {
-    const canvas = document.getElementById("whQueryChart");
-    const badge = document.getElementById("whChartMetricBadge");
-    if (!canvas || typeof Chart === "undefined") return;
-    if (whQueryChartInstance) whQueryChartInstance.destroy();
-
-    if (!rows.length || !numericCols.length) {
-        if (badge) badge.textContent = "No Numeric Series";
-        return;
-    }
-
-    const labelCol = cols.find(c => !numericCols.includes(c)) || cols[0];
-    const metricCol = numericCols.find(c => /rev|gmv|margin|spend|aov|pct/i.test(c)) || numericCols[0];
-    if (badge) badge.textContent = `${metricCol} by ${labelCol}`;
-
-    const isLight = document.documentElement.getAttribute("data-theme") === "light";
-    const textCol = isLight ? "#334155" : "#D4D4D8";
-    const gridCol = isLight ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
-    const slice = rows.slice(0, 12);
-
-    whQueryChartInstance = new Chart(canvas.getContext("2d"), {
-        type: "bar",
-        data: {
-            labels: slice.map(r => String(r[labelCol] ?? "").slice(0, 22)),
-            datasets: [{
-                label: metricCol,
-                data: slice.map(r => Number(r[metricCol]) || 0),
-                backgroundColor: "rgba(59, 130, 246, 0.78)",
-                borderColor: "#3B82F6",
-                borderWidth: 1,
-                borderRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { labels: { color: textCol, font: { size: 11 } } } },
-            scales: {
-                x: { ticks: { color: textCol, font: { size: 10 } }, grid: { display: false } },
-                y: { ticks: { color: textCol }, grid: { color: gridCol } }
-            }
-        }
-    });
-}
-
-function renderWarehouseResultTable(cols, rows) {
-    const thead = document.getElementById("whResultsThead");
-    const tbody = document.getElementById("whResultsTbody");
-    if (!thead || !tbody) return;
-
-    if (!cols.length || !rows.length) {
-        thead.innerHTML = "";
-        tbody.innerHTML = `<tr><td style="text-align:center;color:var(--text-muted);">Query executed cleanly and returned 0 rows.</td></tr>`;
-        return;
-    }
-
-    thead.innerHTML = `<tr>${cols.map(c => `<th>${c}</th>`).join("")}</tr>`;
-    tbody.innerHTML = rows.map(r =>
-        `<tr>${cols.map(c => `<td>${r[c] === null || r[c] === undefined ? "—" : String(r[c])}</td>`).join("")}</tr>`
-    ).join("");
-}
-
-async function runWarehouseSqlQuery() {
-    const editor = document.getElementById("whSqlEditor");
-    const latEl = document.getElementById("whKpiLastLatency");
-    const cntEl = document.getElementById("whKpiRowCount");
-    const statusSub = document.getElementById("whQueryStatusSub");
-    if (!editor) return;
-
-    const sqlText = editor.value.trim();
-    if (!sqlText) return;
-
-    try {
-        const res = await fetch("http://localhost:8000/api/v1/warehouse/query", {
-            method: "POST",
-            headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
-            body: JSON.stringify({ sql: sqlText, max_rows: 100 })
-        });
-        const data = await res.json();
-        if (!res.ok) {
-            showToast("SQL Sandbox Blocked", data.detail || `HTTP ${res.status}`, "alert");
-            if (statusSub) statusSub.textContent = `Query error: ${data.detail || res.status}`;
-            return;
-        }
-        WAREHOUSE_ROWS_CACHE = data.rows || [];
-        if (latEl) latEl.textContent = `${data.execution_time_ms} ms`;
-        if (cntEl) cntEl.textContent = `${data.row_count} Rows Returned`;
-        if (statusSub) statusSub.textContent = `Executed in ${data.execution_time_ms} ms • Returned ${data.row_count} rows (${data.columns.length} columns)`;
-
-        renderWarehouseResultTable(data.columns || [], data.rows || []);
-        renderWarehouseChart(data.columns || [], data.rows || [], data.numeric_columns || []);
-        logAuditEvent("Warehouse", `Executed Star-Schema SQL query (${data.row_count} rows, ${data.execution_time_ms} ms)`);
-    } catch (_e) {
-        showToast("Warehouse Offline", "Start FastAPI backend :8000 to execute live DuckDB SQL", "alert");
-    }
-}
-
-async function refreshWarehouseDataQuality() {
-    const dqBody = document.getElementById("whDqTbody");
-    const scoreEl = document.getElementById("whKpiDqScore");
-    const sumEl = document.getElementById("whKpiDqChecksSummary");
-    const certBadge = document.getElementById("whCertificationBadge");
-    if (!dqBody) return;
-
-    try {
-        const res = await fetch("http://localhost:8000/api/v1/warehouse/data-quality");
-        if (!res.ok) return;
-        const dq = await res.json();
-        if (scoreEl) scoreEl.textContent = `${dq.score_pct}%`;
-        if (sumEl) sumEl.textContent = `${dq.passed_checks} / ${dq.total_checks} SQL Contracts Passing`;
-        if (certBadge) {
-            certBadge.textContent = dq.status;
-            certBadge.className = `badge-tag ${dq.passed_checks === dq.total_checks ? "green" : "red"}`;
-        }
-        dqBody.innerHTML = (dq.checks || []).map(chk => `
-            <tr>
-                <td><code>${chk.check_id}</code></td>
-                <td><strong>${chk.name}</strong><br><small style="color:var(--text-muted);">${chk.description}</small></td>
-                <td><code style="font-size:0.72rem;white-space:normal;">${chk.sql}</code></td>
-                <td><strong>${chk.violations}</strong></td>
-                <td>${chk.duration_ms} ms</td>
-                <td><span class="badge-tag ${chk.status === "PASS" ? "green" : "red"}">${chk.status}</span></td>
-            </tr>
-        `).join("");
-    } catch (_e) {
-        dqBody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">Connect FastAPI backend :8000 to run automated SQL Data-Quality contracts.</td></tr>`;
-    }
-}
-
-async function initDataWarehouseTab() {
-    const schemaGrid = document.getElementById("whSchemaGrid");
-    const caseSelect = document.getElementById("whCaseStudySelect");
-    const editor = document.getElementById("whSqlEditor");
-    if (!schemaGrid || !caseSelect || !editor) return;
-
-    try {
-        const res = await fetch("http://localhost:8000/api/v1/warehouse/schema");
-        if (res.ok) {
-            const schema = await res.json();
-            const totalEl = document.getElementById("whKpiTotalRows");
-            const srcEl = document.getElementById("whKpiDataSource");
-            if (totalEl) totalEl.textContent = Number(schema.total_warehouse_rows || 0).toLocaleString("en-IN");
-            if (srcEl) srcEl.textContent = `DuckDB • ${schema.data_source}`;
-
-            schemaGrid.innerHTML = (schema.tables || []).map(t => `
-                <div class="btyd-stat-box">
-                    <strong>${t.role} &bull; ${t.table_name}</strong>
-                    <div class="stat-val text-blue" style="font-size:1.1rem;">${Number(t.row_count).toLocaleString("en-IN")} rows</div>
-                    <small style="color:var(--text-muted);">${t.columns.length} cols &bull; ${t.description}</small>
-                </div>
-            `).join("");
-
-            WAREHOUSE_CASE_STUDIES_CACHE = schema.case_studies || [];
-            if (WAREHOUSE_CASE_STUDIES_CACHE.length) {
-                caseSelect.innerHTML = WAREHOUSE_CASE_STUDIES_CACHE.map(cs =>
-                    `<option value="${cs.id}">[${cs.category}] ${cs.title}</option>`
-                ).join("");
-                editor.value = WAREHOUSE_CASE_STUDIES_CACHE[0].sql;
-            }
-        }
-    } catch (_e) {
-        schemaGrid.innerHTML = `<div class="btyd-stat-box"><strong>Star Schema Offline</strong><small>Connect backend :8000 to browse live DuckDB tables.</small></div>`;
-    }
-
-    await Promise.all([runWarehouseSqlQuery(), refreshWarehouseDataQuality()]);
-
-    if (!WAREHOUSE_WIRED) {
-        WAREHOUSE_WIRED = true;
-        caseSelect.addEventListener("change", () => {
-            const match = WAREHOUSE_CASE_STUDIES_CACHE.find(c => c.id === caseSelect.value);
-            if (match) {
-                editor.value = match.sql;
-                runWarehouseSqlQuery();
-            }
-        });
-
-        const runBtn = document.getElementById("whRunSqlBtn");
-        const dqBtn = document.getElementById("whRunDqBtn");
-        const expBtn = document.getElementById("whExportSqlCsvBtn");
-
-        if (runBtn) runBtn.addEventListener("click", runWarehouseSqlQuery);
-        if (dqBtn) dqBtn.addEventListener("click", async () => {
-            await refreshWarehouseDataQuality();
-            showToast("DQ Contracts Verified", "Executed all 7 SQL data-quality checks on Star Schema", "success");
-        });
-        if (expBtn) expBtn.addEventListener("click", () => {
-            if (WAREHOUSE_ROWS_CACHE.length) {
-                downloadCSV("warehouse_sql_query_result.csv", WAREHOUSE_ROWS_CACHE);
-                showToast("CSV Exported", "warehouse_sql_query_result.csv downloaded", "success");
-            }
-        });
-    }
-}
-
-// =============================================================================
-// PHASE 27: SURVIVAL ANALYSIS, WEIBULL HAZARD & SHAPLEY XAI LAB
-// =============================================================================
-let kmSurvivalChartInstance = null;
-let xaiAttributionChartInstance = null;
-let survivalCfChartInstance = null;
-let SURVIVAL_LAB_WIRED = false;
-
-function _escapeSurvivalText(str) {
-    return String(str ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
-}
-
-function _syncRangeProgress(sliderEl) {
-    if (!sliderEl || CSS.supports("accent-color", "#2563EB")) return;
-    const min = Number(sliderEl.min || 0);
-    const max = Number(sliderEl.max || 100);
-    const pct = max > min ? ((Number(sliderEl.value) - min) / (max - min)) * 100 : 0;
-    sliderEl.style.setProperty("--progress", `${pct.toFixed(1)}%`);
-}
-
-async function refreshKaplanMeierCohortCharts() {
-    const cohortSelect = document.getElementById("survivalCohortSelect");
-    const medianEl = document.getElementById("survivalMedianVal");
-    const s90El = document.getElementById("survival90Val");
-    const driverEl = document.getElementById("survivalTopDriverVal");
-    const tbody = document.getElementById("survivalCohortTbody");
-    const kmCanvas = document.getElementById("kmSurvivalChart");
-    if (!cohortSelect || !kmCanvas) return;
-
-    const segment = cohortSelect.value || "All";
-    try {
-        const res = await fetch(`http://localhost:8000/api/v1/survival/kaplan-meier-report?segment=${encodeURIComponent(segment)}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        const summary = data.summary || {};
-
-        if (medianEl) {
-            medianEl.textContent = summary.median_censored_flag ? `>${summary.median_cohort_days}d` : `${summary.median_cohort_days} days`;
-        }
-        if (s90El) s90El.textContent = `${summary.survival_90d_pct ?? 0}%`;
-        if (driverEl) driverEl.textContent = summary.top_global_driver || "Recency";
-
-        const isLight = document.documentElement.getAttribute("data-theme") === "light";
-        const textCol = isLight ? "#334155" : "#D4D4D8";
-        const gridCol = isLight ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
-
-        const cohorts = data.cohorts || {};
-        const selectedKm = cohorts[segment] || cohorts["All"];
-        const vipKm = cohorts["Champions (VIP)"];
-        const occKm = cohorts["Occasional / Hibernating"];
-
-        if (typeof Chart !== "undefined" && selectedKm && selectedKm.curve) {
-            if (kmSurvivalChartInstance) kmSurvivalChartInstance.destroy();
-            const labels = selectedKm.curve.map(pt => `D${pt.day}`);
-            const datasets = [
-                {
-                    label: `${segment} S(t)`,
-                    data: selectedKm.curve.map(pt => +(pt.survival * 100).toFixed(1)),
-                    borderColor: "#3B82F6",
-                    backgroundColor: "rgba(59, 130, 246, 0.14)",
-                    borderWidth: 2.5,
-                    stepped: true,
-                    fill: true,
-                    tension: 0
-                }
-            ];
-            if (segment === "All" && vipKm && occKm) {
-                datasets.push({
-                    label: "Champions (VIP) S(t)",
-                    data: vipKm.curve.map(pt => +(pt.survival * 100).toFixed(1)),
-                    borderColor: "#10B981",
-                    borderWidth: 2,
-                    borderDash: [5, 4],
-                    stepped: true,
-                    fill: false
-                });
-                datasets.push({
-                    label: "Occasional / Hibernating S(t)",
-                    data: occKm.curve.map(pt => +(pt.survival * 100).toFixed(1)),
-                    borderColor: "#EF4444",
-                    borderWidth: 2,
-                    borderDash: [3, 3],
-                    stepped: true,
-                    fill: false
-                });
-            } else if (selectedKm.curve[0] && selectedKm.curve[0].ci_upper !== undefined) {
-                datasets.push({
-                    label: "Greenwood 95% Upper CI",
-                    data: selectedKm.curve.map(pt => +(pt.ci_upper * 100).toFixed(1)),
-                    borderColor: "rgba(16, 185, 129, 0.55)",
-                    borderWidth: 1.2,
-                    borderDash: [4, 4],
-                    stepped: true,
-                    fill: false
-                });
-                datasets.push({
-                    label: "Greenwood 95% Lower CI",
-                    data: selectedKm.curve.map(pt => +(pt.ci_lower * 100).toFixed(1)),
-                    borderColor: "rgba(239, 68, 68, 0.55)",
-                    borderWidth: 1.2,
-                    borderDash: [4, 4],
-                    stepped: true,
-                    fill: false
-                });
-            }
-
-            kmSurvivalChartInstance = new Chart(kmCanvas.getContext("2d"), {
-                type: "line",
-                data: { labels, datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { labels: { color: textCol, font: { size: 11 } } } },
-                    scales: {
-                        x: { ticks: { color: textCol }, grid: { display: false } },
-                        y: {
-                            min: 0,
-                            max: 100,
-                            ticks: { color: textCol, callback: v => `${v}%` },
-                            grid: { color: gridCol }
-                        }
-                    }
-                }
-            });
-        }
-
-        if (tbody) {
-            const cohortNames = ["All", "Champions (VIP)", "Loyal Customers", "At-Risk / Lapsing", "Occasional / Hibernating"];
-            tbody.innerHTML = cohortNames
-                .filter(name => cohorts[name])
-                .map(name => {
-                    const c = cohorts[name];
-                    const medTxt = c.median_censored_flag ? `>${c.median_survival_days}d` : `${c.median_survival_days}d`;
-                    return `
-                        <tr>
-                            <th scope="row">${_escapeSurvivalText(name)}</th>
-                            <td>${Number(c.n_subjects).toLocaleString("en-IN")}</td>
-                            <td>${Number(c.n_events).toLocaleString("en-IN")}</td>
-                            <td>${medTxt}</td>
-                            <td><strong>${(c.s_90 * 100).toFixed(1)}%</strong></td>
-                            <td>${(c.s_180 * 100).toFixed(1)}%</td>
-                            <td>${c.rmst_365}d</td>
-                        </tr>
-                    `;
-                })
-                .join("");
-        }
-    } catch (_e) {
-        if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-muted);">Connect FastAPI (:8000) to render Kaplan-Meier survival cohorts.</td></tr>`;
-        }
-    }
-}
-
-async function refreshCustomerXaiAndCounterfactual() {
-    const custInput = document.getElementById("xaiCustomerInput");
-    const recSlider = document.getElementById("xaiRecencySlider");
-    const freqSlider = document.getElementById("xaiFreqSlider");
-    const aovSlider = document.getElementById("xaiAovSlider");
-    const recLbl = document.getElementById("xaiRecencyLbl");
-    const freqLbl = document.getElementById("xaiFreqLbl");
-    const aovLbl = document.getElementById("xaiAovLbl");
-    const liftEl = document.getElementById("survivalLiftVal");
-    const summaryEl = document.getElementById("survivalCounterfactualSummary");
-    const xaiCanvas = document.getElementById("xaiAttributionChart");
-    const cfCanvas = document.getElementById("survivalCounterfactualChart");
-
-    if (!custInput || !recSlider || !freqSlider || !aovSlider) return;
-
-    const customerId = String(custInput.value || "14096").trim() || "14096";
-    const recDays = Number(recSlider.value || 45);
-    const freqOrders = Number(freqSlider.value || 2);
-    const aovPct = Number(aovSlider.value || 15);
-
-    if (recLbl) recLbl.textContent = `${recDays} days`;
-    if (freqLbl) freqLbl.textContent = `+${freqOrders} orders`;
-    if (aovLbl) aovLbl.textContent = `+${aovPct}%`;
-    _syncRangeProgress(recSlider);
-    _syncRangeProgress(freqSlider);
-    _syncRangeProgress(aovSlider);
-
-    try {
-        const [xaiRes, cfRes] = await Promise.all([
-            fetch(`http://localhost:8000/api/v1/survival/explain/${encodeURIComponent(customerId)}`),
-            fetch("http://localhost:8000/api/v1/survival/simulate-intervention", {
-                method: "POST",
-                headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
-                body: JSON.stringify({
-                    customer_id: customerId,
-                    recency_reduction_days: recDays,
-                    frequency_boost_orders: freqOrders,
-                    aov_boost_pct: aovPct
-                })
-            })
-        ]);
-
-        const isLight = document.documentElement.getAttribute("data-theme") === "light";
-        const textCol = isLight ? "#334155" : "#D4D4D8";
-        const gridCol = isLight ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
-
-        if (xaiRes.ok && xaiCanvas && typeof Chart !== "undefined") {
-            const xaiData = await xaiRes.json();
-            const contribs = xaiData.contributions || [];
-            if (xaiAttributionChartInstance) xaiAttributionChartInstance.destroy();
-            xaiAttributionChartInstance = new Chart(xaiCanvas.getContext("2d"), {
-                type: "bar",
-                data: {
-                    labels: contribs.map(c => c.label),
-                    datasets: [{
-                        label: "Shapley Attribution (pp)",
-                        data: contribs.map(c => c.shapley_pp),
-                        backgroundColor: contribs.map(c => (c.shapley_pp >= 0 ? "rgba(239, 68, 68, 0.80)" : "rgba(16, 185, 129, 0.80)")),
-                        borderColor: contribs.map(c => (c.shapley_pp >= 0 ? "#EF4444" : "#10B981")),
-                        borderWidth: 1,
-                        borderRadius: 5
-                    }]
-                },
-                options: {
-                    indexAxis: "y",
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { labels: { color: textCol, font: { size: 11 } } } },
-                    scales: {
-                        x: { ticks: { color: textCol, callback: v => `${v > 0 ? "+" : ""}${v}pp` }, grid: { color: gridCol } },
-                        y: { ticks: { color: textCol, font: { size: 10 } }, grid: { display: false } }
-                    }
-                }
-            });
-        }
-
-        if (cfRes.ok) {
-            const cfData = await cfRes.json();
-            const sum = cfData.summary || {};
-            const deltaS90 = Number(sum.delta_s90_pp || 0);
-            if (liftEl) liftEl.textContent = `${deltaS90 >= 0 ? "+" : ""}${deltaS90.toFixed(1)} pp`;
-
-            if (cfCanvas && typeof Chart !== "undefined" && cfData.comparison_curve) {
-                if (survivalCfChartInstance) survivalCfChartInstance.destroy();
-                survivalCfChartInstance = new Chart(cfCanvas.getContext("2d"), {
-                    type: "line",
-                    data: {
-                        labels: cfData.comparison_curve.map(pt => `D${pt.day}`),
-                        datasets: [
-                            {
-                                label: "Baseline Weibull S(t)",
-                                data: cfData.comparison_curve.map(pt => +(pt.baseline_survival * 100).toFixed(1)),
-                                borderColor: "#94A3B8",
-                                borderDash: [5, 4],
-                                borderWidth: 2,
-                                fill: false,
-                                tension: 0.25
-                            },
-                            {
-                                label: "Post-Intervention S(t)",
-                                data: cfData.comparison_curve.map(pt => +(pt.counterfactual_survival * 100).toFixed(1)),
-                                borderColor: "#10B981",
-                                backgroundColor: "rgba(16, 185, 129, 0.14)",
-                                borderWidth: 2.5,
-                                fill: true,
-                                tension: 0.25
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { labels: { color: textCol, font: { size: 11 } } } },
-                        scales: {
-                            x: { ticks: { color: textCol }, grid: { display: false } },
-                            y: { min: 0, max: 100, ticks: { color: textCol, callback: v => `${v}%` }, grid: { color: gridCol } }
-                        }
-                    }
-                });
-            }
-
-            if (summaryEl) {
-                summaryEl.innerHTML = `
-                    <div class="result-grid">
-                        <div class="result-stat"><strong>Account Cohort</strong><span>${_escapeSurvivalText(cfData.cohort)}</span></div>
-                        <div class="result-stat"><strong>Baseline → Treated S(90)</strong><span>${sum.baseline_s90_pct}% → ${sum.counterfactual_s90_pct}%</span></div>
-                        <div class="result-stat"><strong>RMST-365 Lifespan Gain</strong><span style="color:#10B981;">+${sum.rmst_gain_days} days</span></div>
-                        <div class="result-stat"><strong>Protected Annual Margin</strong><span style="color:#10B981;">₹${Number(sum.protected_margin_gbp || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span></div>
-                    </div>
-                `;
-            }
-        } else if (cfRes.status === 401 || cfRes.status === 403) {
-            if (summaryEl) {
-                summaryEl.innerHTML = `<div class="btyd-stat-box"><strong>Strict RBAC Active</strong><small>Sign in with predict:execute scope to simulate counterfactual retention curves.</small></div>`;
-            }
-        }
-    } catch (_e) {
-        if (summaryEl) {
-            summaryEl.innerHTML = `<div class="btyd-stat-box"><strong>Survival Engine Offline</strong><small>Connect backend :8000 for live Weibull &amp; Shapley attribution.</small></div>`;
-        }
-    }
-}
-
-function initSurvivalXaiLab() {
-    refreshKaplanMeierCohortCharts();
-    refreshCustomerXaiAndCounterfactual();
-
-    if (SURVIVAL_LAB_WIRED) return;
-    SURVIVAL_LAB_WIRED = true;
-
-    const cohortSelect = document.getElementById("survivalCohortSelect");
-    const explainBtn = document.getElementById("xaiExplainBtn");
-    const recSlider = document.getElementById("xaiRecencySlider");
-    const freqSlider = document.getElementById("xaiFreqSlider");
-    const aovSlider = document.getElementById("xaiAovSlider");
-
-    if (cohortSelect) cohortSelect.addEventListener("change", refreshKaplanMeierCohortCharts);
-    if (explainBtn) explainBtn.addEventListener("click", refreshCustomerXaiAndCounterfactual);
-    const debouncedSurvival = nexusDebounce(refreshCustomerXaiAndCounterfactual, 150);
-    [recSlider, freqSlider, aovSlider].forEach(el => {
-        if (el) {
-            el.addEventListener("input", () => {
-                const rLbl = document.getElementById("xaiRecencyLbl");
-                const fLbl = document.getElementById("xaiFreqLbl");
-                const aLbl = document.getElementById("xaiAovLbl");
-                if (rLbl && recSlider) rLbl.textContent = `${recSlider.value} days`;
-                if (fLbl && freqSlider) fLbl.textContent = `+${freqSlider.value} orders`;
-                if (aLbl && aovSlider) aLbl.textContent = `+${aovSlider.value}%`;
-                debouncedSurvival();
-            });
-            el.addEventListener("change", refreshCustomerXaiAndCounterfactual);
-        }
-    });
-}
-
-// =============================================================================
-// PHASE 28: INDIAN GST (CGST/SGST/IGST + HSN) & TAX INVOICE STUDIO
-// =============================================================================
-let ACTIVE_TAX_INVOICE_CACHE = null;
-let TAX_INVOICE_WIRED = false;
-
-function _escInv(v) {
-    return String(v ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
-}
-
-function renderTaxInvoicePreview(inv) {
-    const previewBox = document.getElementById("taxInvoicePreviewBox");
-    if (!previewBox || !inv) return;
-    ACTIVE_TAX_INVOICE_CACHE = inv;
-
-    const sym = _escInv(inv.totals?.currency_symbol || "₹");
-    const isCn = inv.document_type === "CREDIT NOTE";
-    const badgeColor = isCn ? "#EF4444" : "#3B82F6";
-    const seller = inv.seller || {};
-    const buyer = inv.buyer || {};
-    const tax = inv.tax_summary || {};
-    const totals = inv.totals || {};
-
-    const rowsHtml = (inv.items || []).map(item => `
-        <tr>
-            <th scope="row">${_escInv(item.stock_code)}</th>
-            <td data-label="HSN">${_escInv(item.hsn_code)}</td>
-            <td data-label="Description">${_escInv(item.description)}</td>
-            <td data-label="Qty">${Number(item.quantity)}</td>
-            <td data-label="Rate">${sym}${Number(item.unit_price).toFixed(2)}</td>
-            <td data-label="Taxable">${sym}${Number(item.taxable_value).toFixed(2)}</td>
-            <td data-label="CGST">${sym}${Number(item.cgst_amount).toFixed(2)}</td>
-            <td data-label="SGST">${sym}${Number(item.sgst_amount).toFixed(2)}</td>
-            <td data-label="IGST">${sym}${Number(item.igst_amount).toFixed(2)}</td>
-            <td data-label="Total"><strong>${sym}${Number(item.gross_amount).toFixed(2)}</strong></td>
-        </tr>
-    `).join("");
-
-    const compRows = (tax.components || []).map(c => `
-        <div style="display:flex; justify-content:space-between; font-size:0.84rem; margin-bottom:0.25rem;">
-            <span>${_escInv(c.label)} (${_escInv(c.rate_pct)})</span>
-            <strong>${sym}${Number(c.amount).toFixed(2)}</strong>
-        </div>
-    `).join("");
-
-    previewBox.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.75rem; margin-bottom:1rem; padding-bottom:0.75rem; border-bottom:1px solid var(--border-color);">
-            <div>
-                <span class="badge-tag" style="background:${badgeColor}22; color:${badgeColor}; border:1px solid ${badgeColor}; margin-bottom:0.35rem; display:inline-block;">
-                    ${_escInv(inv.document_type)} • ${_escInv(tax.tax_regime || "GST")}
-                </span>
-                <h4 style="margin:0.15rem 0;">${_escInv(seller.legal_name)}</h4>
-                <small class="text-muted">${_escInv(seller.tax_id_label)}: <code>${_escInv(seller.tax_id)}</code> | ${_escInv(seller.state)}</small>
-            </div>
-            <div style="text-align:right;">
-                <div style="font-size:1.05rem;"><strong>Invoice #${_escInv(inv.invoice_no)}</strong></div>
-                <small class="text-muted">${_escInv(inv.invoice_date)}</small>
-                ${inv.irn_reference ? `<div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.2rem;">IRN: <code>${_escInv(inv.irn_reference.slice(0, 22))}…</code></div>` : ""}
-            </div>
-        </div>
-
-        <div class="invoice-parties-grid">
-            <div class="invoice-party-box">
-                <strong>Buyer / Recipient</strong><br>
-                Account: #${_escInv(buyer.customer_id)} (${_escInv(buyer.country)})<br>
-                Buyer ID: <code>${_escInv(buyer.buyer_tax_id)}</code><br>
-                Place of Supply: <strong>${_escInv(buyer.place_of_supply)}</strong>
-            </div>
-            <div class="invoice-party-box">
-                <strong>Statutory Supply Classification</strong><br>
-                Type: <code>${_escInv(tax.gst_supply_type)}</code><br>
-                Rule: ${_escInv(tax.jurisdiction)}<br>
-                Effective Tax Rate: <strong>${Number(tax.effective_rate_pct || 0).toFixed(2)}%</strong>
-            </div>
-        </div>
-
-        <div tabindex="0" role="region" aria-labelledby="taxInvoiceTableCaption" class="invoice-table-wrapper">
-            <table class="data-table">
-                <caption id="taxInvoiceTableCaption" class="survival-caption">Itemized HSN &amp; GST / VAT Tax Breakdown for Invoice #${_escInv(inv.invoice_no)}</caption>
-                <thead>
-                    <tr>
-                        <th scope="col">SKU</th>
-                        <th scope="col">HSN</th>
-                        <th scope="col">Description</th>
-                        <th scope="col">Qty</th>
-                        <th scope="col">Rate</th>
-                        <th scope="col">Taxable</th>
-                        <th scope="col">CGST</th>
-                        <th scope="col">SGST</th>
-                        <th scope="col">IGST</th>
-                        <th scope="col">Gross Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${rowsHtml}
-                </tbody>
-            </table>
-        </div>
-
-        <div class="invoice-totals-panel">
-            <div style="display:flex; justify-content:space-between; font-size:0.86rem; margin-bottom:0.35rem;">
-                <span>Taxable Value (Net)</span>
-                <strong>${sym}${Number(totals.subtotal_net || 0).toFixed(2)}</strong>
-            </div>
-            ${compRows}
-            <div style="display:flex; justify-content:space-between; font-size:1.05rem; margin-top:0.5rem; padding-top:0.5rem; border-top:1px solid var(--border-color);">
-                <strong>Grand Total (${_escInv(totals.currency)})</strong>
-                <strong style="color:${badgeColor};">${sym}${Number(totals.grand_total || 0).toFixed(2)}</strong>
-            </div>
-        </div>
-    `;
-}
-
-async function fetchActiveTaxInvoice() {
-    const invInput = document.getElementById("taxInvoiceLookupInput");
-    const regimeSel = document.getElementById("taxRegimeSelect");
-    const supplySel = document.getElementById("taxSupplyStateSelect");
-    const buyerIdInput = document.getElementById("taxBuyerIdInput");
-    const previewBox = document.getElementById("taxInvoicePreviewBox");
-    if (!invInput || !previewBox) return;
-
-    const invNo = String(invInput.value || "536365").trim() || "536365";
-    const regime = regimeSel ? regimeSel.value : "GST";
-    const supply = supplySel ? supplySel.value : "Karnataka";
-    const buyerId = buyerIdInput ? String(buyerIdInput.value || "").trim() : "";
-
-    const url = `http://localhost:8000/api/v1/invoices/${encodeURIComponent(invNo)}?tax_regime=${encodeURIComponent(regime)}&supply_state=${encodeURIComponent(supply)}&buyer_tax_id=${encodeURIComponent(buyerId)}`;
-    try {
-        const res = await fetch(url);
-        if (!res.ok) {
-            previewBox.innerHTML = `<div class="btyd-stat-box"><strong>Invoice Not Found</strong><small>No record found for #${_escInv(invNo)}. Try 536365, C536379, or click Issue from POS Form.</small></div>`;
-            return;
-        }
-        const data = await res.json();
-        renderTaxInvoicePreview(data);
-    } catch (_e) {
-        previewBox.innerHTML = `<div class="btyd-stat-box"><strong>Invoice Engine Offline</strong><small>Connect FastAPI (:8000) to generate statutory GST &amp; VAT invoices.</small></div>`;
-    }
-}
-
-async function issueTaxInvoiceFromPosForm() {
-    const custId = document.getElementById("simCustId")?.value || "12352";
-    const skuSel = document.getElementById("simSkuCode");
-    const skuCode = skuSel?.value || "22423";
-    const skuDesc = skuSel?.options?.[skuSel.selectedIndex]?.text?.replace(/^\[[^\]]+\]\s*/, "").replace(/\s*\([^)]+\)$/, "") || "REGENCY CAKESTAND 3 TIER";
-    const qty = Number(document.getElementById("simQty")?.value || 12);
-    const unitPrice = Number(document.getElementById("simPrice")?.value || 10.95);
-    const country = document.getElementById("simCountry")?.value || "India";
-    const regime = document.getElementById("taxRegimeSelect")?.value || "GST";
-    const supply = document.getElementById("taxSupplyStateSelect")?.value || "Karnataka";
-    const buyerId = document.getElementById("taxBuyerIdInput")?.value || "";
-
-    try {
-        const res = await fetch("http://localhost:8000/api/v1/invoices/generate", {
-            method: "POST",
-            headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
-            body: JSON.stringify({
-                customer_id: custId,
-                country,
-                tax_regime: regime,
-                buyer_tax_id: buyerId || null,
-                supply_state: supply,
-                items: [{
-                    stock_code: skuCode,
-                    description: skuDesc.toUpperCase(),
-                    quantity: qty,
-                    unit_price: unitPrice
-                }]
-            })
-        });
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            showToast("Invoice Issuance Blocked", err.detail || `HTTP ${res.status}`, "alert");
-            return;
-        }
-        const data = await res.json();
-        const invInput = document.getElementById("taxInvoiceLookupInput");
-        if (invInput) invInput.value = data.invoice_no;
-        renderTaxInvoicePreview(data);
-        showToast("Tax Invoice Issued", `Generated ${data.document_type} #${data.invoice_no}`, "success");
-        logAuditEvent("Tax Invoice", `Issued ${data.document_type} #${data.invoice_no} (${data.tax_summary?.gst_supply_type})`);
-    } catch (_e) {
-        showToast("Backend Offline", "Connect FastAPI (:8000) to generate POS tax invoices.", "alert");
-    }
-}
-
-window.loadTaxInvoicePreset = function(invNo, regime, supplyState) {
-    const invInput = document.getElementById("taxInvoiceLookupInput");
-    const regimeSel = document.getElementById("taxRegimeSelect");
-    const supplySel = document.getElementById("taxSupplyStateSelect");
-    if (invInput) invInput.value = invNo;
-    if (regimeSel) regimeSel.value = regime;
-    if (supplySel) supplySel.value = supplyState;
-    fetchActiveTaxInvoice();
-};
-
-function initTaxInvoiceStudio() {
-    fetchActiveTaxInvoice();
-    if (TAX_INVOICE_WIRED) return;
-    TAX_INVOICE_WIRED = true;
-
-    const lookupBtn = document.getElementById("taxInvoiceLookupBtn");
-    const issueBtn = document.getElementById("taxIssueFromPosBtn");
-    const regimeSel = document.getElementById("taxRegimeSelect");
-    const supplySel = document.getElementById("taxSupplyStateSelect");
-    const printBtn = document.getElementById("taxPrintInvoiceBtn");
-    const jsonBtn = document.getElementById("taxDownloadJsonBtn");
-
-    if (lookupBtn) lookupBtn.addEventListener("click", fetchActiveTaxInvoice);
-    if (issueBtn) issueBtn.addEventListener("click", issueTaxInvoiceFromPosForm);
-    if (regimeSel) regimeSel.addEventListener("change", fetchActiveTaxInvoice);
-    if (supplySel) supplySel.addEventListener("change", fetchActiveTaxInvoice);
-
-    if (printBtn) {
-        printBtn.addEventListener("click", () => {
-            const invNo = ACTIVE_TAX_INVOICE_CACHE?.invoice_no || document.getElementById("taxInvoiceLookupInput")?.value || "536365";
-            const regime = document.getElementById("taxRegimeSelect")?.value || "GST";
-            const supply = document.getElementById("taxSupplyStateSelect")?.value || "Karnataka";
-            const buyerId = document.getElementById("taxBuyerIdInput")?.value || "";
-            const url = `http://localhost:8000/api/v1/invoices/${encodeURIComponent(invNo)}/html?tax_regime=${encodeURIComponent(regime)}&supply_state=${encodeURIComponent(supply)}&buyer_tax_id=${encodeURIComponent(buyerId)}`;
-            window.open(url, "_blank", "noopener,noreferrer");
-        });
-    }
-
-    if (jsonBtn) {
-        jsonBtn.addEventListener("click", () => {
-            if (!ACTIVE_TAX_INVOICE_CACHE) return;
-            const blob = new Blob([JSON.stringify(ACTIVE_TAX_INVOICE_CACHE, null, 2)], { type: "application/json" });
-            const a = document.createElement("a");
-            a.href = URL.createObjectURL(blob);
-            a.download = `tax_invoice_${ACTIVE_TAX_INVOICE_CACHE.invoice_no}.json`;
-            a.click();
-            URL.revokeObjectURL(a.href);
-            showToast("JSON Exported", `Downloaded tax_invoice_${ACTIVE_TAX_INVOICE_CACHE.invoice_no}.json`, "success");
-        });
-    }
-}
+// [Lazy-Loaded Module] js/modules/fraud-radar.js
+// [Lazy-Loaded Module] js/modules/warehouse-lab.js
+// [Lazy-Loaded Module] js/modules/survival-xai.js
+// [Lazy-Loaded Module] js/modules/tax-invoice.js

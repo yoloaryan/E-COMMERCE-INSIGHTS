@@ -1,19 +1,47 @@
 # ==============================================================================
 # Render Infrastructure Blueprint Configuration (render.yaml)
-# Nexus Retail AI - Enterprise Customer Intelligence Platform
-# Pure HTML5, CSS3 & JavaScript Web Application
+# Nexus Retail AI - Full-Stack Cloud Blueprint (Static Frontend + FastAPI API)
 # ==============================================================================
 
 services:
-  # High-Performance Static Web Application (HTML / CSS / Vanilla JS)
+  # FastAPI + DuckDB ML Microservice (Dockerized Python 3.11)
+  - type: web
+    name: nexus-retail-api
+    env: docker
+    dockerfilePath: ./Dockerfile.api
+    region: oregon
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PYTHONDONTWRITEBYTECODE
+        value: "1"
+
+  # Code-Split Liquid Glass Web Application with Transparent API Reverse-Proxy
   - type: static
     name: nexus-retail-ai
     env: static
     region: oregon
     plan: free
-    buildCommand: "echo 'Static assets ready for deployment'"
+    buildCommand: "echo 'Static & ES module assets ready'"
     staticPublishPath: "."
     routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://nexus-retail-api.onrender.com/api/*
+      - type: rewrite
+        source: /ws/*
+        destination: https://nexus-retail-api.onrender.com/ws/*
+      - type: rewrite
+        source: /health
+        destination: https://nexus-retail-api.onrender.com/health
+      - type: rewrite
+        source: /docs
+        destination: https://nexus-retail-api.onrender.com/docs
+      - type: rewrite
+        source: /openapi.json
+        destination: https://nexus-retail-api.onrender.com/openapi.json
       - type: rewrite
         source: /*
         destination: /index.html
@@ -25,5 +53,8 @@ services:
         name: Cache-Control
         value: public, max-age=31536000, immutable
       - path: /app.js
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /js/*
         name: Cache-Control
         value: public, max-age=31536000, immutable

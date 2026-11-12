@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark">
+    <meta name="nexus-api-base" content="">
     <title>Nexus Retail AI | Enterprise Customer Intelligence & Admin Platform</title>
     <meta name="description" content="Production Enterprise Data Science & Machine Learning Admin Suite: Customer Segmentation, Time-Series Demand Forecasting, Churn Early Warning, Collaborative Filtering Recommender, and Operations Studio.">
     <!-- Google Fonts -->
@@ -12,7 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=7.22">
+    <link rel="stylesheet" href="style.css?v=7.23">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -179,9 +180,9 @@
                     </div>
 
                     <!-- Live FastAPI Status Badge -->
-                    <a href="http://localhost:8000/docs" target="_blank" rel="noopener noreferrer" class="api-live-pill" id="headerApiStatus" title="FastAPI ML Microservice Documentation">
+                    <a href="/docs" target="_blank" rel="noopener noreferrer" class="api-live-pill" id="headerApiStatus" title="FastAPI ML Microservice Documentation">
                         <span class="api-live-dot"></span>
-                        <span class="api-live-text">API Online :8000</span>
+                        <span class="api-live-text">API Status</span>
                     </a>
 
                     <!-- Unified Action Toolbar -->
@@ -3630,6 +3631,7 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script defer src="app.js?v=7.22"></script>
+    <script defer src="js/core/api-config.js?v=7.23"></script>
+    <script defer src="app.js?v=7.23"></script>
 </body>
 </html>
