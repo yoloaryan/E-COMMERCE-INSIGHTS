@@ -2562,43 +2562,190 @@ function initCampaignStudio() {
     const campIncentive = document.getElementById("campIncentive");
     const audienceSpan = document.getElementById("campAudienceSize");
     const revSpan = document.getElementById("campRevenueProtected");
+    const voucherPreview = document.getElementById("campVoucherPreview");
+    const btnRegenVoucher = document.getElementById("btnRegenerateVoucher");
     const list = document.getElementById("activeCampaignsList");
+    const testChannelBtns = document.querySelectorAll(".btn-test-channel");
+    const btnTestWatchdog = document.getElementById("btnTestWatchdog");
+    const activeCampBadge = document.getElementById("activeCampCountBadge");
 
     const segmentStats = {
-        "At-Risk VIPs": { size: "22 Accounts", rev: "£191,892.72" },
-        "All At-Risk": { size: "1,180 Accounts", rev: "£2,105,745.40" },
-        "Champions": { size: "708 Accounts", rev: "£5,659,383.84" },
-        "Hibernating": { size: "1,602 Accounts", rev: "£555,301.26" }
+        "At-Risk VIPs": { size: "22 Accounts", sizeNum: 22, rev: "£191,892.72", revNum: 191892.72 },
+        "All At-Risk": { size: "1,180 Accounts", sizeNum: 1180, rev: "£2,105,745.40", revNum: 2105745.40 },
+        "Champions": { size: "708 Accounts", sizeNum: 708, rev: "£5,659,383.84", revNum: 5659383.84 },
+        "Hibernating": { size: "1,602 Accounts", sizeNum: 1602, rev: "£555,301.26", revNum: 555301.26 }
     };
 
-    if (campSegment && audienceSpan && revSpan) {
-        campSegment.addEventListener("change", () => {
-            const s = segmentStats[campSegment.value] || segmentStats["At-Risk VIPs"];
-            audienceSpan.textContent = s.size;
-            revSpan.textContent = s.rev;
+    function generateCode() {
+        const seg = (campSegment ? campSegment.value : "WINBACK").replace(/[^a-zA-Z]/g, "").slice(0, 6).toUpperCase();
+        const disc = campIncentive ? campIncentive.value : "15";
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        let rand = "";
+        for (let i = 0; i < 5; i++) rand += chars.charAt(Math.floor(Math.random() * chars.length));
+        return `${seg}-${disc}-${rand}`;
+    }
+
+    if (voucherPreview) {
+        voucherPreview.value = generateCode();
+    }
+
+    if (btnRegenVoucher && voucherPreview) {
+        btnRegenVoucher.addEventListener("click", () => {
+            voucherPreview.value = generateCode();
         });
     }
 
+    if (campSegment) {
+        campSegment.addEventListener("change", () => {
+            const s = segmentStats[campSegment.value] || segmentStats["At-Risk VIPs"];
+            if (audienceSpan) audienceSpan.textContent = s.size;
+            if (revSpan) revSpan.textContent = s.rev;
+            if (voucherPreview) voucherPreview.value = generateCode();
+        });
+    }
+
+    if (campIncentive) {
+        campIncentive.addEventListener("change", () => {
+            if (voucherPreview) voucherPreview.value = generateCode();
+        });
+    }
+
+    // Test notification channels
+    testChannelBtns.forEach(btn => {
+        btn.addEventListener("click", async () => {
+            const ch = btn.getAttribute("data-channel");
+            btn.disabled = true;
+            const original = btn.textContent;
+            btn.textContent = "⏳ Ping...";
+            try {
+                const res = await fetch("http://localhost:8000/api/v1/campaigns/test-channel", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ channel: ch })
+                });
+                if (res.ok) {
+                    showToast(`⚡ ${ch.toUpperCase()} Channel Verified`, "Verification ping delivered successfully.", "success");
+                }
+            } catch (e) {
+                showToast("Channel Ping Sent (Local)", `Dispatched ${ch} simulation.`, "info");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = original;
+            }
+        });
+    });
+
+    // Test Watchdog
+    if (btnTestWatchdog) {
+        btnTestWatchdog.addEventListener("click", async () => {
+            btnTestWatchdog.disabled = true;
+            btnTestWatchdog.textContent = "⏳ Triggering...";
+            try {
+                const res = await fetch("http://localhost:8000/api/v1/campaigns/trigger-watchdog", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        watchdog_type: "churn",
+                        customer_id: 14096,
+                        churn_prob: 0.84,
+                        total_spend_gbp: 2850.0
+                    })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    showToast("🚨 VIP Churn Watchdog Triggered", "Account #14096 (84% Churn Risk) triggered automatic Slack & Email win-back dispatch.", "warning");
+                }
+            } catch (e) {
+                showToast("Watchdog Triggered (Simulated)", "VIP account #14096 evaluated.", "warning");
+            } finally {
+                btnTestWatchdog.disabled = false;
+                btnTestWatchdog.textContent = "⚡ Test Watchdog";
+            }
+        });
+    }
+
+    // Launch Campaign
     if (launchBtn && list) {
-        launchBtn.addEventListener("click", () => {
+        launchBtn.addEventListener("click", async () => {
             const seg = campSegment.value;
-            const inc = campIncentive.options[campIncentive.selectedIndex].text;
-            const newCamp = document.createElement("div");
-            newCamp.className = "campaign-item";
-            newCamp.innerHTML = `
-                <div class="camp-status-badge active">JUST LAUNCHED</div>
-                <h4>${seg} - ${inc.split(" ")[0]} Campaign</h4>
-                <p>Strategy: ${inc}</p>
-                <div class="camp-stats">
-                    <div><small>Status</small><strong class="text-green">Active</strong></div>
-                    <div><small>Audience</small><strong>${segmentStats[seg].size}</strong></div>
-                    <div><small>Channel</small><strong>Omni-Channel</strong></div>
-                    <div><small>Revenue Target</small><strong class="text-green">${segmentStats[seg].rev}</strong></div>
-                </div>
-            `;
-            list.prepend(newCamp);
-            showToast("Campaign Dispatched", `Targeting ${segmentStats[seg].size} with ${inc.split(" ")[0]}`, "success");
-            logAuditEvent("Marketing", `Launched automated retention campaign targeting ${seg} (${segmentStats[seg].size})`);
+            const s = segmentStats[seg] || segmentStats["At-Risk VIPs"];
+            const disc = parseInt(campIncentive.value, 10) || 15;
+            const incText = campIncentive.options[campIncentive.selectedIndex].text;
+            const voucher = voucherPreview ? voucherPreview.value : generateCode();
+
+            const chSlack = document.getElementById("campChanSlack")?.checked;
+            const chDiscord = document.getElementById("campChanDiscord")?.checked;
+            const chEmail = document.getElementById("campChanEmail")?.checked;
+
+            const channels = [];
+            if (chSlack) channels.push("slack");
+            if (chDiscord) channels.push("discord");
+            if (chEmail) channels.push("email");
+            if (channels.length === 0) channels.push("email");
+
+            launchBtn.disabled = true;
+            launchBtn.textContent = "⏳ Dispatching Across Channels...";
+
+            try {
+                const res = await fetch("http://localhost:8000/api/v1/campaigns/dispatch", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        campaign_name: `${seg} Retention Wave`,
+                        audience_segment: seg,
+                        audience_size: s.sizeNum,
+                        revenue_target_gbp: s.revNum,
+                        discount_pct: disc,
+                        channels: channels,
+                        custom_message: `Automated retention sequence offering ${incText}.`
+                    })
+                });
+
+                let campData = null;
+                if (res.ok) {
+                    const payload = await res.json();
+                    campData = payload.campaign;
+                }
+
+                const newCamp = document.createElement("div");
+                newCamp.className = "campaign-item";
+                const displayVoucher = campData ? campData.voucher_code : voucher;
+                const chanStr = channels.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(", ");
+
+                newCamp.innerHTML = `
+                    <div class="camp-status-badge active">JUST DISPATCHED</div>
+                    <h4>${seg} - ${disc}% Off Retention Wave</h4>
+                    <p>Strategy: ${incText}</p>
+                    <div class="camp-stats">
+                        <div><small>Channels</small><strong>${chanStr}</strong></div>
+                        <div><small>Voucher</small><code>${displayVoucher}</code></div>
+                        <div><small>Audience</small><strong>${s.size}</strong></div>
+                        <div><small>Preserved Target</small><strong class="text-green">${s.rev}</strong></div>
+                    </div>
+                `;
+                list.prepend(newCamp);
+
+                showToast(
+                    "🚀 Campaign Dispatched Multi-Channel",
+                    `Dispatched to ${s.size} via ${chanStr} with voucher ${displayVoucher}`,
+                    "success"
+                );
+                logAuditEvent("Marketing", `Dispatched automated multi-channel retention campaign to ${seg} (${s.size}) with voucher ${displayVoucher}`);
+
+                if (activeCampBadge) {
+                    activeCampBadge.textContent = `${list.querySelectorAll(".campaign-item").length} Active Sequences`;
+                }
+
+                // Generate new voucher for next campaign
+                if (voucherPreview) voucherPreview.value = generateCode();
+
+            } catch (err) {
+                console.error("[Campaigns] Dispatch error:", err);
+                showToast("Dispatch Local Fallback", `Dispatched ${seg} retention campaign locally.`, "info");
+            } finally {
+                launchBtn.disabled = false;
+                launchBtn.textContent = "🚀 Launch Automated Retention Campaign";
+            }
         });
     }
 }
@@ -2749,6 +2896,10 @@ function initLiveOrderWebSocket() {
                         handleDatasetBatchIngestedBroadcast(msg.data);
                     } else if (msg.type === "WEBHOOK_ORDER_INGESTED" && msg.data) {
                         handleWebhookOrderBroadcast(msg.data);
+                    } else if (msg.type === "CAMPAIGN_DISPATCHED" && msg.data) {
+                        handleCampaignDispatchedBroadcast(msg.data);
+                    } else if (msg.type === "WATCHDOG_ALERT_TRIGGERED" && msg.data) {
+                        handleWatchdogAlertBroadcast(msg.data);
                     }
                 } catch (e) {
                     console.warn("[Nexus WebSocket] Inbound parse warning:", e);
@@ -2796,6 +2947,32 @@ function handleDatasetBatchIngestedBroadcast(data) {
     }
     showToast("Dataset Ingestion Live", `Batch ${data.filename} merged into production data store (+${data.rows_added} transactions)`, "success");
     logAuditEvent("Data Engineering", `Ingested dataset batch: ${data.filename} (+${data.rows_added} rows, +£${Number(data.total_revenue_gbp).toFixed(2)})`);
+}
+
+function handleCampaignDispatchedBroadcast(data) {
+    console.log("[Nexus WebSocket] Received campaign dispatched broadcast:", data);
+    showToast(
+        "🚀 Multi-Channel Campaign Dispatched",
+        `${data.name}: ${data.target_segment} (${data.audience_size} users) • Voucher ${data.voucher_code}`,
+        "success"
+    );
+}
+
+function handleWatchdogAlertBroadcast(data) {
+    console.log("[Nexus WebSocket] Received watchdog alert:", data);
+    if (data.rule === "churn_watchdog") {
+        showToast(
+            "🚨 VIP Churn Watchdog Alert",
+            `Account #${data.customer_id} reached ${(data.churn_prob * 100).toFixed(1)}% churn risk (£${Number(data.spend_gbp).toFixed(2)} spend). Automatic win-back dispatched!`,
+            "warning"
+        );
+    } else if (data.rule === "drift_watchdog") {
+        showToast(
+            "🚨 MLOps Data Drift Watchdog Alert",
+            `PSI ${Number(data.psi_score).toFixed(3)} exceeded threshold. Shifted features: ${(data.shifted_features || []).join(", ")}`,
+            "danger"
+        );
+    }
 }
 
 function initTransactionSimulator() {

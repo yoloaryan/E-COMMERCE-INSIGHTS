@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=7.1">
+    <link rel="stylesheet" href="style.css?v=7.2">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -1172,12 +1172,13 @@
                         <div class="card-header">
                             <div>
                                 <h3>Targeted Retention Campaign Studio</h3>
-                                <p class="card-sub">Trigger automated win-back workflows for high-risk cohorts</p>
+                                <p class="card-sub">Trigger automated multi-channel win-back workflows for high-risk cohorts</p>
                             </div>
+                            <span class="badge" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);">Multi-Channel Dispatcher</span>
                         </div>
                         <form id="campaignBuilderForm" class="admin-form">
                             <div class="form-group">
-                                <label>Target Cohort Segment:</label>
+                                <label for="campSegment">Target Cohort Segment:</label>
                                 <select id="campSegment">
                                     <option value="At-Risk VIPs">At-Risk VIP Spenders (Spend &gt; £1k, Churn &ge; 70%)</option>
                                     <option value="All At-Risk">All At-Risk / Lapsing Customers (1,180 accounts)</option>
@@ -1186,31 +1187,77 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Offer & Incentive Strategy:</label>
+                                <label for="campIncentive">Offer & Incentive Strategy:</label>
                                 <select id="campIncentive">
-                                    <option value="20_off_fav">20% Off Customer's Top Purchased Category</option>
-                                    <option value="free_express">Complimentary Priority Express Shipping</option>
-                                    <option value="vip_gift">Free Regency Gift Item with Re-order &gt; £100</option>
-                                    <option value="dedicated_call">Direct Senior Account Manager Phone Concierge</option>
+                                    <option value="20">20% Off Customer's Top Purchased Category</option>
+                                    <option value="15" selected>15% Off Storewide Re-activation Voucher</option>
+                                    <option value="25">25% Exclusive VIP Appreciation Credit</option>
+                                    <option value="10">10% Off Cart Recovery Incentive</option>
                                 </select>
                             </div>
+
+                            <!-- Real-Time Promo Voucher Generator Preview -->
                             <div class="form-group">
-                                <label>Delivery Channel:</label>
-                                <div class="checkbox-row">
-                                    <label><input type="checkbox" checked> Personalized Email Sequence</label>
-                                    <label><input type="checkbox" checked> SMS Quick Trigger</label>
-                                    <label><input type="checkbox"> WhatsApp VIP Concierge</label>
+                                <label>Dynamic Promo Voucher Code Preview:</label>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <input type="text" id="campVoucherPreview" value="WINBACK-15-7X9B2" readonly style="font-family: var(--font-mono); font-weight: 700; color: #818cf8; background: var(--bg-surface-alt); letter-spacing: 1px;">
+                                    <button type="button" class="btn btn-secondary btn-sm" id="btnRegenerateVoucher" title="Generate New Voucher Code">🎲 Regenerate</button>
                                 </div>
                             </div>
+
+                            <div class="form-group">
+                                <label>Delivery Channels:</label>
+                                <div class="checkbox-row" style="flex-wrap: wrap; gap: 0.75rem;">
+                                    <label style="display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                                        <input type="checkbox" id="campChanSlack" checked>
+                                        <span>💬 Slack Alert</span>
+                                    </label>
+                                    <label style="display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                                        <input type="checkbox" id="campChanDiscord" checked>
+                                        <span>🎮 Discord Webhook</span>
+                                    </label>
+                                    <label style="display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                                        <input type="checkbox" id="campChanEmail" checked>
+                                        <span>✉️ HTML Email Queue</span>
+                                    </label>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                                    <button type="button" class="btn btn-secondary btn-xs btn-test-channel" data-channel="slack">Test Slack</button>
+                                    <button type="button" class="btn btn-secondary btn-xs btn-test-channel" data-channel="discord">Test Discord</button>
+                                    <button type="button" class="btn btn-secondary btn-xs btn-test-channel" data-channel="email">Test Email</button>
+                                </div>
+                            </div>
+
                             <div class="campaign-est-box">
                                 <div><strong>Target Audience Size:</strong> <span id="campAudienceSize">22 Accounts</span></div>
                                 <div><strong>Protected Gross Revenue Exposure:</strong> <span id="campRevenueProtected">£191,892.72</span></div>
                                 <div><strong>Projected Win-Back Rate:</strong> <span class="badge-tag green">28.5% Expected</span></div>
                             </div>
+
                             <button type="button" class="btn btn-primary" id="launchCampaignBtn" style="width: 100%; margin-top: 1rem;">
                                 🚀 Launch Automated Retention Campaign
                             </button>
                         </form>
+
+                        <!-- Autonomous ML Watchdog Rules Card -->
+                        <div style="margin-top: 1.5rem; padding: 1rem; border-radius: var(--radius-md); background: var(--bg-surface-alt); border: 1px solid var(--border-color);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                <h4 style="margin: 0; font-size: 0.9rem; display: flex; align-items: center; gap: 0.4rem;">
+                                    <span>🛡️</span> Autonomous ML Watchdog Triggers
+                                </h4>
+                                <button type="button" class="btn btn-secondary btn-xs" id="btnTestWatchdog" title="Simulate a live watchdog alert">⚡ Test Watchdog</button>
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.8rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span>VIP Churn Watchdog (Churn &gt; 65%, Spend &gt; £1k)</span>
+                                    <span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #22c55e;">● ACTIVE</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span>MLOps Drift Watchdog (PSI &gt; 0.25 Critical Shift)</span>
+                                    <span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #22c55e;">● ACTIVE</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Live Active Campaigns -->
@@ -1218,8 +1265,9 @@
                         <div class="card-header">
                             <div>
                                 <h3>Active Marketing & Retention Campaigns</h3>
-                                <p class="card-sub">Real-time conversion tracking and preserved EBITDA</p>
+                                <p class="card-sub">Real-time multi-channel delivery audit ledger & preserved GMV</p>
                             </div>
+                            <span class="badge" id="activeCampCountBadge">2 Active Sequences</span>
                         </div>
                         <div class="campaign-list" id="activeCampaignsList">
                             <div class="campaign-item">
@@ -1227,9 +1275,9 @@
                                 <h4>Q4 VIP Win-Back Acceleration</h4>
                                 <p>Target: 22 High-Value At-Risk VIPs (£1k+ historical spend)</p>
                                 <div class="camp-stats">
-                                    <div><small>Dispatched</small><strong>22 emails</strong></div>
-                                    <div><small>Opened</small><strong>19 (86.4%)</strong></div>
-                                    <div><small>Converted</small><strong>6 (27.3%)</strong></div>
+                                    <div><small>Channels</small><strong>Slack, Email</strong></div>
+                                    <div><small>Voucher</small><code>WINBACK-20-VIP99</code></div>
+                                    <div><small>Audience</small><strong>22 accounts</strong></div>
                                     <div><small>Preserved GMV</small><strong class="text-green">£48,210.00</strong></div>
                                 </div>
                             </div>
@@ -1238,9 +1286,9 @@
                                 <h4>Regency Teaware Cross-Sell Drip</h4>
                                 <p>Target: Customers who bought Regency Cakestand 3 Tier</p>
                                 <div class="camp-stats">
-                                    <div><small>Dispatched</small><strong>1,420 emails</strong></div>
-                                    <div><small>Opened</small><strong>612 (43.1%)</strong></div>
-                                    <div><small>Converted</small><strong>188 (13.2%)</strong></div>
+                                    <div><small>Channels</small><strong>Email Queue</strong></div>
+                                    <div><small>Voucher</small><code>REGENCY-15-X48A1</code></div>
+                                    <div><small>Audience</small><strong>1,420 accounts</strong></div>
                                     <div><small>Generated GMV</small><strong class="text-green">£14,640.00</strong></div>
                                 </div>
                             </div>
@@ -1986,6 +2034,6 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=7.1"></script>
+    <script src="app.js?v=7.2"></script>
 </body>
 </html>

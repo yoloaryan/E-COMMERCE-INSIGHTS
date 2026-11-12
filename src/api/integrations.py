@@ -496,3 +496,4 @@ class IntegrationRegistry:
             self.connectors[provider]["secret"] = new_secret.strip()
             return True
         return False
+

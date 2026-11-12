@@ -29,6 +29,7 @@ from src.models.recommender import ProductRecommender
 from src.data.importer import DatasetImporter
 from src.api.copilot import RetailCopilot
 from src.api.integrations import ECommerceIntegrations, IntegrationRegistry
+from src.api.campaigns import CampaignRegistry, CampaignDispatcher, WatchdogEvaluator, MessageFormatter, VoucherGenerator
 
 MODELS_DIR = ROOT_DIR / "models"
 MANIFEST_PATH = MODELS_DIR / "model_manifest.json"
@@ -185,6 +186,35 @@ class ConfigureSecretRequest(BaseModel):
 class SimulateWebhookRequest(BaseModel):
     provider: str = Field(default="shopify", description="shopify, stripe, or woocommerce")
     customer_id: Optional[int] = Field(default=None, description="Optional override customer ID")
+
+
+class ConfigureChannelRequest(BaseModel):
+    channel: str = Field(..., description="slack, discord, or email")
+    webhook_url: Optional[str] = Field(default="", description="Target incoming webhook URL")
+    enabled: bool = Field(default=True, description="Enable or disable channel")
+
+
+class DispatchCampaignRequest(BaseModel):
+    campaign_name: str = Field(..., description="Campaign identifier")
+    audience_segment: str = Field(..., description="Target segment, e.g. At-Risk High-Value Accounts")
+    audience_size: int = Field(default=50, ge=1)
+    revenue_target_gbp: float = Field(default=12500.0, ge=0.0)
+    discount_pct: int = Field(default=15, ge=5, le=50)
+    channels: Optional[List[str]] = Field(default=["slack", "email"])
+    custom_message: Optional[str] = Field(default=None)
+
+
+class TestChannelRequest(BaseModel):
+    channel: str = Field(default="slack", description="slack, discord, or email")
+
+
+class TriggerWatchdogRequest(BaseModel):
+    watchdog_type: str = Field(default="churn", description="'churn' or 'drift'")
+    customer_id: Optional[int] = Field(default=14096)
+    churn_prob: Optional[float] = Field(default=0.78, ge=0.0, le=1.0)
+    total_spend_gbp: Optional[float] = Field(default=2450.0, ge=0.0)
+    psi_score: Optional[float] = Field(default=0.28, ge=0.0)
+    shifted_features: Optional[List[str]] = Field(default=["UnitPrice", "Quantity", "Recency"])
 
 
 # -----------------------------------------------------------------------------
@@ -972,6 +1002,156 @@ async def simulate_sample_webhook(payload: SimulateWebhookRequest):
         "items": records,
         "registry_summary": registry.get_status()["connectors"][provider]
     }
+
+
+# -----------------------------------------------------------------------------
+# Retention Campaign & Multi-Channel Alert Dispatcher Endpoints
+# -----------------------------------------------------------------------------
+@app.get("/api/v1/campaigns/status", tags=["Campaign & Alert Dispatcher"])
+def get_campaigns_status():
+    """
+    Returns configured notification channels (Slack, Discord, Email), watchdog rules,
+    active promo vouchers, and recent dispatch transmissions.
+    """
+    return CampaignRegistry().get_status()
+
+
+@app.post("/api/v1/campaigns/configure-channels", tags=["Campaign & Alert Dispatcher"])
+def configure_campaign_channel(payload: ConfigureChannelRequest):
+    """
+    Configures webhook URLs or toggle states for target notification channels.
+    """
+    registry = CampaignRegistry()
+    success = registry.configure_channel(payload.channel, payload.webhook_url, payload.enabled)
+    if not success:
+        raise HTTPException(status_code=400, detail=f"Unsupported channel: {payload.channel}")
+    return {
+        "status": "success",
+        "message": f"Channel '{payload.channel}' updated successfully.",
+        "channel_status": registry.channels.get(payload.channel.lower())
+    }
+
+
+@app.post("/api/v1/campaigns/dispatch", tags=["Campaign & Alert Dispatcher"])
+async def dispatch_retention_campaign(payload: DispatchCampaignRequest):
+    """
+    Executes an automated multi-channel retention campaign with dynamic promo voucher generation,
+    Slack Block Kit cards, Discord embeds, and transactional HTML email queues.
+    """
+    res = CampaignDispatcher.dispatch_campaign(
+        campaign_name=payload.campaign_name,
+        audience_segment=payload.audience_segment,
+        audience_size=payload.audience_size,
+        revenue_target_gbp=payload.revenue_target_gbp,
+        discount_pct=payload.discount_pct,
+        channels=payload.channels,
+        custom_message=payload.custom_message
+    )
+
+    # Broadcast campaign execution over WebSocket
+    await ws_manager.broadcast({
+        "type": "CAMPAIGN_DISPATCHED",
+        "data": res["campaign"]
+    })
+
+    return res
+
+
+@app.post("/api/v1/campaigns/test-channel", tags=["Campaign & Alert Dispatcher"])
+async def test_notification_channel(payload: TestChannelRequest):
+    """
+    Fires an instant verification ping to test Slack, Discord, or Email delivery.
+    """
+    channel = payload.channel.lower()
+    registry = CampaignRegistry()
+    if channel not in registry.channels:
+        raise HTTPException(status_code=400, detail=f"Unsupported channel: {payload.channel}")
+
+    test_voucher = VoucherGenerator.generate_voucher_code("TESTPING", 10)
+    exp = VoucherGenerator.calculate_expiration(3)
+
+    if channel == "slack":
+        slack_payload = MessageFormatter.build_slack_blocks(
+            title="Nexus Retail AI Channel Verification",
+            message="Live Slack Block Kit webhook verification test ping.",
+            audience_segment="Internal Ops",
+            audience_size=1,
+            revenue_target_gbp=500.0,
+            voucher_code=test_voucher,
+            discount_pct=10,
+            severity="info"
+        )
+        url = registry.channels["slack"]["webhook_url"]
+        result = CampaignDispatcher._post_webhook(url, slack_payload, "slack")
+
+    elif channel == "discord":
+        discord_payload = MessageFormatter.build_discord_embed(
+            title="Nexus Retail AI Channel Verification",
+            message="Live Discord rich embed webhook verification test ping.",
+            audience_segment="Internal Ops",
+            audience_size=1,
+            revenue_target_gbp=500.0,
+            voucher_code=test_voucher,
+            discount_pct=10,
+            severity="info"
+        )
+        url = registry.channels["discord"]["webhook_url"]
+        result = CampaignDispatcher._post_webhook(url, discord_payload, "discord")
+
+    else:
+        html = MessageFormatter.build_html_email(
+            customer_name="Test Recipient",
+            discount_pct=10,
+            voucher_code=test_voucher,
+            expires_at=exp
+        )
+        result = {"status": "simulated_success", "channel": "email", "html_length": len(html)}
+
+    return {
+        "status": "success",
+        "channel": channel,
+        "result": result,
+        "message": f"Verification ping executed for {channel.title()}."
+    }
+
+
+@app.post("/api/v1/campaigns/trigger-watchdog", tags=["Campaign & Alert Dispatcher"])
+async def trigger_watchdog_rule(payload: TriggerWatchdogRequest):
+    """
+    Evaluates or simulates automated watchdog triggers for customer churn spikes or MLOps data drift.
+    """
+    w_type = payload.watchdog_type.lower()
+    if w_type == "churn":
+        res = WatchdogEvaluator.evaluate_churn_watchdog(
+            customer_id=payload.customer_id or 14096,
+            churn_prob=payload.churn_prob or 0.78,
+            total_spend_gbp=payload.total_spend_gbp or 2450.0
+        )
+        if not res:
+            return {"triggered": False, "message": "Customer metrics did not exceed VIP churn threshold."}
+        
+        await ws_manager.broadcast({
+            "type": "WATCHDOG_ALERT_TRIGGERED",
+            "data": res
+        })
+        return res
+
+    elif w_type == "drift":
+        res = WatchdogEvaluator.evaluate_drift_watchdog(
+            psi_score=payload.psi_score or 0.28,
+            shifted_features=payload.shifted_features or ["UnitPrice", "Quantity"]
+        )
+        if not res:
+            return {"triggered": False, "message": "Drift metrics did not exceed critical threshold."}
+
+        await ws_manager.broadcast({
+            "type": "WATCHDOG_ALERT_TRIGGERED",
+            "data": res
+        })
+        return res
+
+    else:
+        raise HTTPException(status_code=400, detail="watchdog_type must be 'churn' or 'drift'.")
 
 
 if __name__ == "__main__":
