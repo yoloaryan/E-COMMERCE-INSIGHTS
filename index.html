@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=7.8">
+    <link rel="stylesheet" href="style.css?v=7.9">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -1129,32 +1129,115 @@
             <section id="tab-inventory-mart" class="tab-pane">
                 <div class="kpi-grid">
                     <div class="kpi-card">
-                        <div class="kpi-label">Active SKUs in Catalog</div>
-                        <div class="kpi-value">3,660</div>
-                        <div class="kpi-subtext">3,182 Active in Recommender</div>
+                        <div class="kpi-label">Active SKUs Monitored</div>
+                        <div class="kpi-value" id="invKpiTotalSkus">12</div>
+                        <div class="kpi-subtext" id="invKpiAbcSummary">ABC-XYZ Segmented Catalog</div>
                     </div>
                     <div class="kpi-card red-border">
-                        <div class="kpi-label">Stockout Risk Alerts</div>
-                        <div class="kpi-value">14 SKUs</div>
-                        <div class="kpi-trend alert">Projected Runout &lt; 14 Days</div>
+                        <div class="kpi-label">Stockout Risk Alerts (&le; ROP)</div>
+                        <div class="kpi-value" id="invKpiCriticalSkus">4 SKUs</div>
+                        <div class="kpi-trend alert">Immediate Replenishment Recommended</div>
                     </div>
                     <div class="kpi-card gold-border">
-                        <div class="kpi-label">Slow-Moving Deadstock</div>
-                        <div class="kpi-value">482 SKUs</div>
-                        <div class="kpi-subtext">&lt; 3 purchases in 90 days</div>
+                        <div class="kpi-label">Overstock / Slow Capital</div>
+                        <div class="kpi-value" id="invKpiOverstockCap">£4,358</div>
+                        <div class="kpi-subtext" id="invKpiOverstockSub">Working Capital Tied Above 75d Cover</div>
                     </div>
-                    <div class="kpi-card">
-                        <div class="kpi-label">Catalog Velocity Index</div>
-                        <div class="kpi-value">94.8%</div>
-                        <div class="kpi-trend positive">High Inventory Turnover</div>
+                    <div class="kpi-card green-border">
+                        <div class="kpi-label">Annual EOQ Cost Savings</div>
+                        <div class="kpi-value" id="invKpiEoqSavings">£2,840</div>
+                        <div class="kpi-trend positive">Wilson EOQ vs Fixed Monthly Ordering</div>
+                    </div>
+                </div>
+
+                <!-- Phase 17: Interactive EOQ Optimizer & 30-Day Replenishment Sawtooth Simulation -->
+                <div class="charts-row">
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <div>
+                                <h3>AI Safety Stock &amp; Wilson EOQ Optimizer</h3>
+                                <p class="card-sub">Tune cycle service levels, supplier lead time, and demand surge to optimize replenishment</p>
+                            </div>
+                            <span class="badge-tag blue" id="invOptAbcBadge">Class AX</span>
+                        </div>
+
+                        <div class="pricing-controls-stack">
+                            <div class="pricing-field-group">
+                                <label for="invOptSkuSelect">Target Catalog SKU</label>
+                                <select id="invOptSkuSelect" class="form-select-sm"></select>
+                            </div>
+
+                            <div class="pricing-field-group">
+                                <label for="invOptServiceLevel">Target Cycle Service Level (Z-Score)</label>
+                                <select id="invOptServiceLevel" class="form-select-sm">
+                                    <option value="0.90">90.0% Service Level (Z = 1.28)</option>
+                                    <option value="0.95" selected>95.0% Service Level (Z = 1.64 • Enterprise Default)</option>
+                                    <option value="0.98">98.0% Service Level (Z = 2.05)</option>
+                                    <option value="0.99">99.0% Service Level (Z = 2.33 • Critical SKU)</option>
+                                </select>
+                            </div>
+
+                            <div class="pricing-field-group">
+                                <div class="pricing-slider-label-row">
+                                    <label for="invOptLeadTime">Supplier Lead Time (Days)</label>
+                                    <span class="pricing-slider-readout" id="invOptLeadTimeVal">7 days</span>
+                                </div>
+                                <input type="range" id="invOptLeadTime" class="modern-range-slider" min="2" max="21" step="1" value="7">
+                            </div>
+
+                            <div class="pricing-field-group">
+                                <div class="pricing-slider-label-row">
+                                    <label for="invOptDemandMult">Demand Surge Multiplier</label>
+                                    <span class="pricing-slider-readout" id="invOptDemandMultVal">1.0x</span>
+                                </div>
+                                <input type="range" id="invOptDemandMult" class="modern-range-slider" min="0.5" max="2.0" step="0.1" value="1.0">
+                            </div>
+                        </div>
+
+                        <div class="btyd-stat-grid" style="margin-top: 1rem;">
+                            <div class="btyd-stat-box">
+                                <strong>Safety Stock Buffer</strong>
+                                <div class="stat-val" id="invReadoutSafetyStock">62 units</div>
+                            </div>
+                            <div class="btyd-stat-box">
+                                <strong>Reorder Point (ROP)</strong>
+                                <div class="stat-val text-gold" id="invReadoutRop">328 units</div>
+                            </div>
+                            <div class="btyd-stat-box">
+                                <strong>Optimal Wilson EOQ</strong>
+                                <div class="stat-val text-blue" id="invReadoutEoq">914 units</div>
+                            </div>
+                            <div class="btyd-stat-box">
+                                <strong>Stockout Prob. (LT)</strong>
+                                <div class="stat-val text-green" id="invReadoutStockoutProb">18.4%</div>
+                            </div>
+                        </div>
+
+                        <div style="display:flex;gap:0.65rem;flex-wrap:wrap;margin-top:0.85rem;">
+                            <button type="button" class="btn btn-primary btn-sm" id="invIssueOptimalPoBtn">📦 Approve &amp; Issue Optimal EOQ PO</button>
+                            <button type="button" class="btn btn-secondary btn-sm" id="invRecalcCatalogBtn">🔄 Recalculate Catalog Policy</button>
+                        </div>
+                    </div>
+
+                    <div class="chart-card flex-2">
+                        <div class="card-header">
+                            <div>
+                                <h3>30-Day Inventory Depletion &amp; Sawtooth Replenishment Curve</h3>
+                                <p class="card-sub">Comparing unmanaged runout trajectory against automated EOQ reorder triggers at ROP</p>
+                            </div>
+                            <span class="badge-tag green" id="invTrajectoryStatusBadge">EOQ Policy Active</span>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="inventoryTrajectoryChart"></canvas>
+                        </div>
                     </div>
                 </div>
 
                 <div class="table-card">
                     <div class="card-header">
                         <div>
-                            <h3>SKU Velocity & Stock Reorder Intelligence</h3>
-                            <p class="card-sub">Combining historical order rates with predictive demand forecasting</p>
+                            <h3>SKU Velocity, ABC-XYZ &amp; Automated Replenishment Ledger</h3>
+                            <p class="card-sub">Combining empirical demand variance with EOQ, Safety Stock &amp; Reorder Point thresholds</p>
                         </div>
                         <div class="filter-actions" style="display:flex;gap:0.5rem;align-items:center;">
                             <button class="btn btn-secondary btn-sm" id="exportInventoryBtn">📥 Export CSV</button>
@@ -1167,16 +1250,47 @@
                                 <tr>
                                     <th>Stock Code</th>
                                     <th>Product Name</th>
+                                    <th>ABC / XYZ</th>
                                     <th>Unit Price</th>
-                                    <th>Est. Units in Stock</th>
-                                    <th>Daily Burn Rate</th>
-                                    <th>Days of Inventory Remaining</th>
-                                    <th>Stockout Risk Status</th>
-                                    <th>Restock Action</th>
+                                    <th>Stock On Hand</th>
+                                    <th>Daily Burn (&plusmn;&sigma;)</th>
+                                    <th>Safety Stock / ROP</th>
+                                    <th>Optimal EOQ</th>
+                                    <th>Days Left</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="card-header">
+                        <div>
+                            <h3>Recent Purchase Orders Dispatch Ledger</h3>
+                            <p class="card-sub">RBAC-audited EOQ purchase orders dispatched from Supply Operations &amp; Restock Modals</p>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table" id="invPoLedgerTable">
+                            <thead>
+                                <tr>
+                                    <th>PO Reference</th>
+                                    <th>SKU</th>
+                                    <th>Qty Ordered</th>
+                                    <th>Lead Time</th>
+                                    <th>Total Cost (&pound;)</th>
+                                    <th>New Cover</th>
+                                    <th>Issued By</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="invPoLedgerBody">
+                                <tr><td colspan="8" style="text-align:center;color:var(--text-muted);">No Purchase Orders dispatched in current session yet. Select a SKU above or click Order PO.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1601,6 +1715,7 @@
                                     <option value="segment">/api/v1/segment/rfm (RFM Persona Classifier)</option>
                                     <option value="pricing">/api/v1/pricing/simulate-price-change (Pricing Elasticity)</option>
                                     <option value="fraud">/api/v1/fraud/score-transaction (Isolation Forest Fraud)</option>
+                                    <option value="inventory">/api/v1/inventory/simulate-sku (EOQ &amp; Safety Stock)</option>
                                     <option value="rbac">/api/v1/auth/rbac-matrix (RBAC &amp; Tenant Governance)</option>
                                 </select>
                             </div>
@@ -2787,6 +2902,6 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=7.8"></script>
+    <script src="app.js?v=7.9"></script>
 </body>
 </html>

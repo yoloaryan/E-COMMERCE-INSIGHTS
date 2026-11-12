@@ -33,6 +33,7 @@ from src.api.campaigns import CampaignRegistry, CampaignDispatcher, WatchdogEval
 from src.models.pricing_elasticity import PricingElasticityEngine, ABExperimentEngine, PricingExperimentRegistry
 from src.api.security import SecurityRegistry, ROLE_DEFINITIONS, AuthError, get_required_principal, require_permission
 from src.models.anomaly_detection import AnomalyDetectionEngine, AnomalyRegistry
+from src.models.inventory_optimization import get_inventory_engine
 
 MODELS_DIR = ROOT_DIR / "models"
 MANIFEST_PATH = MODELS_DIR / "model_manifest.json"
@@ -285,6 +286,36 @@ class ScoreTransactionRequest(BaseModel):
 
 class ResolveQuarantineRequest(BaseModel):
     decision: str = Field(..., description="Operator decision: 'APPROVED' or 'BLOCKED'")
+
+
+class SimulateSkuInventoryRequest(BaseModel):
+    stock_code: str = Field(..., min_length=1)
+    service_level: float = Field(default=0.95, ge=0.51, le=0.999)
+    lead_time_days: int = Field(default=7, ge=1, le=60)
+    ordering_cost: float = Field(default=45.0, ge=5.0, le=5000.0)
+    holding_rate: float = Field(default=0.22, ge=0.05, le=0.80)
+    demand_multiplier: float = Field(default=1.0, ge=0.25, le=4.0)
+    stock_override: Optional[int] = Field(default=None, ge=0)
+    horizon_days: int = Field(default=30, ge=7, le=60)
+
+
+class IssuePurchaseOrderRequest(BaseModel):
+    stock_code: str = Field(..., min_length=1)
+    order_qty: Optional[int] = Field(default=None, ge=1, le=100000)
+    lead_time_days: int = Field(default=7, ge=1, le=60)
+    service_level: float = Field(default=0.95, ge=0.51, le=0.999)
+    ordering_cost: float = Field(default=45.0, ge=5.0, le=5000.0)
+    holding_rate: float = Field(default=0.22, ge=0.05, le=0.80)
+    notes: str = Field(default="", max_length=200)
+
+
+class AddInventorySkuRequest(BaseModel):
+    stock_code: str = Field(..., min_length=1, max_length=24)
+    description: str = Field(..., min_length=2, max_length=80)
+    unit_price: float = Field(..., gt=0.05, le=10000.0)
+    daily_demand_mean: float = Field(..., gt=0.1, le=50000.0)
+    daily_demand_std: Optional[float] = Field(default=None, ge=0.1)
+    stock_on_hand: int = Field(default=100, ge=0)
 
 
 # -----------------------------------------------------------------------------
@@ -1672,6 +1703,125 @@ async def resolve_fraud_quarantine(
         "data": updated,
     })
     return {"status": "success", "alert": updated}
+
+
+# -----------------------------------------------------------------------------
+# Phase 17: AI Inventory & Supply Chain Optimization Engine Endpoints
+# -----------------------------------------------------------------------------
+@app.get("/api/v1/inventory/optimization-report", tags=["Inventory & Supply Chain Optimization"])
+def get_inventory_optimization_report(
+    service_level: float = Query(default=0.95, ge=0.51, le=0.999),
+    lead_time_days: int = Query(default=7, ge=1, le=60),
+    ordering_cost: float = Query(default=45.0, ge=5.0, le=5000.0),
+    holding_rate: float = Query(default=0.22, ge=0.05, le=0.80),
+):
+    """
+    Returns ABC-XYZ inventory classification, Safety Stock, Reorder Points (ROP),
+    Wilson EOQ optimal lot sizes, deadstock capital exposure, and PO ledger.
+    """
+    return get_inventory_engine().generate_optimization_report(
+        service_level=service_level,
+        lead_time_days=lead_time_days,
+        ordering_cost=ordering_cost,
+        holding_rate=holding_rate,
+    )
+
+
+@app.post("/api/v1/inventory/simulate-sku", tags=["Inventory & Supply Chain Optimization"])
+def simulate_inventory_sku(
+    payload: SimulateSkuInventoryRequest,
+    _principal: Dict[str, Any] = Depends(require_permission("predict:execute")),
+):
+    """
+    Runs interactive What-If Safety Stock, Reorder Point, Wilson EOQ cost breakdown,
+    and 30-day depletion vs sawtooth replenishment simulation for a target SKU.
+    """
+    try:
+        return get_inventory_engine().simulate_sku(
+            stock_code=payload.stock_code,
+            service_level=payload.service_level,
+            lead_time_days=payload.lead_time_days,
+            ordering_cost=payload.ordering_cost,
+            holding_rate=payload.holding_rate,
+            demand_multiplier=payload.demand_multiplier,
+            stock_override=payload.stock_override,
+            horizon_days=payload.horizon_days,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@app.post("/api/v1/inventory/purchase-orders", tags=["Inventory & Supply Chain Optimization"])
+async def create_inventory_purchase_order(
+    payload: IssuePurchaseOrderRequest,
+    principal: Dict[str, Any] = Depends(require_permission("inventory:write")),
+):
+    """
+    Issues a Purchase Order (defaults to optimal Wilson EOQ quantity), replenishing SKU stock
+    in the live ledger and emitting audit + WebSocket telemetry (requires inventory:write).
+    """
+    try:
+        result = get_inventory_engine().issue_purchase_order(
+            stock_code=payload.stock_code,
+            order_qty=payload.order_qty,
+            lead_time_days=payload.lead_time_days,
+            service_level=payload.service_level,
+            ordering_cost=payload.ordering_cost,
+            holding_rate=payload.holding_rate,
+            actor_email=principal.get("email", "supply@nexusretail.ai"),
+            notes=payload.notes,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+    po = result["purchase_order"]
+    SecurityRegistry().record_audit_event(
+        event_type="INVENTORY_PO",
+        actor_email=principal.get("email", "supply@nexusretail.ai"),
+        actor_role=principal.get("role", "supply"),
+        tenant_id=principal.get("tenant_id", "tenant_uk_flagship"),
+        action=f"Issued {po['po_id']} for SKU {po['stock_code']} (+{po['order_qty']} units, £{po['total_cost_gbp']:,.2f})",
+        status_code=200,
+        severity="INFO",
+    )
+
+    await ws_manager.broadcast({
+        "type": "PURCHASE_ORDER_DISPATCHED",
+        "data": po,
+    })
+    return {"status": "success", **result}
+
+
+@app.post("/api/v1/inventory/skus", status_code=201, tags=["Inventory & Supply Chain Optimization"])
+def create_or_update_inventory_sku(
+    payload: AddInventorySkuRequest,
+    principal: Dict[str, Any] = Depends(require_permission("inventory:write")),
+):
+    """
+    Registers a new SKU in the AI Inventory Optimization catalog and computes its initial EOQ policy.
+    """
+    try:
+        policy = get_inventory_engine().add_sku(
+            stock_code=payload.stock_code,
+            description=payload.description,
+            unit_price=payload.unit_price,
+            daily_demand_mean=payload.daily_demand_mean,
+            daily_demand_std=payload.daily_demand_std,
+            stock_on_hand=payload.stock_on_hand,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    SecurityRegistry().record_audit_event(
+        event_type="INVENTORY_SKU_ADDED",
+        actor_email=principal.get("email", "supply@nexusretail.ai"),
+        actor_role=principal.get("role", "supply"),
+        tenant_id=principal.get("tenant_id", "tenant_uk_flagship"),
+        action=f"Registered catalog SKU {policy['stock_code']} ({policy['description']}, EOQ {policy['eoq']})",
+        status_code=201,
+        severity="INFO",
+    )
+    return {"status": "created", "policy": policy}
 
 
 if __name__ == "__main__":

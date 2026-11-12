@@ -2554,37 +2554,423 @@ const INVENTORY_DATABASE = [
     { code: "22697", name: "Green Regency Teacup And Saucer", price: 2.95, stock: 180, burn: 27, daysLeft: 6, status: "Urgent Stockout Risk" }
 ];
 
-function initInventoryMart() {
-    const tbody = document.querySelector("#inventoryTable tbody");
-    const exportBtn = document.getElementById("exportInventoryBtn");
+let inventoryTrajectoryChartInstance = null;
+let INVENTORY_POLICIES_CACHE = [];
+let INVENTORY_PURCHASE_ORDERS_CACHE = [];
+let INVENTORY_INIT_WIRED = false;
 
-    if (exportBtn) {
-        exportBtn.addEventListener("click", () => {
-            downloadCSV("inventory_sku_catalog.csv", INVENTORY_DATABASE);
-            showToast("Inventory Exported", "inventory_sku_catalog.csv downloaded", "success");
-            logAuditEvent("Export", "Exported SKU Inventory & Reorder Intelligence Catalog to CSV");
-        });
+function computeLocalInventoryPolicy(item, serviceLevel = 0.95, leadDays = 7, demandMult = 1.0) {
+    const zMap = { 0.90: 1.2816, 0.95: 1.6449, 0.98: 2.0537, 0.99: 2.3263 };
+    const z = zMap[serviceLevel] || 1.6449;
+    const mu = Math.max(0.5, item.burn * demandMult);
+    const sigma = Math.max(0.2, (item.std || item.burn * 0.36) * Math.sqrt(demandMult));
+    const unitCost = Math.max(0.25, item.price * 0.62);
+    const ss = Math.max(1, Math.round(z * sigma * Math.sqrt(leadDays)));
+    const rop = Math.max(ss + 1, Math.round(mu * leadDays + ss));
+    const eoq = Math.max(10, Math.round(Math.sqrt((2 * mu * 365 * 45) / (unitCost * 0.22))));
+    const daysRemaining = parseFloat((item.stock / mu).toFixed(1));
+    const riskStatus = (item.stock <= rop * 0.85 || daysRemaining <= leadDays + 3)
+        ? "CRITICAL_REORDER"
+        : (item.stock <= rop * 1.2 || daysRemaining <= leadDays + 8)
+            ? "REORDER_SOON"
+            : daysRemaining > 75
+                ? "OVERSTOCK_MARKDOWN"
+                : "OPTIMAL";
+    return {
+        stock_code: item.code,
+        description: item.name,
+        unit_price: item.price,
+        unit_cost: parseFloat(unitCost.toFixed(2)),
+        abc_class: item.abc_class || (item.price * item.burn > 150 ? "A" : "B"),
+        xyz_class: item.xyz_class || "Y",
+        abc_xyz: item.abc_xyz || (item.price * item.burn > 150 ? "AX" : "BY"),
+        stock_on_hand: item.stock,
+        daily_demand_mean: parseFloat(mu.toFixed(2)),
+        daily_demand_std: parseFloat(sigma.toFixed(2)),
+        safety_stock: ss,
+        reorder_point: rop,
+        eoq: eoq,
+        days_remaining: daysRemaining,
+        stockout_probability_pct: item.stock <= rop ? 34.5 : 4.2,
+        annual_eoq_savings: parseFloat((eoq * 0.32).toFixed(2)),
+        overstock_capital_gbp: daysRemaining > 75 ? parseFloat((item.stock * unitCost).toFixed(2)) : 0,
+        risk_status: riskStatus
+    };
+}
+
+function renderInventoryTrajectoryChart(trajectory, skuLabel) {
+    const canvas = document.getElementById("inventoryTrajectoryChart");
+    if (!canvas || typeof Chart === "undefined") return;
+    if (inventoryTrajectoryChartInstance) {
+        inventoryTrajectoryChartInstance.destroy();
     }
 
+    const labels = trajectory.map(pt => pt.label);
+    const unmanaged = trajectory.map(pt => pt.unmanaged_stock);
+    const eoqManaged = trajectory.map(pt => pt.eoq_managed_stock);
+    const ropLine = trajectory.map(pt => pt.reorder_point);
+    const ssLine = trajectory.map(pt => pt.safety_stock);
+
+    const textColor = document.documentElement.getAttribute("data-theme") === "light" ? "#334155" : "#CBD5E1";
+    const gridColor = document.documentElement.getAttribute("data-theme") === "light" ? "rgba(15, 23, 42, 0.08)" : "rgba(255, 255, 255, 0.08)";
+
+    inventoryTrajectoryChartInstance = new Chart(canvas.getContext("2d"), {
+        type: "line",
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: `EOQ Replenishment Sawtooth (${skuLabel})`,
+                    data: eoqManaged,
+                    borderColor: "#3B82F6",
+                    backgroundColor: "rgba(59, 130, 246, 0.14)",
+                    borderWidth: 2.5,
+                    fill: true,
+                    tension: 0.15,
+                    pointRadius: 2
+                },
+                {
+                    label: "Unmanaged Depletion (No Reorder)",
+                    data: unmanaged,
+                    borderColor: "#EF4444",
+                    borderWidth: 2,
+                    borderDash: [4, 4],
+                    fill: false,
+                    tension: 0.15,
+                    pointRadius: 0
+                },
+                {
+                    label: "Reorder Point (ROP)",
+                    data: ropLine,
+                    borderColor: "#F59E0B",
+                    borderWidth: 1.5,
+                    borderDash: [6, 3],
+                    fill: false,
+                    pointRadius: 0
+                },
+                {
+                    label: "Safety Stock Buffer",
+                    data: ssLine,
+                    borderColor: "#10B981",
+                    borderWidth: 1.5,
+                    borderDash: [2, 3],
+                    fill: false,
+                    pointRadius: 0
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+                legend: { labels: { color: textColor, font: { size: 11 } } }
+            },
+            scales: {
+                x: { ticks: { color: textColor, maxTicksLimit: 8 }, grid: { color: gridColor } },
+                y: { beginAtZero: true, ticks: { color: textColor }, grid: { color: gridColor } }
+            }
+        }
+    });
+}
+
+function renderInventoryLedgerAndPo(rows, pos = []) {
+    const tbody = document.querySelector("#inventoryTable tbody");
+    const poBody = document.getElementById("invPoLedgerBody");
     if (!tbody) return;
 
-    tbody.innerHTML = INVENTORY_DATABASE.map(item => {
-        const isUrgent = item.daysLeft <= 14;
-        const badgeColor = isUrgent ? "#EF4444" : item.daysLeft <= 21 ? "#F59E0B" : "#10B981";
+    const statusMeta = {
+        CRITICAL_REORDER: { label: "Critical Reorder", color: "#EF4444" },
+        REORDER_SOON: { label: "Reorder Soon", color: "#F59E0B" },
+        OVERSTOCK_MARKDOWN: { label: "Overstock / Markdown", color: "#A855F7" },
+        OPTIMAL: { label: "Optimal Buffer", color: "#10B981" }
+    };
 
+    tbody.innerHTML = rows.map(item => {
+        const meta = statusMeta[item.risk_status] || statusMeta.OPTIMAL;
+        const abcColor = item.abc_class === "A" ? "#3B82F6" : item.abc_class === "B" ? "#10B981" : "#94A3B8";
         return `
             <tr>
-                <td><code>${item.code}</code></td>
-                <td><strong>${item.name}</strong></td>
-                <td>£${item.price.toFixed(2)}</td>
-                <td><strong>${item.stock.toLocaleString()} units</strong></td>
-                <td>${item.burn} / day</td>
-                <td><strong style="color:${badgeColor};">${item.daysLeft} days</strong></td>
-                <td><span class="badge-tag" style="background:${badgeColor}22; color:${badgeColor}; font-weight:700;">${item.status}</span></td>
-                <td><button class="btn btn-outline btn-xs" onclick="openRestockModal('${item.code}')">📦 Order Restock</button></td>
+                <td><code>${item.stock_code}</code></td>
+                <td><strong>${item.description}</strong></td>
+                <td><span class="badge-tag" style="background:${abcColor}22;color:${abcColor};font-weight:700;">${item.abc_xyz}</span></td>
+                <td>£${Number(item.unit_price).toFixed(2)}</td>
+                <td><strong>${Number(item.stock_on_hand).toLocaleString()} units</strong></td>
+                <td>${item.daily_demand_mean} <small style="color:var(--text-muted);">&plusmn;${item.daily_demand_std}</small></td>
+                <td><span style="color:var(--text-muted);">${item.safety_stock}</span> / <strong>${item.reorder_point}</strong></td>
+                <td><strong class="text-blue">${Number(item.eoq).toLocaleString()}</strong></td>
+                <td><strong style="color:${meta.color};">${item.days_remaining}d</strong></td>
+                <td><span class="badge-tag" style="background:${meta.color}22;color:${meta.color};font-weight:700;">${meta.label}</span></td>
+                <td style="white-space:nowrap;">
+                    <button type="button" class="btn btn-secondary btn-xs" onclick="window.selectSkuForOptimization('${item.stock_code}')">📐 EOQ</button>
+                    <button type="button" class="btn btn-outline btn-xs" onclick="openRestockModal('${item.stock_code}')">📦 Order PO</button>
+                </td>
             </tr>
         `;
     }).join("");
+
+    if (poBody) {
+        if (!pos.length) {
+            poBody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);">No Purchase Orders dispatched in current session yet. Select a SKU above or click Order PO.</td></tr>`;
+        } else {
+            poBody.innerHTML = pos.map(po => `
+                <tr>
+                    <td><code>${po.po_id}</code></td>
+                    <td><strong>${po.stock_code}</strong> <small style="color:var(--text-muted);">${po.description || ""}</small></td>
+                    <td><strong>+${Number(po.order_qty).toLocaleString()}</strong></td>
+                    <td>${po.lead_time_days}d</td>
+                    <td>£${Number(po.total_cost_gbp).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td><strong class="text-green">${po.new_days_remaining}d</strong></td>
+                    <td><code>${po.issued_by}</code></td>
+                    <td><span class="badge-tag green">${po.status}</span></td>
+                </tr>
+            `).join("");
+        }
+    }
+}
+
+async function refreshInventorySimulator() {
+    const skuSelect = document.getElementById("invOptSkuSelect");
+    const slSelect = document.getElementById("invOptServiceLevel");
+    const ltSlider = document.getElementById("invOptLeadTime");
+    const multSlider = document.getElementById("invOptDemandMult");
+    if (!skuSelect || !skuSelect.value) return;
+
+    const stockCode = skuSelect.value;
+    const serviceLevel = parseFloat(slSelect ? slSelect.value : "0.95");
+    const leadDays = parseInt(ltSlider ? ltSlider.value : "7", 10);
+    const demandMult = parseFloat(multSlider ? multSlider.value : "1.0");
+
+    const ltVal = document.getElementById("invOptLeadTimeVal");
+    const multVal = document.getElementById("invOptDemandMultVal");
+    if (ltVal) ltVal.textContent = `${leadDays} days`;
+    if (multVal) multVal.textContent = `${demandMult.toFixed(1)}x`;
+
+    let simData = null;
+    try {
+        const res = await fetch("http://localhost:8000/api/v1/inventory/simulate-sku", {
+            method: "POST",
+            headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
+            body: JSON.stringify({
+                stock_code: stockCode,
+                service_level: serviceLevel,
+                lead_time_days: leadDays,
+                demand_multiplier: demandMult,
+                horizon_days: 30
+            })
+        });
+        if (res.ok) simData = await res.json();
+    } catch (_e) {
+        // Fallback offline simulation below
+    }
+
+    if (!simData) {
+        const base = INVENTORY_POLICIES_CACHE.find(r => r.stock_code === stockCode)
+            || computeLocalInventoryPolicy(INVENTORY_DATABASE.find(i => i.code === stockCode) || INVENTORY_DATABASE[0], serviceLevel, leadDays, demandMult);
+        const pol = computeLocalInventoryPolicy({
+            code: base.stock_code,
+            name: base.description,
+            price: base.unit_price,
+            stock: base.stock_on_hand,
+            burn: base.daily_demand_mean,
+            std: base.daily_demand_std,
+            abc_class: base.abc_class,
+            xyz_class: base.xyz_class,
+            abc_xyz: base.abc_xyz
+        }, serviceLevel, leadDays, demandMult);
+
+        let unm = pol.stock_on_hand;
+        let opt = pol.stock_on_hand;
+        let arrival = null;
+        const traj = [];
+        for (let d = 0; d <= 30; d++) {
+            if (d > 0) {
+                unm = Math.max(0, unm - pol.daily_demand_mean);
+                opt = Math.max(0, opt - pol.daily_demand_mean);
+                if (arrival === d) { opt += pol.eoq; arrival = null; }
+                if (opt <= pol.reorder_point && arrival === null) arrival = d + leadDays;
+            }
+            traj.push({
+                day: d,
+                label: `Day ${d}`,
+                unmanaged_stock: parseFloat(unm.toFixed(1)),
+                eoq_managed_stock: parseFloat(opt.toFixed(1)),
+                safety_stock: pol.safety_stock,
+                reorder_point: pol.reorder_point
+            });
+        }
+        simData = { policy: pol, trajectory: traj };
+    }
+
+    const p = simData.policy;
+    const ssEl = document.getElementById("invReadoutSafetyStock");
+    const ropEl = document.getElementById("invReadoutRop");
+    const eoqEl = document.getElementById("invReadoutEoq");
+    const probEl = document.getElementById("invReadoutStockoutProb");
+    const abcEl = document.getElementById("invOptAbcBadge");
+    if (ssEl) ssEl.textContent = `${Number(p.safety_stock).toLocaleString()} units`;
+    if (ropEl) ropEl.textContent = `${Number(p.reorder_point).toLocaleString()} units`;
+    if (eoqEl) eoqEl.textContent = `${Number(p.eoq).toLocaleString()} units`;
+    if (probEl) {
+        probEl.textContent = `${p.stockout_probability_pct}%`;
+        probEl.className = `stat-val ${p.stockout_probability_pct >= 25 ? "text-red" : p.stockout_probability_pct >= 12 ? "text-gold" : "text-green"}`;
+    }
+    if (abcEl) abcEl.textContent = `Class ${p.abc_xyz}`;
+
+    renderInventoryTrajectoryChart(simData.trajectory, p.stock_code);
+}
+
+async function initInventoryMart() {
+    const tbody = document.querySelector("#inventoryTable tbody");
+    const exportBtn = document.getElementById("exportInventoryBtn");
+    const skuSelect = document.getElementById("invOptSkuSelect");
+    const slSelect = document.getElementById("invOptServiceLevel");
+    const ltSlider = document.getElementById("invOptLeadTime");
+    const multSlider = document.getElementById("invOptDemandMult");
+    const issuePoBtn = document.getElementById("invIssueOptimalPoBtn");
+    const recalcBtn = document.getElementById("invRecalcCatalogBtn");
+
+    if (!tbody) return;
+
+    const serviceLevel = parseFloat(slSelect ? slSelect.value : "0.95");
+    const leadDays = parseInt(ltSlider ? ltSlider.value : "7", 10);
+
+    let report = null;
+    try {
+        const res = await fetch(`http://localhost:8000/api/v1/inventory/optimization-report?service_level=${serviceLevel}&lead_time_days=${leadDays}`);
+        if (res.ok) report = await res.json();
+    } catch (_e) {
+        // Fallback offline computation
+    }
+
+    if (report && Array.isArray(report.skus)) {
+        INVENTORY_POLICIES_CACHE = report.skus;
+        INVENTORY_PURCHASE_ORDERS_CACHE = report.purchase_orders || [];
+        // Sync local fallback array so modal restock + CSV export align with backend
+        INVENTORY_DATABASE.length = 0;
+        report.skus.forEach(s => INVENTORY_DATABASE.push({
+            code: s.stock_code,
+            name: s.description,
+            price: s.unit_price,
+            stock: s.stock_on_hand,
+            burn: s.daily_demand_mean,
+            std: s.daily_demand_std,
+            daysLeft: s.days_remaining,
+            status: s.risk_status
+        }));
+        const k = report.kpis;
+        const kTotal = document.getElementById("invKpiTotalSkus");
+        const kAbc = document.getElementById("invKpiAbcSummary");
+        const kCrit = document.getElementById("invKpiCriticalSkus");
+        const kOver = document.getElementById("invKpiOverstockCap");
+        const kSav = document.getElementById("invKpiEoqSavings");
+        if (kTotal) kTotal.textContent = `${k.active_skus_monitored} SKUs`;
+        if (kAbc && k.abc_distribution) kAbc.textContent = `A: ${k.abc_distribution.A || 0} • B: ${k.abc_distribution.B || 0} • C: ${k.abc_distribution.C || 0}`;
+        if (kCrit) kCrit.textContent = `${k.critical_reorder_skus} SKUs`;
+        if (kOver) kOver.textContent = `£${Number(k.overstock_capital_gbp).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+        if (kSav) kSav.textContent = `£${Number(k.annual_eoq_savings_gbp).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+    } else {
+        INVENTORY_POLICIES_CACHE = INVENTORY_DATABASE.map(item => computeLocalInventoryPolicy(item, serviceLevel, leadDays, 1.0));
+    }
+
+    if (skuSelect) {
+        const prev = skuSelect.value;
+        skuSelect.innerHTML = INVENTORY_POLICIES_CACHE.map(r =>
+            `<option value="${r.stock_code}">${r.stock_code} — ${r.description} (${r.days_remaining}d cover)</option>`
+        ).join("");
+        if (prev && INVENTORY_POLICIES_CACHE.some(r => r.stock_code === prev)) {
+            skuSelect.value = prev;
+        }
+    }
+
+    renderInventoryLedgerAndPo(INVENTORY_POLICIES_CACHE, INVENTORY_PURCHASE_ORDERS_CACHE);
+    await refreshInventorySimulator();
+
+    window.selectSkuForOptimization = (code) => {
+        if (skuSelect) {
+            skuSelect.value = code;
+            refreshInventorySimulator();
+            skuSelect.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+    };
+
+    if (!INVENTORY_INIT_WIRED) {
+        INVENTORY_INIT_WIRED = true;
+
+        if (exportBtn) {
+            exportBtn.addEventListener("click", () => {
+                downloadCSV("inventory_eoq_optimization_ledger.csv", INVENTORY_POLICIES_CACHE.length ? INVENTORY_POLICIES_CACHE : INVENTORY_DATABASE);
+                showToast("Inventory Exported", "inventory_eoq_optimization_ledger.csv downloaded", "success");
+                logAuditEvent("Export", "Exported Phase 17 EOQ & ABC-XYZ Inventory Ledger to CSV");
+            });
+        }
+
+        [skuSelect, slSelect, ltSlider, multSlider].forEach(el => {
+            if (el) {
+                el.addEventListener("input", refreshInventorySimulator);
+                el.addEventListener("change", refreshInventorySimulator);
+            }
+        });
+
+        if (recalcBtn) {
+            recalcBtn.addEventListener("click", async () => {
+                await initInventoryMart();
+                showToast("Catalog Recalculated", "Updated Safety Stock, ROP & Wilson EOQ across catalog", "info");
+            });
+        }
+
+        if (issuePoBtn) {
+            issuePoBtn.addEventListener("click", async () => {
+                const targetSku = skuSelect ? skuSelect.value : null;
+                if (!targetSku) return;
+                const sl = parseFloat(slSelect ? slSelect.value : "0.95");
+                const lt = parseInt(ltSlider ? ltSlider.value : "7", 10);
+                issuePoBtn.disabled = true;
+                try {
+                    const res = await fetch("http://localhost:8000/api/v1/inventory/purchase-orders", {
+                        method: "POST",
+                        headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
+                        body: JSON.stringify({
+                            stock_code: targetSku,
+                            service_level: sl,
+                            lead_time_days: lt,
+                            notes: "Approved from Phase 17 EOQ Optimizer"
+                        })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) {
+                        showToast("PO Authorization Blocked", data.detail || `HTTP ${res.status}`, "alert");
+                    } else {
+                        const po = data.purchase_order;
+                        showToast("EOQ Purchase Order Dispatched", `${po.po_id}: +${po.order_qty} units of SKU ${po.stock_code} (£${Number(po.total_cost_gbp).toFixed(2)})`, "success");
+                        logAuditEvent("Inventory", `Dispatched ${po.po_id} (+${po.order_qty} units for ${po.stock_code})`);
+                        await initInventoryMart();
+                    }
+                } catch (_e) {
+                    const localItem = INVENTORY_DATABASE.find(i => i.code === targetSku);
+                    if (localItem) {
+                        const pol = computeLocalInventoryPolicy(localItem, sl, lt, 1.0);
+                        localItem.stock += pol.eoq;
+                        INVENTORY_PURCHASE_ORDERS_CACHE.unshift({
+                            po_id: `PO-${Math.floor(100000 + Math.random() * 899999)}`,
+                            stock_code: localItem.code,
+                            description: localItem.name,
+                            order_qty: pol.eoq,
+                            lead_time_days: lt,
+                            total_cost_gbp: parseFloat((pol.eoq * pol.unit_cost).toFixed(2)),
+                            new_days_remaining: parseFloat((localItem.stock / localItem.burn).toFixed(1)),
+                            issued_by: "offline-operator",
+                            status: "DISPATCHED (LOCAL)"
+                        });
+                        await initInventoryMart();
+                        showToast("PO Dispatched (Local)", `Replenished +${pol.eoq} units for SKU ${localItem.code}`, "success");
+                    }
+                } finally {
+                    issuePoBtn.disabled = false;
+                }
+            });
+        }
+    }
 }
 
 // =============================================================================
@@ -3480,7 +3866,7 @@ function initSkuAndRestockModals() {
     if (cancelSkuBtn) cancelSkuBtn.addEventListener("click", closeSkuModal);
 
     if (skuForm) {
-        skuForm.addEventListener("submit", (e) => {
+        skuForm.addEventListener("submit", async (e) => {
             e.preventDefault();
             const code = document.getElementById("modalSkuCode").value.trim().toUpperCase();
             const name = document.getElementById("modalSkuName").value.trim();
@@ -3488,20 +3874,30 @@ function initSkuAndRestockModals() {
             const stock = parseInt(document.getElementById("modalSkuStock").value, 10) || 250;
             const burn = parseInt(document.getElementById("modalSkuBurn").value, 10) || 10;
 
-            const daysLeft = Math.round(stock / burn);
-            const status = daysLeft <= 14 ? "Critical Reorder" : daysLeft <= 21 ? "Reorder Approaching" : "Healthy Stock";
+            try {
+                const res = await fetch("http://localhost:8000/api/v1/inventory/skus", {
+                    method: "POST",
+                    headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
+                    body: JSON.stringify({
+                        stock_code: code,
+                        description: name,
+                        unit_price: price,
+                        daily_demand_mean: burn,
+                        stock_on_hand: stock
+                    })
+                });
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    showToast("Catalog Update Blocked", errData.detail || `HTTP ${res.status}`, "alert");
+                    return;
+                }
+            } catch (_err) {
+                const daysLeft = Math.round(stock / burn);
+                const status = daysLeft <= 14 ? "CRITICAL_REORDER" : daysLeft <= 21 ? "REORDER_SOON" : "OPTIMAL";
+                INVENTORY_DATABASE.unshift({ code, name, price, stock, burn, daysLeft, status });
+            }
 
-            INVENTORY_DATABASE.unshift({
-                code: code,
-                name: name,
-                price: price,
-                stock: stock,
-                burn: burn,
-                daysLeft: daysLeft,
-                status: status
-            });
-
-            initInventoryMart();
+            await initInventoryMart();
             closeSkuModal();
             showToast("SKU Registered", `Created catalog product [${code}] ${name}`, "success");
             logAuditEvent("Catalog", `Registered new SKU catalog item: [${code}] ${name} (£${price.toFixed(2)})`);
@@ -3553,22 +3949,41 @@ function initSkuAndRestockModals() {
     if (cancelRestockBtn) cancelRestockBtn.addEventListener("click", closeRestockModal);
 
     if (restockForm) {
-        restockForm.addEventListener("submit", (e) => {
+        restockForm.addEventListener("submit", async (e) => {
             e.preventDefault();
             if (!currentRestockItem) return;
 
             const addQty = parseInt(restockQtyInput.value, 10) || 500;
             const supplier = document.getElementById("modalRestockSupplier").value;
             const leadDays = parseInt(document.getElementById("modalRestockLeadDays").value, 10) || 3;
+            const targetCode = currentRestockItem.code;
 
-            currentRestockItem.stock += addQty;
-            currentRestockItem.daysLeft = Math.round(currentRestockItem.stock / currentRestockItem.burn);
-            currentRestockItem.status = currentRestockItem.daysLeft <= 14 ? "Critical Reorder" : currentRestockItem.daysLeft <= 21 ? "Reorder Approaching" : "Healthy Stock";
+            try {
+                const res = await fetch("http://localhost:8000/api/v1/inventory/purchase-orders", {
+                    method: "POST",
+                    headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
+                    body: JSON.stringify({
+                        stock_code: targetCode,
+                        order_qty: addQty,
+                        lead_time_days: leadDays,
+                        notes: `Manual Restock Modal (${supplier})`
+                    })
+                });
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    showToast("Purchase Order Blocked", errData.detail || `HTTP ${res.status}`, "alert");
+                    return;
+                }
+            } catch (_err) {
+                currentRestockItem.stock += addQty;
+                currentRestockItem.daysLeft = Math.round(currentRestockItem.stock / currentRestockItem.burn);
+                currentRestockItem.status = currentRestockItem.daysLeft <= 14 ? "CRITICAL_REORDER" : currentRestockItem.daysLeft <= 21 ? "REORDER_SOON" : "OPTIMAL";
+            }
 
-            initInventoryMart();
+            await initInventoryMart();
             closeRestockModal();
-            showToast("Purchase Order Dispatched", `Added ${addQty} units to SKU [${currentRestockItem.code}]. Lead Time: ${leadDays}d (${supplier})`, "success");
-            logAuditEvent("Inventory", `Dispatched replenishment PO: ${addQty} units for SKU [${currentRestockItem.code}] via ${supplier}`);
+            showToast("Purchase Order Dispatched", `Added ${addQty} units to SKU [${targetCode}]. Lead Time: ${leadDays}d (${supplier})`, "success");
+            logAuditEvent("Inventory", `Dispatched replenishment PO: ${addQty} units for SKU [${targetCode}] via ${supplier}`);
         });
     }
 
@@ -3682,6 +4097,16 @@ const API_ENDPOINTS = {
         handler: (req) => ({
             status: "success",
             assessment: { risk_score: (req.amount_gbp || 0) > 4000 ? 86.5 : 18.0, risk_tier: (req.amount_gbp || 0) > 4000 ? "CRITICAL_QUARANTINE" : "LOW_SAFE" }
+        })
+    },
+    inventory: {
+        method: "POST",
+        path: "/api/v1/inventory/simulate-sku",
+        url: "http://localhost:8000/api/v1/inventory/simulate-sku",
+        payload: { stock_code: "22423", service_level: 0.95, lead_time_days: 7, demand_multiplier: 1.0, horizon_days: 30 },
+        handler: (req) => ({
+            status: "success",
+            policy: { stock_code: req.stock_code || "22423", safety_stock: 62, reorder_point: 328, eoq: 914 }
         })
     },
     rbac: {
