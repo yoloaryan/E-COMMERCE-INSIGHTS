@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=7.3">
+    <link rel="stylesheet" href="style.css?v=7.4">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -47,6 +47,10 @@
                     <option value="growth">Growth & Marketing Director</option>
                     <option value="supply">Supply Chain & Inventory VP</option>
                 </select>
+                <div class="sidebar-tenant-badge" id="sidebarTenantIndicator" title="Active Multi-Tenant Workspace">
+                    <span>🏢</span>
+                    <span id="sidebarTenantName">UK Flagship (GBP)</span>
+                </div>
             </div>
 
             <nav class="nav-menu">
@@ -183,6 +187,9 @@
                         <button type="button" class="btn btn-secondary btn-sm header-copilot-pill" id="openCopilotBtn" title="Launch AI Copilot & Text-to-SQL Assistant">
                             <span>✨</span> Copilot
                         </button>
+                        <button type="button" class="btn btn-secondary btn-sm" id="openAuthDialogBtn" title="Enterprise JWT Sign-In & Tenant Security">
+                            <span>🔐</span> Sign In
+                        </button>
                     </div>
 
                     <!-- Theme Toggle -->
@@ -221,10 +228,10 @@
                         </div>
                     </div>
 
-                    <div class="admin-user-chip">
-                        <div class="avatar-ring">AG</div>
+                    <div class="admin-user-chip" id="headerUserChip" title="Active Authenticated Principal & Tenant">
+                        <div class="avatar-ring" id="headerUserAvatar">AG</div>
                         <div class="user-info-text">
-                            <strong>Aryan Gupta</strong>
+                            <strong id="headerUserName">Aryan Gupta</strong>
                             <span id="adminBadgeText">Principal Admin</span>
                         </div>
                     </div>
@@ -1382,9 +1389,153 @@
             </section>
 
             <!-- ============================================================= -->
-            <!-- TAB 11: SECURITY & AUDIT LOGS (ADMIN NEW) -->
+            <!-- TAB 11: SECURITY, RBAC & MULTI-TENANT AUTH (ADMIN NEW) -->
             <!-- ============================================================= -->
             <section id="tab-audit-logs" class="tab-pane">
+                <!-- Enterprise Auth & Tenant Governance Top Grid -->
+                <div class="charts-row" style="margin-bottom: 1.5rem;">
+                    <!-- Active Session & Strict Policy Card -->
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <div>
+                                <h3>🔐 Active Session, JWT &amp; Strict RBAC Policy</h3>
+                                <p class="card-sub">Verify bearer token identity, switch isolated tenants, and enforce API RBAC</p>
+                            </div>
+                            <span class="badge blue" id="authSessionStatusBadge">DEV OPEN MODE</span>
+                        </div>
+
+                        <div class="security-session-box" id="authSessionDetailsBox">
+                            <div class="security-kv"><span>Principal Identity:</span><strong id="secPrincipalEmail">dev@nexusretail.ai (Demo)</strong></div>
+                            <div class="security-kv"><span>Assigned Role:</span><strong id="secPrincipalRole">Principal Admin (admin)</strong></div>
+                            <div class="security-kv"><span>Active Tenant:</span><strong id="secActiveTenant">Nexus UK Flagship Wholesale (GBP)</strong></div>
+                        </div>
+
+                        <div class="pricing-field-group" style="margin-top: 0.9rem;">
+                            <label for="tenantWorkspaceSelect">Isolated Tenant Context Switcher (Admin Cross-Tenant)</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <select id="tenantWorkspaceSelect" name="tenant_id" class="form-select-sm" style="flex: 1;">
+                                    <option value="tenant_uk_flagship">Nexus UK Flagship Wholesale (GBP)</option>
+                                    <option value="tenant_eu_nordics">EuroCraft Retail GmbH &amp; NL (EUR)</option>
+                                    <option value="tenant_us_direct">Atlantic Direct Commerce (USD)</option>
+                                </select>
+                                <button type="button" class="btn btn-primary btn-sm" id="btnSwitchTenant">Switch Tenant</button>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; padding: 0.75rem; background: var(--bg-surface-alt); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                            <label for="chkStrictRbacToggle" style="display: flex; align-items: center; gap: 0.55rem; cursor: pointer; font-size: 0.84rem; font-weight: 600;">
+                                <input type="checkbox" id="chkStrictRbacToggle" name="strict_rbac_enabled">
+                                <span>Enforce Strict API RBAC (Require JWT / X-API-Key on mutations)</span>
+                            </label>
+                            <button type="button" class="btn btn-outline btn-xs" id="btnOpenAuthFromSecurity">Sign In / Switch User</button>
+                        </div>
+
+                        <div id="jwtTokenBar" style="display: none; margin-top: 0.85rem; padding: 0.65rem 0.75rem; background: var(--bg-surface-alt); border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                                <small style="font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Active HS256 Bearer JWT</small>
+                                <div style="display: flex; gap: 0.4rem;">
+                                    <button type="button" class="btn btn-outline btn-xs" id="btnCopyJwt">Copy JWT</button>
+                                    <button type="button" class="btn btn-secondary btn-xs" id="btnSignOutSession">Revoke &amp; Sign Out</button>
+                                </div>
+                            </div>
+                            <code id="jwtTokenSnippet" style="font-size: 0.72rem; word-break: break-all; color: #34D399;"></code>
+                        </div>
+                    </div>
+
+                    <!-- Multi-Tenant Workspace & API Key Provisioning Card -->
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <div>
+                                <h3>🗝️ Multi-Tenant API Key Vault &amp; Workspaces</h3>
+                                <p class="card-sub">Issue tenant-isolated service keys (SHA-256 hashed at rest) or provision new tenants</p>
+                            </div>
+                        </div>
+
+                        <form id="createApiKeyForm" class="admin-form" aria-labelledby="apiKeyFormHeading">
+                            <h4 id="apiKeyFormHeading" class="visually-hidden">Issue Multi-Tenant API Key</h4>
+                            <div class="form-row">
+                                <div class="pricing-field-group flex-1">
+                                    <label for="newKeyLabelInput">API Key Label</label>
+                                    <input type="text" id="newKeyLabelInput" name="label" placeholder="e.g. Shopify EU ERP Connector" required minlength="3" class="form-input-sm">
+                                </div>
+                                <div class="pricing-field-group flex-1">
+                                    <label for="newKeyTenantSelect">Bound Tenant</label>
+                                    <select id="newKeyTenantSelect" name="tenant_id" class="form-select-sm">
+                                        <option value="tenant_uk_flagship">UK Flagship</option>
+                                        <option value="tenant_eu_nordics">EU Nordics</option>
+                                        <option value="tenant_us_direct">US Direct</option>
+                                    </select>
+                                </div>
+                                <div class="pricing-field-group flex-1">
+                                    <label for="newKeyRoleSelect">Scoped Role</label>
+                                    <select id="newKeyRoleSelect" name="role" class="form-select-sm">
+                                        <option value="lead_ds">Lead DS</option>
+                                        <option value="growth">Growth Lead</option>
+                                        <option value="supply">Supply VP</option>
+                                        <option value="admin">Principal Admin</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-sm" id="btnMintApiKey" style="margin-top: 0.25rem;">
+                                + Mint Multi-Tenant API Key
+                            </button>
+                        </form>
+
+                        <div id="apiKeyOneTimeBox" role="status" aria-live="polite" style="display: none; margin-top: 0.75rem; padding: 0.75rem; background: var(--success-light); border: 1px solid var(--success); border-radius: var(--radius-sm);">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <strong style="font-size: 0.8rem; color: var(--success);">New Secret Key Created (Shown Once):</strong>
+                                <button type="button" class="btn btn-outline btn-xs" id="btnCopyNewApiKey">Copy Secret</button>
+                            </div>
+                            <code id="apiKeyOneTimeSecret" style="display: block; margin-top: 0.35rem; font-size: 0.78rem; word-break: break-all;"></code>
+                        </div>
+
+                        <div class="table-responsive" style="max-height: 175px; margin-top: 0.85rem;">
+                            <table class="data-table" id="apiKeysTable" style="font-size: 0.8rem;">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Label</th>
+                                        <th scope="col">Prefix</th>
+                                        <th scope="col">Tenant</th>
+                                        <th scope="col">Role</th>
+                                        <th scope="col">Status</th>
+                                        <th scope="col">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="apiKeysTbody">
+                                    <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Loading service keys...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RBAC Permission Matrix Card -->
+                <div class="table-card" style="margin-bottom: 1.5rem;">
+                    <div class="card-header">
+                        <div>
+                            <h3>🛡️ Role-Based Access Control (RBAC) Permission Matrix</h3>
+                            <p class="card-sub">Granular API scope &amp; workspace enforcement per organizational role</p>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table" id="rbacMatrixTable">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Role</th>
+                                    <th scope="col">Cross-Tenant Switch</th>
+                                    <th scope="col">MLOps Retrain</th>
+                                    <th scope="col">Webhook Secrets &amp; Keys</th>
+                                    <th scope="col">Retention Campaigns</th>
+                                    <th scope="col">Pricing A/B Experiments</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rbacMatrixTbody">
+                                <!-- Populated dynamically by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <div class="table-card">
                     <div class="card-header">
                         <div>
@@ -2383,12 +2534,76 @@
         </div>
     </div>
 
+    <!-- Native Modal Dialog: Enterprise RBAC Sign-In -->
+    <dialog id="authSignInDialog" class="enterprise-auth-dialog" closedby="any" aria-labelledby="authDialogTitle">
+        <div class="auth-dialog-header">
+            <div>
+                <h2 id="authDialogTitle" style="margin: 0; font-size: 1.2rem;">🔐 Enterprise Sign In &amp; RBAC Session</h2>
+                <p style="margin: 0.25rem 0 0; font-size: 0.82rem; color: var(--text-muted);">Authenticate via PBKDF2-SHA256 to obtain a tenant-scoped HS256 JWT</p>
+            </div>
+            <button type="button" class="modal-close-btn" id="closeAuthDialogXBtn" aria-label="Close sign-in dialog">✕</button>
+        </div>
+
+        <div class="auth-dialog-body">
+            <div class="quick-preset-bar" style="margin-bottom: 1rem;">
+                <span class="preset-bar-label">⚡ Quick Demo Identities:</span>
+                <button type="button" class="preset-chip btn-demo-identity" data-email="admin@nexusretail.ai" data-pwd="NexusAdmin2026!">👑 Principal Admin</button>
+                <button type="button" class="preset-chip btn-demo-identity" data-email="ds@nexusretail.ai" data-pwd="NexusDS2026!">🧬 Lead DS</button>
+                <button type="button" class="preset-chip btn-demo-identity" data-email="growth@nexusretail.ai" data-pwd="NexusGrowth2026!">🚀 Growth (EU Tenant)</button>
+                <button type="button" class="preset-chip btn-demo-identity" data-email="supply@nexusretail.ai" data-pwd="NexusOps2026!">📦 Supply VP</button>
+            </div>
+
+            <form id="authSignInForm" class="admin-form" method="post" aria-labelledby="authDialogTitle">
+                <div class="pricing-field-group">
+                    <label for="authEmailInput">Work Email Address</label>
+                    <input
+                        type="email"
+                        id="authEmailInput"
+                        name="email"
+                        autocomplete="username"
+                        spellcheck="false"
+                        enterkeyhint="next"
+                        autofocus
+                        required
+                        class="form-input-sm"
+                        placeholder="admin@nexusretail.ai">
+                </div>
+
+                <div class="pricing-field-group">
+                    <label for="authPasswordInput">Password</label>
+                    <div class="auth-password-wrap">
+                        <input
+                            type="password"
+                            id="authPasswordInput"
+                            name="password"
+                            autocomplete="current-password"
+                            enterkeyhint="done"
+                            required
+                            class="form-input-sm"
+                            style="flex: 1;"
+                            placeholder="Enter account password">
+                        <button type="button" class="btn btn-secondary btn-sm" id="toggleAuthPwdBtn" aria-pressed="false" aria-label="Show password">
+                            👁️ Show
+                        </button>
+                    </div>
+                </div>
+
+                <div id="authFormError" class="auth-error-msg" role="alert" aria-live="polite" hidden></div>
+
+                <div class="auth-dialog-actions">
+                    <button type="button" class="btn btn-secondary" id="btnAuthCancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="btnAuthSubmit">Sign In</button>
+                </div>
+            </form>
+        </div>
+    </dialog>
+
     <!-- Scroll to Top Floating Action Button -->
     <button class="scroll-to-top-btn" id="scrollToTopBtn" aria-label="Scroll to top" title="Back to top">↑</button>
 
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=7.3"></script>
+    <script src="app.js?v=7.4"></script>
 </body>
 </html>

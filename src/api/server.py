@@ -20,7 +20,7 @@ import numpy as np
 import pandas as pd
 import joblib
 from typing import List, Optional, Dict, Any
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect, status, UploadFile, File, Form, Request, Header
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect, status, UploadFile, File, Form, Request, Header, Depends
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -31,6 +31,7 @@ from src.api.copilot import RetailCopilot
 from src.api.integrations import ECommerceIntegrations, IntegrationRegistry
 from src.api.campaigns import CampaignRegistry, CampaignDispatcher, WatchdogEvaluator, MessageFormatter, VoucherGenerator
 from src.models.pricing_elasticity import PricingElasticityEngine, ABExperimentEngine, PricingExperimentRegistry
+from src.api.security import SecurityRegistry, ROLE_DEFINITIONS, AuthError, get_required_principal, require_permission
 
 MODELS_DIR = ROOT_DIR / "models"
 MANIFEST_PATH = MODELS_DIR / "model_manifest.json"
@@ -239,6 +240,32 @@ class RunABExperimentRequest(BaseModel):
     control_conversions: Optional[int] = Field(default=None, ge=0)
     variant_visitors: Optional[int] = Field(default=None, ge=10)
     variant_conversions: Optional[int] = Field(default=None, ge=0)
+
+
+class LoginRequest(BaseModel):
+    email: str = Field(..., description="Registered user email")
+    password: str = Field(..., min_length=4, description="User password")
+
+
+class CreateTenantRequest(BaseModel):
+    name: str = Field(..., min_length=3, max_length=80)
+    country: str = Field(default="United Kingdom")
+    currency: str = Field(default="GBP", min_length=3, max_length=3)
+    plan: str = Field(default="Enterprise")
+
+
+class SwitchTenantRequest(BaseModel):
+    tenant_id: str = Field(..., min_length=3)
+
+
+class CreateApiKeyRequest(BaseModel):
+    label: str = Field(..., min_length=3, max_length=60)
+    tenant_id: str = Field(default="tenant_uk_flagship")
+    role: str = Field(default="lead_ds")
+
+
+class SecurityPolicyRequest(BaseModel):
+    strict_rbac_enabled: bool = Field(..., description="Require valid JWT/API key on protected mutations")
 
 
 # -----------------------------------------------------------------------------
@@ -549,7 +576,9 @@ def get_mlops_drift_report(
 
 
 @app.post("/api/v1/mlops/retrain", tags=["Enterprise MLOps"])
-async def trigger_pipeline_retraining():
+async def trigger_pipeline_retraining(
+    _principal: Dict[str, Any] = Depends(require_permission("mlops:retrain"))
+):
     """
     Triggers automated pipeline retraining, updates model checkpoint manifest metadata,
     and broadcasts the completion event across all live WebSocket terminals.
@@ -747,7 +776,10 @@ def get_integrations_status():
 
 
 @app.post("/api/v1/integrations/configure-secret", tags=["E-Commerce Webhooks"])
-def configure_integration_secret(payload: ConfigureSecretRequest):
+def configure_integration_secret(
+    payload: ConfigureSecretRequest,
+    _principal: Dict[str, Any] = Depends(require_permission("integrations:write"))
+):
     """
     Updates or rotates the HMAC signing secret for a target connector.
     """
@@ -1041,7 +1073,10 @@ def get_campaigns_status():
 
 
 @app.post("/api/v1/campaigns/configure-channels", tags=["Campaign & Alert Dispatcher"])
-def configure_campaign_channel(payload: ConfigureChannelRequest):
+def configure_campaign_channel(
+    payload: ConfigureChannelRequest,
+    _principal: Dict[str, Any] = Depends(require_permission("campaigns:dispatch"))
+):
     """
     Configures webhook URLs or toggle states for target notification channels.
     """
@@ -1057,7 +1092,10 @@ def configure_campaign_channel(payload: ConfigureChannelRequest):
 
 
 @app.post("/api/v1/campaigns/dispatch", tags=["Campaign & Alert Dispatcher"])
-async def dispatch_retention_campaign(payload: DispatchCampaignRequest):
+async def dispatch_retention_campaign(
+    payload: DispatchCampaignRequest,
+    _principal: Dict[str, Any] = Depends(require_permission("campaigns:dispatch"))
+):
     """
     Executes an automated multi-channel retention campaign with dynamic promo voucher generation,
     Slack Block Kit cards, Discord embeds, and transactional HTML email queues.
@@ -1244,7 +1282,10 @@ def calculate_ab_test_power(
 
 
 @app.post("/api/v1/pricing/run-ab-experiment", tags=["Pricing & A/B Experimentation"])
-async def run_pricing_ab_experiment(payload: RunABExperimentRequest):
+async def run_pricing_ab_experiment(
+    payload: RunABExperimentRequest,
+    _principal: Dict[str, Any] = Depends(require_permission("experiments:run"))
+):
     """
     Executes or evaluates a controlled two-arm pricing A/B experiment (Control Holdout vs Variant),
     computes two-proportion Z-test significance and margin-per-visitor uplift,
@@ -1276,6 +1317,192 @@ async def run_pricing_ab_experiment(payload: RunABExperimentRequest):
     })
 
     return res
+
+
+# -----------------------------------------------------------------------------
+# Enterprise RBAC, JWT Authentication & Multi-Tenant Isolation Endpoints
+# -----------------------------------------------------------------------------
+@app.post("/api/v1/auth/login", tags=["Security, RBAC & Multi-Tenant Auth"])
+async def auth_login(payload: LoginRequest):
+    """
+    Authenticates user credentials via PBKDF2-HMAC-SHA256 verification and issues
+    a tenant-scoped HS256 JWT access token.
+    """
+    registry = SecurityRegistry()
+    try:
+        session = registry.authenticate_user(payload.email, payload.password)
+    except AuthError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message)
+
+    await ws_manager.broadcast({
+        "type": "SECURITY_AUDIT_EVENT",
+        "data": registry.audit_events[0],
+    })
+    return {"status": "success", **session}
+
+
+@app.post("/api/v1/auth/logout", tags=["Security, RBAC & Multi-Tenant Auth"])
+async def auth_logout(principal: Dict[str, Any] = Depends(get_required_principal)):
+    """Revokes the active JWT jti identifier and logs session termination."""
+    registry = SecurityRegistry()
+    jti = principal.get("jti")
+    if jti:
+        registry.revoked_jtis.add(jti)
+    registry.record_audit_event(
+        event_type="LOGOUT",
+        actor_email=principal.get("email", "unknown"),
+        actor_role=principal.get("role", "unknown"),
+        tenant_id=principal.get("tenant_id", "unknown"),
+        action=f"Revoked active JWT session for {principal.get('email')}",
+        status_code=200,
+        severity="INFO",
+    )
+    return {"status": "success", "message": "Session revoked successfully."}
+
+
+@app.get("/api/v1/auth/me", tags=["Security, RBAC & Multi-Tenant Auth"])
+def auth_get_current_session(principal: Dict[str, Any] = Depends(get_required_principal)):
+    """Verifies the provided Bearer JWT or X-API-Key and returns active tenant & RBAC scopes."""
+    registry = SecurityRegistry()
+    role = principal.get("role", "supply")
+    tenant_id = principal.get("tenant_id", "tenant_uk_flagship")
+    role_meta = ROLE_DEFINITIONS.get(role, {})
+    return {
+        "status": "success",
+        "principal": {
+            "sub": principal.get("sub"),
+            "email": principal.get("email"),
+            "name": principal.get("name"),
+            "role": role,
+            "role_label": role_meta.get("label", role),
+            "tenant_id": tenant_id,
+            "tenant_name": registry.tenants.get(tenant_id, {}).get("name", tenant_id),
+            "permissions": role_meta.get("permissions", []),
+            "allowed_tabs": role_meta.get("allowed_tabs", []),
+            "can_switch_tenants": role_meta.get("can_switch_tenants", False),
+            "auth_method": principal.get("auth_method", "jwt"),
+        },
+        "active_tenant": registry.tenants.get(tenant_id),
+    }
+
+
+@app.get("/api/v1/auth/rbac-matrix", tags=["Security, RBAC & Multi-Tenant Auth"])
+def auth_get_rbac_matrix():
+    """Returns RBAC role permission definitions, tenant directory, and strict policy state."""
+    registry = SecurityRegistry()
+    return {
+        "status": "success",
+        "strict_rbac_enabled": registry.strict_rbac_enabled,
+        "roles": ROLE_DEFINITIONS,
+        "tenants": list(registry.tenants.values()),
+        "total_api_keys": len(registry.api_keys),
+    }
+
+
+@app.post("/api/v1/auth/tenants", status_code=201, tags=["Security, RBAC & Multi-Tenant Auth"])
+async def auth_create_tenant(
+    payload: CreateTenantRequest,
+    principal: Dict[str, Any] = Depends(require_permission("tenants:manage")),
+):
+    """Provisions a new isolated retail tenant workspace (requires Admin permission)."""
+    registry = SecurityRegistry()
+    tenant = registry.create_tenant(payload.name, payload.country, payload.currency, payload.plan, actor=principal)
+    await ws_manager.broadcast({"type": "SECURITY_AUDIT_EVENT", "data": registry.audit_events[0]})
+    return {"status": "success", "tenant": tenant}
+
+
+@app.post("/api/v1/auth/switch-tenant", tags=["Security, RBAC & Multi-Tenant Auth"])
+async def auth_switch_tenant(
+    payload: SwitchTenantRequest,
+    principal: Dict[str, Any] = Depends(get_required_principal),
+):
+    """Issues a refreshed JWT bound to the requested tenant workspace (enforces tenant isolation)."""
+    registry = SecurityRegistry()
+    try:
+        switched = registry.switch_tenant(payload.tenant_id, principal)
+    except AuthError as exc:
+        await ws_manager.broadcast({"type": "SECURITY_AUDIT_EVENT", "data": registry.audit_events[0]})
+        raise HTTPException(status_code=exc.status_code, detail=exc.message)
+
+    await ws_manager.broadcast({"type": "SECURITY_AUDIT_EVENT", "data": registry.audit_events[0]})
+    return {"status": "success", **switched}
+
+
+@app.get("/api/v1/auth/api-keys", tags=["Security, RBAC & Multi-Tenant Auth"])
+def auth_list_api_keys(principal: Dict[str, Any] = Depends(require_permission("analytics:read"))):
+    """Returns masked API keys scoped to the caller's tenant (Admins view all tenants)."""
+    registry = SecurityRegistry()
+    keys = registry.list_api_keys(tenant_id=principal.get("tenant_id"), role=principal.get("role", "admin"))
+    return {"status": "success", "api_keys": keys}
+
+
+@app.post("/api/v1/auth/api-keys", status_code=201, tags=["Security, RBAC & Multi-Tenant Auth"])
+async def auth_create_api_key(
+    payload: CreateApiKeyRequest,
+    principal: Dict[str, Any] = Depends(require_permission("api_keys:manage")),
+):
+    """Mints a new SHA-256 hashed multi-tenant API key, returning the raw key once."""
+    registry = SecurityRegistry()
+    try:
+        key_record = registry.issue_api_key(payload.label, payload.tenant_id, payload.role, actor=principal)
+    except AuthError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message)
+
+    await ws_manager.broadcast({"type": "SECURITY_AUDIT_EVENT", "data": registry.audit_events[0]})
+    return {"status": "success", "api_key": key_record}
+
+
+@app.delete("/api/v1/auth/api-keys/{key_id}", tags=["Security, RBAC & Multi-Tenant Auth"])
+async def auth_revoke_api_key(
+    key_id: str,
+    principal: Dict[str, Any] = Depends(require_permission("api_keys:manage")),
+):
+    """Revokes an active multi-tenant API key."""
+    registry = SecurityRegistry()
+    try:
+        revoked = registry.revoke_api_key(key_id, actor=principal)
+    except AuthError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message)
+
+    await ws_manager.broadcast({"type": "SECURITY_AUDIT_EVENT", "data": registry.audit_events[0]})
+    return {"status": "success", "api_key": revoked}
+
+
+@app.post("/api/v1/auth/security-policy", tags=["Security, RBAC & Multi-Tenant Auth"])
+async def auth_update_security_policy(
+    payload: SecurityPolicyRequest,
+    principal: Dict[str, Any] = Depends(require_permission("tenants:manage")),
+):
+    """Toggles strict API RBAC enforcement policy across protected endpoints."""
+    registry = SecurityRegistry()
+    registry.strict_rbac_enabled = payload.strict_rbac_enabled
+    registry.record_audit_event(
+        event_type="POLICY_UPDATED",
+        actor_email=principal.get("email", "admin"),
+        actor_role=principal.get("role", "admin"),
+        tenant_id=principal.get("tenant_id", "tenant_uk_flagship"),
+        action=f"Set strict_rbac_enabled={payload.strict_rbac_enabled}",
+        status_code=200,
+        severity="WARNING" if payload.strict_rbac_enabled else "INFO",
+    )
+    await ws_manager.broadcast({
+        "type": "SECURITY_POLICY_UPDATED",
+        "data": {"strict_rbac_enabled": registry.strict_rbac_enabled, "audit_event": registry.audit_events[0]},
+    })
+    return {"status": "success", "strict_rbac_enabled": registry.strict_rbac_enabled}
+
+
+@app.get("/api/v1/auth/audit-stream", tags=["Security, RBAC & Multi-Tenant Auth"])
+def auth_get_audit_stream(principal: Dict[str, Any] = Depends(require_permission("audit:read"))):
+    """Returns immutable server-side authentication and RBAC security events."""
+    registry = SecurityRegistry()
+    role = principal.get("role", "admin")
+    tenant_id = principal.get("tenant_id")
+    events = [
+        ev for ev in registry.audit_events
+        if role == "admin" or ev["tenant_id"] in (tenant_id, "none", "tenant_uk_flagship")
+    ]
+    return {"status": "success", "events": events[:50], "strict_rbac_enabled": registry.strict_rbac_enabled}
 
 
 if __name__ == "__main__":

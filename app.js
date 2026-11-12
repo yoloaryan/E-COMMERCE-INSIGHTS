@@ -38,6 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initAiCopilot();
     initWebhooksHub();
     initPricingLab();
+    initEnterpriseSecurity();
     initLivePipelineSync();
 });
 
@@ -65,9 +66,23 @@ if (savedCart) {
 const APP_STATE = {
     theme: localStorage.getItem("nexus_theme") || "dark",
     role: localStorage.getItem("nexus_role") || "admin",
+    tenantId: localStorage.getItem("nexus_tenant_id") || "tenant_uk_flagship",
+    authToken: localStorage.getItem("nexus_jwt_token") || "",
+    authUser: null,
     cart: initialCart,
     dateRange: localStorage.getItem("nexus_date_range") || "all",
     auditLogs: initialLogs
+};
+
+window.getAuthHeaders = function(extraHeaders = {}) {
+    const headers = { ...extraHeaders };
+    if (APP_STATE.authToken) {
+        headers["Authorization"] = `Bearer ${APP_STATE.authToken}`;
+    }
+    if (APP_STATE.tenantId) {
+        headers["X-Tenant-ID"] = APP_STATE.tenantId;
+    }
+    return headers;
 };
 
 // =============================================================================
@@ -144,11 +159,13 @@ function initRoleManager() {
         if (APP_STATE.role && roleMap[APP_STATE.role]) {
             roleSelect.value = APP_STATE.role;
             badgeText.textContent = roleMap[APP_STATE.role];
+            if (typeof window.applyRbacUiState === "function") window.applyRbacUiState(APP_STATE.role);
         }
         roleSelect.addEventListener("change", () => {
             APP_STATE.role = roleSelect.value;
             localStorage.setItem("nexus_role", APP_STATE.role);
             badgeText.textContent = roleMap[roleSelect.value];
+            if (typeof window.applyRbacUiState === "function") window.applyRbacUiState(APP_STATE.role);
             showToast("Role Context Switched", `Active permissions: ${roleMap[roleSelect.value]}`, "info");
             logAuditEvent("Auth/RBAC", `Switched active operational role to ${roleMap[roleSelect.value]}`);
         });
@@ -1958,9 +1975,18 @@ function initMLOpsConsole() {
             try {
                 const res = await fetch("http://localhost:8000/api/v1/mlops/retrain", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
                     body: JSON.stringify({ trigger_source: "admin_web_console", model_types: ["all"] })
                 });
+
+                if (res.status === 401 || res.status === 403) {
+                    const errBody = await res.json().catch(() => ({}));
+                    appendTermLog(`[RBAC DENIED] HTTP ${res.status}: ${errBody.detail || "Insufficient permissions"}`);
+                    globalRetrainBtn.disabled = false;
+                    globalRetrainBtn.textContent = "⚡ Run Pipeline Ingest & Retrain";
+                    showToast("RBAC Access Denied", errBody.detail || `HTTP ${res.status} on MLOps Retrain`, "alert");
+                    return;
+                }
 
                 if (res.ok) {
                     const data = await res.json();
@@ -2692,7 +2718,7 @@ function initCampaignStudio() {
             try {
                 const res = await fetch("http://localhost:8000/api/v1/campaigns/dispatch", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
                     body: JSON.stringify({
                         campaign_name: `${seg} Retention Wave`,
                         audience_segment: seg,
@@ -2703,6 +2729,12 @@ function initCampaignStudio() {
                         custom_message: `Automated retention sequence offering ${incText}.`
                     })
                 });
+
+                if (res.status === 401 || res.status === 403) {
+                    const errBody = await res.json().catch(() => ({}));
+                    showToast("RBAC Access Denied", errBody.detail || `HTTP ${res.status} on Campaign Dispatch`, "alert");
+                    return;
+                }
 
                 let campData = null;
                 if (res.ok) {
@@ -2905,6 +2937,10 @@ function initLiveOrderWebSocket() {
                         handleWatchdogAlertBroadcast(msg.data);
                     } else if (msg.type === "PRICING_EXPERIMENT_COMPLETED" && msg.data) {
                         handlePricingExperimentBroadcast(msg.data);
+                    } else if (msg.type === "SECURITY_AUDIT_EVENT" && msg.data) {
+                        handleSecurityAuditBroadcast(msg.data);
+                    } else if (msg.type === "SECURITY_POLICY_UPDATED" && msg.data) {
+                        handleSecurityPolicyBroadcast(msg.data);
                     }
                 } catch (e) {
                     console.warn("[Nexus WebSocket] Inbound parse warning:", e);
@@ -5358,9 +5394,14 @@ function initPricingLab() {
             try {
                 const res = await fetch("http://localhost:8000/api/v1/pricing/run-ab-experiment", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
                     body: JSON.stringify(payload)
                 });
+                if (res.status === 401 || res.status === 403) {
+                    const errBody = await res.json().catch(() => ({}));
+                    showToast("RBAC Access Denied", errBody.detail || `HTTP ${res.status} on A/B Experiment`, "alert");
+                    return;
+                }
                 if (res.ok) {
                     const data = await res.json();
                     const exp = data.experiment;
@@ -5472,6 +5513,489 @@ function initPricingLab() {
     loadElasticityReport();
     computeAbPower();
 }
+
+// =============================================================================
+// ENTERPRISE RBAC, JWT AUTHENTICATION & MULTI-TENANT SECURITY CONSOLE
+// =============================================================================
+function handleSecurityAuditBroadcast(ev) {
+    if (!ev) return;
+    logAuditEvent(ev.event_type || "Security", `${ev.action} [${ev.tenant_id}]`, ev.severity || "INFO");
+}
+
+function handleSecurityPolicyBroadcast(data) {
+    if (!data) return;
+    const chkStrict = document.getElementById("chkStrictRbacToggle");
+    if (chkStrict) chkStrict.checked = Boolean(data.strict_rbac_enabled);
+    if (data.audit_event) handleSecurityAuditBroadcast(data.audit_event);
+}
+
+function initEnterpriseSecurity() {
+    const authDialog = document.getElementById("authSignInDialog");
+    const openAuthBtn = document.getElementById("openAuthDialogBtn");
+    const openFromSecurityBtn = document.getElementById("btnOpenAuthFromSecurity");
+    const closeXBtn = document.getElementById("closeAuthDialogXBtn");
+    const cancelBtn = document.getElementById("btnAuthCancel");
+    const signInForm = document.getElementById("authSignInForm");
+    const emailInput = document.getElementById("authEmailInput");
+    const pwdInput = document.getElementById("authPasswordInput");
+    const togglePwdBtn = document.getElementById("toggleAuthPwdBtn");
+    const authErrorBox = document.getElementById("authFormError");
+    const demoButtons = document.querySelectorAll(".btn-demo-identity");
+
+    const tenantSelect = document.getElementById("tenantWorkspaceSelect");
+    const switchTenantBtn = document.getElementById("btnSwitchTenant");
+    const strictToggle = document.getElementById("chkStrictRbacToggle");
+    const copyJwtBtn = document.getElementById("btnCopyJwt");
+    const signOutBtn = document.getElementById("btnSignOutSession");
+    const createKeyForm = document.getElementById("createApiKeyForm");
+    const apiKeysTbody = document.getElementById("apiKeysTbody");
+    const rbacMatrixTbody = document.getElementById("rbacMatrixTbody");
+
+    const ROLE_ALLOWED_TABS = {
+        admin: ["overview", "segmentation", "forecasting", "churn", "recommendations", "customer-mgmt", "inventory-mart", "campaign-studio", "pricing-lab", "transaction-simulator", "admin-ops", "api-console", "audit-logs"],
+        lead_ds: ["overview", "segmentation", "forecasting", "churn", "recommendations", "pricing-lab", "admin-ops", "api-console", "audit-logs"],
+        growth: ["overview", "segmentation", "forecasting", "churn", "recommendations", "customer-mgmt", "campaign-studio", "pricing-lab"],
+        supply: ["overview", "forecasting", "recommendations", "inventory-mart", "transaction-simulator"]
+    };
+
+    const escapeSecHtml = (str) => String(str ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
+    window.applyRbacUiState = function(roleKey) {
+        const allowed = ROLE_ALLOWED_TABS[roleKey] || ROLE_ALLOWED_TABS.admin;
+        document.querySelectorAll(".nav-item[data-tab]").forEach(btn => {
+            const tabName = btn.getAttribute("data-tab");
+            btn.classList.toggle("rbac-locked", !allowed.includes(tabName));
+        });
+    };
+
+    function openSignInDialog() {
+        if (!authDialog) return;
+        if (authErrorBox) authErrorBox.hidden = true;
+        if (typeof authDialog.showModal === "function") {
+            authDialog.showModal();
+        }
+    }
+
+    function closeSignInDialog() {
+        if (!authDialog) return;
+        if (typeof authDialog.close === "function" && authDialog.open) {
+            authDialog.close();
+        }
+    }
+
+    if (authDialog) {
+        authDialog.addEventListener("close", () => {
+            authDialog.returnValue = "";
+        });
+
+        // Light-dismiss fallback for browsers without native dialog `closedby="any"`
+        if (!("closedBy" in HTMLDialogElement.prototype)) {
+            const isOutsideDialog = (e) => {
+                const r = authDialog.getBoundingClientRect();
+                return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+            };
+            let pressedOutside = false;
+            authDialog.addEventListener("pointerdown", (e) => {
+                pressedOutside = isOutsideDialog(e);
+            });
+            authDialog.addEventListener("pointerup", (e) => {
+                if (pressedOutside && isOutsideDialog(e)) closeSignInDialog();
+            });
+        }
+    }
+
+    openAuthBtn?.addEventListener("click", openSignInDialog);
+    openFromSecurityBtn?.addEventListener("click", openSignInDialog);
+    closeXBtn?.addEventListener("click", closeSignInDialog);
+    cancelBtn?.addEventListener("click", closeSignInDialog);
+
+    // Accessible Show/Hide password toggle
+    if (togglePwdBtn && pwdInput) {
+        togglePwdBtn.addEventListener("click", () => {
+            const show = pwdInput.type === "password";
+            pwdInput.type = show ? "text" : "password";
+            togglePwdBtn.setAttribute("aria-pressed", String(show));
+            togglePwdBtn.setAttribute("aria-label", show ? "Hide password" : "Show password");
+            togglePwdBtn.textContent = show ? "🙈 Hide" : "👁️ Show";
+        });
+    }
+
+    // 1-Click Demo Persona Presets
+    demoButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+            if (emailInput) emailInput.value = btn.getAttribute("data-email") || "";
+            if (pwdInput) pwdInput.value = btn.getAttribute("data-pwd") || "";
+            if (authErrorBox) authErrorBox.hidden = true;
+        });
+    });
+
+    function syncSessionUi() {
+        const badge = document.getElementById("authSessionStatusBadge");
+        const emailEl = document.getElementById("secPrincipalEmail");
+        const roleEl = document.getElementById("secPrincipalRole");
+        const tenantEl = document.getElementById("secActiveTenant");
+        const tokenBar = document.getElementById("jwtTokenBar");
+        const tokenSnippet = document.getElementById("jwtTokenSnippet");
+        const sidebarTenant = document.getElementById("sidebarTenantName");
+        const headerAvatar = document.getElementById("headerUserAvatar");
+        const headerName = document.getElementById("headerUserName");
+        const headerBadge = document.getElementById("adminBadgeText");
+        const roleSelect = document.getElementById("adminRoleSelect");
+
+        const tenantLabels = {
+            tenant_uk_flagship: "UK Flagship (GBP)",
+            tenant_eu_nordics: "EU Nordics (EUR)",
+            tenant_us_direct: "US Direct (USD)"
+        };
+
+        if (APP_STATE.authUser && APP_STATE.authToken) {
+            const u = APP_STATE.authUser;
+            if (openAuthBtn) openAuthBtn.innerHTML = `<span>🛡️</span> ${escapeSecHtml(u.role.toUpperCase())}`;
+            if (badge) {
+                badge.textContent = "HS256 JWT ACTIVE";
+                badge.className = "badge green";
+            }
+            if (emailEl) emailEl.textContent = `${u.email} (${u.name})`;
+            if (roleEl) roleEl.textContent = `${u.role_label} (${u.role})`;
+            if (tenantEl) tenantEl.textContent = `${u.tenant_name || u.tenant_id}`;
+            if (tokenBar && tokenSnippet) {
+                tokenBar.style.display = "block";
+                tokenSnippet.textContent = `${APP_STATE.authToken.slice(0, 48)}...${APP_STATE.authToken.slice(-16)}`;
+            }
+            if (sidebarTenant) sidebarTenant.textContent = tenantLabels[u.tenant_id] || u.tenant_name || u.tenant_id;
+            if (tenantSelect && [...tenantSelect.options].some(o => o.value === u.tenant_id)) {
+                tenantSelect.value = u.tenant_id;
+            }
+            if (headerName) headerName.textContent = u.name;
+            if (headerAvatar) {
+                const initials = u.name.split(/\s+/).map(p => p[0]).join("").slice(0, 2).toUpperCase();
+                headerAvatar.textContent = initials || "NX";
+            }
+            if (headerBadge) headerBadge.textContent = u.role_label;
+            if (roleSelect) {
+                APP_STATE.role = u.role;
+                roleSelect.value = u.role;
+                localStorage.setItem("nexus_role", u.role);
+            }
+            window.applyRbacUiState(u.role);
+        } else {
+            if (openAuthBtn) openAuthBtn.innerHTML = `<span>🔐</span> Sign In`;
+            if (badge) {
+                badge.textContent = strictToggle?.checked ? "STRICT AUTH REQUIRED" : "DEV OPEN MODE";
+                badge.className = strictToggle?.checked ? "badge red" : "badge blue";
+            }
+            if (emailEl) emailEl.textContent = "dev@nexusretail.ai (Unauthenticated Dev)";
+            if (roleEl) roleEl.textContent = `${APP_STATE.role} (Local Role Switch)`;
+            if (tenantEl) tenantEl.textContent = tenantLabels[APP_STATE.tenantId] || APP_STATE.tenantId;
+            if (tokenBar) tokenBar.style.display = "none";
+            if (sidebarTenant) sidebarTenant.textContent = tenantLabels[APP_STATE.tenantId] || "UK Flagship (GBP)";
+        }
+    }
+
+    async function loadRbacMatrixAndKeys() {
+        try {
+            const matRes = await fetch("http://localhost:8000/api/v1/auth/rbac-matrix");
+            if (matRes.ok) {
+                const matData = await matRes.json();
+                if (strictToggle) strictToggle.checked = Boolean(matData.strict_rbac_enabled);
+
+                if (tenantSelect && matData.tenants) {
+                    const prevVal = tenantSelect.value || APP_STATE.tenantId;
+                    tenantSelect.innerHTML = matData.tenants
+                        .map(t => `<option value="${escapeSecHtml(t.tenant_id)}">${escapeSecHtml(t.name)} (${escapeSecHtml(t.currency)})</option>`)
+                        .join("");
+                    if ([...tenantSelect.options].some(o => o.value === prevVal)) tenantSelect.value = prevVal;
+
+                    const keyTenantSel = document.getElementById("newKeyTenantSelect");
+                    if (keyTenantSel) {
+                        keyTenantSel.innerHTML = matData.tenants
+                            .map(t => `<option value="${escapeSecHtml(t.tenant_id)}">${escapeSecHtml(t.name)}</option>`)
+                            .join("");
+                    }
+                }
+
+                if (rbacMatrixTbody && matData.roles) {
+                    const cellMark = (ok) => ok
+                        ? `<span class="badge green">✓ Allowed</span>`
+                        : `<span class="badge" style="background:rgba(239,68,68,0.12);color:#ef4444;">✕ Denied</span>`;
+                    const has = (perms, p) => perms.includes("*") || perms.includes(p);
+
+                    rbacMatrixTbody.innerHTML = Object.entries(matData.roles).map(([key, spec]) => {
+                        const p = spec.permissions || [];
+                        return `
+                            <tr>
+                                <td><strong>${escapeSecHtml(spec.label)}</strong> <small class="text-muted">(<code>${escapeSecHtml(key)}</code>)</small></td>
+                                <td>${cellMark(spec.can_switch_tenants)}</td>
+                                <td>${cellMark(has(p, "mlops:retrain"))}</td>
+                                <td>${cellMark(has(p, "integrations:write") || has(p, "api_keys:manage"))}</td>
+                                <td>${cellMark(has(p, "campaigns:dispatch"))}</td>
+                                <td>${cellMark(has(p, "experiments:run"))}</td>
+                            </tr>
+                        `;
+                    }).join("");
+                }
+            }
+        } catch (e) {
+            // Backend offline
+        }
+
+        try {
+            const keysRes = await fetch("http://localhost:8000/api/v1/auth/api-keys", {
+                headers: window.getAuthHeaders()
+            });
+            if (keysRes.ok && apiKeysTbody) {
+                const keysData = await keysRes.json();
+                const keys = keysData.api_keys || [];
+                if (keys.length === 0) {
+                    apiKeysTbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">No API keys provisioned for this tenant.</td></tr>`;
+                } else {
+                    apiKeysTbody.innerHTML = keys.map(k => `
+                        <tr>
+                            <td><strong>${escapeSecHtml(k.label)}</strong></td>
+                            <td><code>${escapeSecHtml(k.key_prefix)}</code></td>
+                            <td><code>${escapeSecHtml(k.tenant_id)}</code></td>
+                            <td>${escapeSecHtml(k.role)}</td>
+                            <td><span class="badge ${k.active ? "green" : "red"}">${k.active ? "ACTIVE" : "REVOKED"}</span></td>
+                            <td>${k.active ? `<button type="button" class="btn btn-outline btn-xs btn-revoke-apikey" data-key-id="${escapeSecHtml(k.key_id)}">Revoke</button>` : "—"}</td>
+                        </tr>
+                    `).join("");
+
+                    apiKeysTbody.querySelectorAll(".btn-revoke-apikey").forEach(btn => {
+                        btn.addEventListener("click", async () => {
+                            const keyId = btn.getAttribute("data-key-id");
+                            const revRes = await fetch(`http://localhost:8000/api/v1/auth/api-keys/${keyId}`, {
+                                method: "DELETE",
+                                headers: window.getAuthHeaders()
+                            });
+                            if (revRes.ok) {
+                                showToast("API Key Revoked", `Key ${keyId} deactivated immediately`, "info");
+                                loadRbacMatrixAndKeys();
+                            } else {
+                                const err = await revRes.json().catch(() => ({}));
+                                showToast("RBAC Revocation Blocked", err.detail || `HTTP ${revRes.status}`, "alert");
+                            }
+                        });
+                    });
+                }
+            }
+        } catch (e) {
+            // Offline ignore
+        }
+
+        syncSessionUi();
+    }
+
+    if (signInForm) {
+        signInForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById("btnAuthSubmit");
+            if (authErrorBox) authErrorBox.hidden = true;
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = "Authenticating...";
+            }
+
+            try {
+                const res = await fetch("http://localhost:8000/api/v1/auth/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        email: emailInput.value.trim(),
+                        password: pwdInput.value
+                    })
+                });
+
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    if (authErrorBox) {
+                        authErrorBox.textContent = data.detail || "Invalid credentials.";
+                        authErrorBox.hidden = false;
+                    }
+                    return;
+                }
+
+                APP_STATE.authToken = data.access_token;
+                APP_STATE.authUser = data.user;
+                APP_STATE.tenantId = data.user.tenant_id;
+                localStorage.setItem("nexus_jwt_token", APP_STATE.authToken);
+                localStorage.setItem("nexus_tenant_id", APP_STATE.tenantId);
+
+                closeSignInDialog();
+                loadRbacMatrixAndKeys();
+                showToast("Signed In", `Authenticated as ${data.user.name} (${data.user.role_label})`, "success");
+                logAuditEvent("Auth/JWT", `Signed in via JWT: ${data.user.email} [${data.user.tenant_id}]`);
+            } catch (err) {
+                if (authErrorBox) {
+                    authErrorBox.textContent = "Authentication server :8000 unreachable.";
+                    authErrorBox.hidden = false;
+                }
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "Sign In";
+                }
+            }
+        });
+    }
+
+    if (switchTenantBtn && tenantSelect) {
+        switchTenantBtn.addEventListener("click", async () => {
+            const targetTid = tenantSelect.value;
+            if (!APP_STATE.authToken) {
+                APP_STATE.tenantId = targetTid;
+                localStorage.setItem("nexus_tenant_id", targetTid);
+                syncSessionUi();
+                showToast("Tenant Workspace Selected", `Dev tenant context set to ${targetTid}`, "info");
+                return;
+            }
+
+            try {
+                const res = await fetch("http://localhost:8000/api/v1/auth/switch-tenant", {
+                    method: "POST",
+                    headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
+                    body: JSON.stringify({ tenant_id: targetTid })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    showToast("Tenant Isolation Enforced", data.detail || `HTTP ${res.status}`, "alert");
+                    return;
+                }
+                APP_STATE.authToken = data.access_token;
+                APP_STATE.tenantId = data.tenant.tenant_id;
+                if (APP_STATE.authUser) {
+                    APP_STATE.authUser.tenant_id = data.tenant.tenant_id;
+                    APP_STATE.authUser.tenant_name = data.tenant.name;
+                }
+                localStorage.setItem("nexus_jwt_token", APP_STATE.authToken);
+                localStorage.setItem("nexus_tenant_id", APP_STATE.tenantId);
+                loadRbacMatrixAndKeys();
+                showToast("Tenant Context Switched", `Issued new JWT scoped to ${data.tenant.name}`, "success");
+            } catch (e) {
+                showToast("Switch Failed", "Backend unreachable", "alert");
+            }
+        });
+    }
+
+    if (strictToggle) {
+        strictToggle.addEventListener("change", async () => {
+            const desired = strictToggle.checked;
+            try {
+                const res = await fetch("http://localhost:8000/api/v1/auth/security-policy", {
+                    method: "POST",
+                    headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
+                    body: JSON.stringify({ strict_rbac_enabled: desired })
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    strictToggle.checked = !desired;
+                    showToast("Policy Update Denied", err.detail || `HTTP ${res.status}`, "alert");
+                    return;
+                }
+                syncSessionUi();
+                showToast(
+                    "Security Policy Updated",
+                    desired ? "Strict JWT/API-Key RBAC enforcement ENABLED" : "Dev open compatibility mode restored",
+                    desired ? "warning" : "info"
+                );
+            } catch (e) {
+                strictToggle.checked = !desired;
+                showToast("Backend Offline", "Unable to update policy on :8000", "alert");
+            }
+        });
+    }
+
+    if (copyJwtBtn) {
+        copyJwtBtn.addEventListener("click", () => {
+            if (!APP_STATE.authToken) return;
+            navigator.clipboard.writeText(APP_STATE.authToken).then(() => {
+                showToast("Bearer JWT Copied", "Copied full HS256 JWT token to clipboard", "success");
+            });
+        });
+    }
+
+    if (signOutBtn) {
+        signOutBtn.addEventListener("click", async () => {
+            if (APP_STATE.authToken) {
+                await fetch("http://localhost:8000/api/v1/auth/logout", {
+                    method: "POST",
+                    headers: window.getAuthHeaders()
+                }).catch(() => {});
+            }
+            APP_STATE.authToken = "";
+            APP_STATE.authUser = null;
+            localStorage.removeItem("nexus_jwt_token");
+            syncSessionUi();
+            showToast("Session Revoked", "JWT signed out and blacklisted", "info");
+        });
+    }
+
+    if (createKeyForm) {
+        createKeyForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const label = document.getElementById("newKeyLabelInput")?.value.trim();
+            const tenantId = document.getElementById("newKeyTenantSelect")?.value || APP_STATE.tenantId;
+            const role = document.getElementById("newKeyRoleSelect")?.value || "lead_ds";
+
+            try {
+                const res = await fetch("http://localhost:8000/api/v1/auth/api-keys", {
+                    method: "POST",
+                    headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
+                    body: JSON.stringify({ label, tenant_id: tenantId, role })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    showToast("Key Issuance Denied", data.detail || `HTTP ${res.status}`, "alert");
+                    return;
+                }
+                const box = document.getElementById("apiKeyOneTimeBox");
+                const secretEl = document.getElementById("apiKeyOneTimeSecret");
+                if (box && secretEl && data.api_key?.raw_secret) {
+                    secretEl.textContent = data.api_key.raw_secret;
+                    box.style.display = "block";
+                }
+                createKeyForm.reset();
+                loadRbacMatrixAndKeys();
+                showToast("API Key Minted", `Provisioned scoped key for ${tenantId}`, "success");
+            } catch (err) {
+                showToast("API Offline", "Start FastAPI :8000 to provision API keys", "alert");
+            }
+        });
+    }
+
+    document.getElementById("btnCopyNewApiKey")?.addEventListener("click", () => {
+        const val = document.getElementById("apiKeyOneTimeSecret")?.textContent;
+        if (val) navigator.clipboard.writeText(val).then(() => showToast("Secret Copied", "Copied raw API key to clipboard", "success"));
+    });
+
+    async function restoreExistingJwtSession() {
+        if (APP_STATE.authToken) {
+            try {
+                const res = await fetch("http://localhost:8000/api/v1/auth/me", {
+                    headers: { "Authorization": `Bearer ${APP_STATE.authToken}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    APP_STATE.authUser = data.principal;
+                    APP_STATE.tenantId = data.principal.tenant_id;
+                } else {
+                    APP_STATE.authToken = "";
+                    localStorage.removeItem("nexus_jwt_token");
+                }
+            } catch (e) {
+                // Keep stored token until backend reconnects
+            }
+        }
+        loadRbacMatrixAndKeys();
+    }
+
+    restoreExistingJwtSession();
+}
+
 
 
 

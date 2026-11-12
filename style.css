@@ -3872,3 +3872,125 @@ input[type="range"].modern-range-slider::-moz-range-thumb {
     color: var(--text-primary);
 }
 
+/* --------------------------------------------------------------------------
+   Phase 14: Enterprise RBAC & Multi-Tenant Native Auth Dialog
+   -------------------------------------------------------------------------- */
+.sidebar-tenant-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-top: 0.5rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: var(--radius-sm);
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    color: #93C5FD;
+    font-size: 0.74rem;
+    font-weight: 600;
+}
+
+.security-session-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    background: var(--bg-surface-alt);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 0.85rem 1rem;
+    font-size: 0.84rem;
+}
+
+.security-kv {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.security-kv span {
+    color: var(--text-muted);
+}
+
+.security-kv strong {
+    color: var(--text-primary);
+}
+
+.nav-item.rbac-locked {
+    opacity: 0.55;
+}
+
+.nav-item.rbac-locked::after {
+    content: "🔒";
+    margin-left: auto;
+    font-size: 0.72rem;
+}
+
+/* Native <dialog> Enterprise Sign-In Modal */
+.enterprise-auth-dialog {
+    width: min(520px, calc(100vw - 2rem));
+    margin: auto;
+    padding: 0;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-lg);
+}
+
+dialog:modal.enterprise-auth-dialog {
+    overscroll-behavior: contain;
+}
+
+.enterprise-auth-dialog::backdrop {
+    overflow: hidden;
+    overscroll-behavior: contain;
+    background-color: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+}
+
+.auth-dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.15rem 1.35rem;
+    background: var(--bg-surface-alt);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.auth-dialog-body {
+    padding: 1.25rem 1.35rem;
+}
+
+.auth-password-wrap {
+    display: flex;
+    gap: 0.5rem;
+    align-items: stretch;
+}
+
+.auth-error-msg {
+    margin-top: 0.5rem;
+    padding: 0.6rem 0.85rem;
+    border-radius: var(--radius-sm);
+    background: var(--danger-light);
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.auth-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    margin-top: 1.15rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.enterprise-auth-dialog :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+
