@@ -127,13 +127,20 @@ class ModelRegistry:
             self.churn_model = joblib.load(MODELS_DIR / "best_churn_classifier.joblib")
             self.churn_scaler = joblib.load(MODELS_DIR / "churn_scaler.joblib")
 
-        if (MODELS_DIR / "item_similarity_matrix.joblib").exists():
-            self.item_sim = joblib.load(MODELS_DIR / "item_similarity_matrix.joblib")
-            self.catalog = joblib.load(MODELS_DIR / "product_catalog.joblib")
-            self.recommender = ProductRecommender()
-            self.recommender.similarity_df = self.item_sim
-            self.recommender.product_catalog = self.catalog
-            self.recommender.popularity_ranking = list(self.catalog.keys())[:30]
+        try:
+            from src.models.recommender import get_product_recommender
+            self.recommender = get_product_recommender()
+            self.item_sim = self.recommender.similarity_df
+            self.catalog = self.recommender.product_catalog
+        except Exception as exc:
+            print(f"[API] Fallback loading recommender: {exc}")
+            if (MODELS_DIR / "item_similarity_matrix.joblib").exists():
+                self.item_sim = joblib.load(MODELS_DIR / "item_similarity_matrix.joblib")
+                self.catalog = joblib.load(MODELS_DIR / "product_catalog.joblib")
+                self.recommender = ProductRecommender()
+                self.recommender.similarity_df = self.item_sim
+                self.recommender.product_catalog = self.catalog
+                self.recommender.popularity_ranking = list(self.catalog.keys())[:30]
 
         if MANIFEST_PATH.exists():
             with open(MANIFEST_PATH, "r") as f:
@@ -437,6 +444,13 @@ class OptimizeBudgetRequest(BaseModel):
     min_roi_multiple: float = Field(default=1.5, ge=1.0, le=6.0)
 
 
+class NextBestSkuRequest(BaseModel):
+    customer_id: Optional[str] = Field(default=None, description="Registered Customer ID or None for guest checkout")
+    current_cart_skus: List[str] = Field(default_factory=list, description="Active shopping basket SKUs")
+    objective: str = Field(default="balanced", description="Optimization objective: balanced | margin_max | discovery")
+    top_n: int = Field(default=5, ge=1, le=20, description="Number of recommendations to return")
+
+
 # -----------------------------------------------------------------------------
 # API Endpoints
 # -----------------------------------------------------------------------------
@@ -529,16 +543,91 @@ def recommend_cross_sell_products(stock_code: str, top_n: int = Query(5, ge=1, l
     clean_code = str(stock_code).strip().upper()
     recs = REGISTRY.recommender.recommend_similar_items(clean_code, top_n=top_n)
 
-    is_cold_start = clean_code not in REGISTRY.recommender.similarity_df.index
-    target_meta = REGISTRY.catalog.get(clean_code, {"Description": "Catalog Item", "UnitPrice": 0.0})
+    is_cold_start = (
+        REGISTRY.recommender.similarity_df is None
+        or clean_code not in REGISTRY.recommender.similarity_df.index
+    )
+    target_meta = REGISTRY.recommender.product_catalog.get(clean_code, {"Description": "Catalog Item", "UnitPrice": 0.0})
 
     return {
         "query_stock_code": clean_code,
         "query_description": target_meta.get("Description", "Unknown Product"),
+        "category": target_meta.get("Category", "Gifts & General Merchandise"),
+        "unit_price_gbp": target_meta.get("UnitPriceGBP", target_meta.get("UnitPrice", 0.0)),
+        "unit_price_inr": target_meta.get("UnitPriceINR", 0.0),
+        "gross_margin_rate": target_meta.get("GrossMarginRate", 0.42),
         "is_cold_start_fallback": is_cold_start,
         "recommendations_count": len(recs),
-        "recommendations": recs
+        "recommendations": recs,
     }
+
+
+@app.get("/api/v1/recommend/customer/{customer_id}", tags=["Recommender Engine"])
+def recommend_for_customer_account(
+    customer_id: str,
+    top_n: int = Query(5, ge=1, le=20),
+    objective: str = Query("balanced", pattern="^(balanced|margin_max|discovery)$"),
+):
+    """Personalized Next-Best-SKU recommendations via 20-component TruncatedSVD & profit-weighted hybrid scoring."""
+    if REGISTRY.recommender is None:
+        raise HTTPException(status_code=503, detail="Product recommender not loaded.")
+
+    cid = str(customer_id).strip()
+    recs = REGISTRY.recommender.recommend_next_best_skus(
+        customer_id=cid,
+        top_n=top_n,
+        objective=objective,
+    )
+
+    is_cold = cid not in REGISTRY.recommender.customer_to_idx
+    return {
+        "customer_id": cid,
+        "objective": objective,
+        "is_cold_start": is_cold,
+        "recommendations_count": len(recs),
+        "recommendations": recs,
+    }
+
+
+@app.post("/api/v1/recommend/next-best-sku", tags=["Recommender Engine"])
+def recommend_next_best_sku_basket(payload: NextBestSkuRequest):
+    """Real-time active basket & customer Next-Best-SKU scoring with projected margin lift."""
+    if REGISTRY.recommender is None:
+        raise HTTPException(status_code=503, detail="Product recommender not loaded.")
+
+    res = REGISTRY.recommender.recommend_for_basket(
+        current_cart_skus=payload.current_cart_skus,
+        customer_id=payload.customer_id,
+        top_n=payload.top_n,
+        objective=payload.objective,
+    )
+    return res
+
+
+@app.get("/api/v1/recommend/explain/{customer_id}/{stock_code}", tags=["Recommender Engine"])
+def explain_recommendation_score(
+    customer_id: str,
+    stock_code: str,
+    objective: str = Query("balanced", pattern="^(balanced|margin_max|discovery)$"),
+):
+    """Deconstructs recommendation score into SVD Latent Match, Cross-Sell Affinity, and Margin Contribution."""
+    if REGISTRY.recommender is None:
+        raise HTTPException(status_code=503, detail="Product recommender not loaded.")
+
+    return REGISTRY.recommender.explain_recommendation(
+        customer_id=customer_id,
+        stock_code=stock_code,
+        objective=objective,
+    )
+
+
+@app.get("/api/v1/recommend/stats", tags=["Recommender Engine"])
+def get_recommender_system_stats():
+    """Returns recommender architecture diagnostics, SVD explained variance, catalog sizes, and margin distributions."""
+    if REGISTRY.recommender is None:
+        raise HTTPException(status_code=503, detail="Product recommender not loaded.")
+
+    return REGISTRY.recommender.get_diagnostics()
 
 
 @app.post("/api/v1/segment/rfm", tags=["Customer Segmentation"])

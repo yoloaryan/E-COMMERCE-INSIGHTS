@@ -13,7 +13,7 @@
 > [!IMPORTANT]
 > 🚀 **Live Production Web Application:** **[https://e-commerce-insights.onrender.com/](https://e-commerce-insights.onrender.com/)**
 >
-> Built as a responsive, compositor-optimized **Liquid Glass** single-page web application (HTML5 / CSS3 / Vanilla JavaScript) backed by FastAPI & DuckDB microservices (`v4.5.0`, **28 Phases**, **142+ automated tests**). Experience **15 operational intelligence modules**: Executive BI & Boardroom Briefing Exports, Customer Segmentation & Cohort Retention Heatmaps, Demand Forecasting, Churn Early-Warning with **Kaplan-Meier Survival & Exact Shapley XAI**, Item-Item & Apriori Market Basket Rules, **Kimball Star-Schema SQL Workbench + 7-Rule DQ Suite**, Customer-360 Dossier, Inventory EOQ, **Causal T-Learner Uplift & DiD Incrementality**, Dynamic Pricing & A/B Labs, Isolation Forest Fraud Radar, Live POS Simulator & **Indian GST (`CGST/SGST/IGST + HSN`) Tax Invoice Studio**, Autonomous Watchdog, SQLite WAL Persistence, and Multi-Tenant RBAC Security.
+> Built as a responsive, compositor-optimized **Liquid Glass** single-page web application (HTML5 / CSS3 / Vanilla JavaScript) backed by FastAPI & DuckDB microservices (`v4.10.0`, **31 Phases**, **163+ automated tests**). Experience **15 operational intelligence modules** and **8 on-demand ES code-split studios**: Executive BI & Boardroom Briefing Exports, Customer Segmentation & Cohort Retention Heatmaps, **Split-Conformal Demand Uncertainty (`P10/P50/P90`) & KKT Budget Optimizer**, Churn Early-Warning with **Kaplan-Meier Survival & Exact Shapley XAI**, **Hybrid TruncatedSVD Latent Factor Matrix Factorization (`k=20`) & Multi-Objective Next-Best-SKU Recommender**, **Kimball Star-Schema SQL Workbench & Text-to-SQL Copilot**, Customer-360 Dossier, Inventory EOQ, **Causal T-Learner Uplift & DiD Incrementality**, Dynamic Pricing & A/B Labs, Isolation Forest Fraud Radar, Live POS Simulator & **Indian GST (`CGST/SGST/IGST + HSN`) Tax Invoice Studio & Monthly GSTR-1 Return Filing**, Autonomous Watchdog, SQLite WAL Persistence, and Multi-Tenant RBAC Security.
 
 An industry-grade Data Science, Machine Learning, and Business Intelligence platform built on **541,909 real-world transnational e-commerce records**. 
 
@@ -269,10 +269,11 @@ Open your browser at `http://localhost:8501`.
 uvicorn src.api.server:app --host 0.0.0.0 --port 8000 --reload
 ```
 Interactive Swagger OpenAPI documentation available at `http://localhost:8000/docs`.
-- **Core ML & Forecasting**: `POST /api/v1/forecast/sales`, `POST /api/v1/churn/predict`, `POST /api/v1/segment/rfm`, `GET /api/v1/clv/summary`, `GET /api/v1/recommend/item/{stock_code}`, `GET /api/v1/analytics/kpis`.
+- **Hybrid SVD Recommender & Copilot**: `GET /api/v1/recommend/customer/{customer_id}`, `POST /api/v1/recommend/next-best-sku`, `GET /api/v1/recommend/explain/{customer_id}/{stock_code}`, `GET /api/v1/recommend/stats`, `GET /api/v1/recommend/item/{stock_code}`, `POST /api/v1/copilot/query`.
+- **Conformal Uncertainty & KKT Budget**: `GET /api/v1/forecast/conformal-intervals`, `POST /api/v1/campaigns/optimize-budget`, `POST /api/v1/forecast/sales`.
 - **Kimball Warehouse & Customer-360**: `GET /api/v1/warehouse/schema`, `GET /api/v1/warehouse/data-quality`, `POST /api/v1/warehouse/query`, `GET /api/v1/customers/{customer_id}/360`.
 - **Causal ML & Survival XAI**: `GET /api/v1/causal/uplift-report`, `POST /api/v1/causal/did-attribution`, `GET /api/v1/survival/kaplan-meier-report`, `GET /api/v1/survival/explain/{customer_id}`, `POST /api/v1/survival/simulate-intervention`.
-- **Indian GST Tax Invoicing & Finance**: `GET /api/v1/invoices/recent`, `GET /api/v1/invoices/{invoice_no}`, `POST /api/v1/invoices/generate`, `GET /api/v1/invoices/{invoice_no}/html`, `GET /api/v1/finance/waterfall-report`.
+- **Indian GST Invoicing & GSTR-1**: `GET /api/v1/invoices/gstr1-return`, `POST /api/v1/invoices/generate`, `GET /api/v1/invoices/{invoice_no}/html`, `GET /api/v1/invoices/recent`, `GET /api/v1/finance/waterfall-report`.
 - **Operations, Security & Telemetry**: `POST /api/v1/pricing/ab-test/run`, `GET /api/v1/inventory/optimization`, `POST /api/v1/fraud/score-transaction`, `GET /api/v1/watchdog/status`, `GET /api/v1/auth/rbac-matrix`.
 
 Execute full CI & UI integrity checks anytime:

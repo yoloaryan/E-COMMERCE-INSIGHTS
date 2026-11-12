@@ -13,7 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=7.25">
+    <link rel="stylesheet" href="style.css?v=7.26">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -1235,9 +1235,34 @@
                 <!-- In-Page Section Subnav -->
                 <div class="tab-subnav-bar">
                     <button class="subnav-pill active" onclick="jumpToSection('recsControlBar', this)">🎯 Recommendation Controls</button>
+                    <button class="subnav-pill" onclick="jumpToSection('svdDiagGrid', this)">🔬 SVD Telemetry</button>
                     <button class="subnav-pill" onclick="jumpToSection('recsDisplayArea', this)">✨ Discovery Grid</button>
                     <button class="subnav-pill" onclick="jumpToSection('cartSimulatorCard', this)">🛒 Live Basket & Cross-Sell</button>
                     <button class="subnav-pill" onclick="jumpToSection('basketRulesCard', this)">🧩 Association Rules (Lift)</button>
+                </div>
+
+                <!-- Phase 31: SVD Latent Factor Telemetry & Architecture KPIs -->
+                <div class="btyd-stat-grid" id="svdDiagGrid" style="margin-bottom: 1.25rem;">
+                    <div class="btyd-stat-box">
+                        <strong>SVD Latent Architecture</strong>
+                        <div class="stat-val text-blue" id="svdArchVal">TruncatedSVD (k=20)</div>
+                        <span class="stat-sub" id="svdVarSub">24.2% Explained Variance</span>
+                    </div>
+                    <div class="btyd-stat-box">
+                        <strong>Active Catalog Matrix</strong>
+                        <div class="stat-val text-green" id="svdCatalogVal">3,363 SKUs</div>
+                        <span class="stat-sub">5 Calibrated Categories</span>
+                    </div>
+                    <div class="btyd-stat-box">
+                        <strong>User Latent Embeddings</strong>
+                        <div class="stat-val text-purple" id="svdCustomerVal">4,333 Profiles</div>
+                        <span class="stat-sub">Dense 20-dim Coordinate Space</span>
+                    </div>
+                    <div class="btyd-stat-box">
+                        <strong>Avg Portfolio Gross Margin</strong>
+                        <div class="stat-val text-amber" id="svdMarginVal">46.3%</div>
+                        <span class="stat-sub">Category-weighted COGS</span>
+                    </div>
                 </div>
 
                 <div class="quick-preset-bar" style="margin-bottom:1rem;">
@@ -1254,7 +1279,15 @@
                         <label for="recModeSelect"><strong>Recommendation Mode:</strong></label>
                         <select id="recModeSelect">
                             <option value="item">Item-to-Item Cross-Sell ('Frequently Bought Together')</option>
-                            <option value="user">User-Personalized (Based on Lifetime Basket)</option>
+                            <option value="user">User-Personalized Next-Best-SKU (SVD + Basket + Margin)</option>
+                        </select>
+                    </div>
+                    <div class="control-group" id="recObjectiveGroup" style="display: none;">
+                        <label for="recObjectiveSelect"><strong>Optimization Objective:</strong></label>
+                        <select id="recObjectiveSelect">
+                            <option value="balanced">⚖️ Balanced (SVD + Cross-Sell + Margin)</option>
+                            <option value="margin_max">💰 Margin-Max (High Profit Up-Sell)</option>
+                            <option value="discovery">🔮 Discovery (Latent Persona Match)</option>
                         </select>
                     </div>
                     <div class="control-group" id="skuSelectorGroup">
@@ -1270,10 +1303,11 @@
                     <div class="control-group" id="custSelectorGroup" style="display: none;">
                         <label for="custSelect"><strong>Select Customer Account:</strong></label>
                         <select id="custSelect">
-                            <option value="17850">Customer 17850 (Home Decor & Gift Buyer)</option>
+                            <option value="14096">Customer 14096 (Top VIP Champion · ₹56.1L spend)</option>
+                            <option value="17850">Customer 17850 (Home Decor & Vintage Buyer)</option>
                             <option value="13089">Customer 13089 (High Frequency Wholesaler)</option>
-                            <option value="15311">Customer 15311 (Vintage Kitchen Enthusiast)</option>
-                            <option value="14646">Customer 14646 (Top Dutch VIP Buyer)</option>
+                            <option value="15311">Customer 15311 (Kitchen & Dining Enthusiast)</option>
+                            <option value="14646">Customer 14646 (Top Dutch International VIP)</option>
                         </select>
                     </div>
                 </div>
@@ -3814,7 +3848,7 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script defer src="js/core/api-config.js?v=7.25"></script>
-    <script defer src="app.js?v=7.25"></script>
+    <script defer src="js/core/api-config.js?v=7.26"></script>
+    <script defer src="app.js?v=7.26"></script>
 </body>
 </html>

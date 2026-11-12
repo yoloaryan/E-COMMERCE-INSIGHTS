@@ -97,3 +97,35 @@ def test_api_copilot_sample_prompts_endpoint():
     assert "categories" in data
     assert len(data["categories"]) >= 3
 
+
+def test_copilot_customer_recommendations_intent():
+    """Assert Copilot generates next-best-SKU recommendations for customers."""
+    copilot = RetailCopilot()
+    res = copilot.execute_query("Recommend top 3 products for customer #14096")
+    assert res["intent"] == "product_recommendations"
+    assert res["customer_id"] == "14096"
+    assert len(res["data"]) <= 3
+    assert "UnitPriceINR" in res["columns"]
+    assert "Badge" in res["columns"]
+
+
+def test_copilot_star_schema_return_analysis():
+    """Assert Copilot analyzes return rates and leakage across the Star Schema."""
+    copilot = RetailCopilot()
+    res = copilot.execute_query("Which category has the highest return rate?")
+    assert res["intent"] == "return_rate_analysis"
+    assert "Category" in res["columns"]
+    assert "RefundLeakageINR" in res["columns"]
+    assert len(res["data"]) > 0
+
+
+def test_copilot_customer_tiers_intent():
+    """Assert Copilot analyzes customer spend across RFM tiers via dim_customers."""
+    copilot = RetailCopilot()
+    res = copilot.execute_query("Show customer spend breakdown by RFM tier")
+    assert res["intent"] == "customer_tiers"
+    assert "RFMTier" in res["columns"]
+    assert "TotalSpendINR" in res["columns"]
+    assert len(res["data"]) > 0
+
+

@@ -1,21 +1,28 @@
 """
-Nexus AI Copilot & Natural Language SQL Analytics Engine.
+Nexus AI Copilot & Star-Schema Text-to-SQL Analytics Engine (Phase 31).
 
-Translates natural language questions from business operators into optimized DuckDB SQL queries
-and live ML predictions, executing in-memory against transactional Parquet datasets in milliseconds.
+Translates natural language questions from business operators into:
+1. Optimized DuckDB SQL queries over both flat transaction views and the 6-table Kimball Star Schema
+   (dim_customers, dim_products, dim_geography, dim_date, fact_order_lines, fact_returns).
+2. Live Next-Best-SKU recommendations powered by 20-component TruncatedSVD & hybrid profit-margin scoring.
+3. Predictive machine learning inference (churn early warning, demand forecasting, MLOps drift).
 """
 
-import sys
 from pathlib import Path
-ROOT_DIR = Path(__file__).resolve().parents[2]
-sys.path.append(str(ROOT_DIR))
-
 import re
+import sys
 import time
+from typing import Any, Dict, List, Optional, Tuple
+
 import duckdb
 import numpy as np
 import pandas as pd
-from typing import Dict, Any, List, Optional, Tuple
+
+ROOT_DIR = Path(__file__).resolve().parents[2]
+sys.path.append(str(ROOT_DIR))
+
+from src.data.warehouse import get_warehouse
+from src.models.recommender import get_product_recommender, GBP_TO_INR
 
 PARQUET_PATH = ROOT_DIR / "data" / "processed" / "online_retail_cleaned.parquet"
 CSV_PATH = ROOT_DIR / "data" / "processed" / "online_retail_cleaned.csv"
@@ -23,19 +30,27 @@ CSV_PATH = ROOT_DIR / "data" / "processed" / "online_retail_cleaned.csv"
 
 class RetailCopilot:
     """
-    Intelligent retail conversational assistant combining Text-to-SQL over DuckDB
-    with predictive machine learning inference.
+    Intelligent retail conversational assistant combining:
+    - Multi-table Text-to-SQL over Kimball Star Schema in DuckDB.
+    - SVD Latent Factor Hybrid Next-Best-SKU Recommender.
+    - Machine Learning Predictive Telemetry.
     """
 
     def __init__(self, data_path: Optional[Path] = None):
         if data_path is None:
             data_path = PARQUET_PATH if PARQUET_PATH.exists() else CSV_PATH
         self.data_path = data_path
-        self.con = duckdb.connect(database=":memory:")
+
+        # Connect to warehouse engine's DuckDB connection to share Star Schema tables
+        try:
+            self.con = get_warehouse().con
+        except Exception:
+            self.con = duckdb.connect(database=":memory:")
+
         self._setup_view()
 
     def _setup_view(self):
-        """Creates standard SQL view named 'ecommerce_transactions' over dataset."""
+        """Ensures standard flat SQL view named 'ecommerce_transactions' exists alongside star schema."""
         if str(self.data_path).endswith(".parquet"):
             self.con.execute(f"""
                 CREATE OR REPLACE VIEW ecommerce_transactions AS 
@@ -72,9 +87,7 @@ class RetailCopilot:
             """)
 
     def execute_query(self, user_prompt: str) -> Dict[str, Any]:
-        """
-        Interprets natural language, runs corresponding SQL / ML logic, and formats response.
-        """
+        """Interprets natural language, runs corresponding SQL / ML logic, and formats response."""
         start_time = time.perf_counter()
         q = user_prompt.lower().strip()
 
@@ -84,13 +97,38 @@ class RetailCopilot:
         if first_token in sql_keywords or q.startswith("select ") or q.startswith("with "):
             return self._execute_custom_sql(user_prompt, start_time)
 
-        # 1. Specific Customer ID lookup (e.g. "customer 14096" or "account #14646")
+        # 1. Product Recommendation / Next-Best-SKU Queries (e.g. "recommend products for customer 14096")
+        if any(k in q for k in [
+            "recommend", "recommendation", "recommendations", "next best", "suggest",
+            "cross sell", "cross-sell", "crosssell", "what should", "up-sell", "upsell",
+            "what to buy", "frequently bought together"
+        ]):
+            return self._handle_recommendations(user_prompt, start_time)
+
+        # 2. Specific Customer ID lookup (e.g. "customer 14096" or "account #14646")
         cust_match = re.search(r"(?:customer|account|client|cust|#)\s*([0-9]{5})", q)
         if cust_match:
             cid = cust_match.group(1)
             return self._handle_customer_lookup(cid, user_prompt, start_time)
 
-        # 2. Top Products / Best Sellers
+        # 3. Return Rate / Cancellations (Star Schema: fact_returns + dim_products)
+        if any(k in q for k in ["return", "returns", "refund", "refunds", "return rate", "cancellation", "cancellations"]):
+            limit = self._extract_limit(q, default=5)
+            return self._handle_return_rate_analysis(limit, user_prompt, start_time)
+
+        # 4. Customer Segmentation / RFM Personas (Star Schema: dim_customers)
+        if any(k in q for k in ["rfm", "persona", "champions", "loyal", "hibernating", "tier", "personas"]) and not any(k in q for k in ["churn"]):
+            return self._handle_customer_tiers(user_prompt, start_time)
+
+        # 5. Category Performance & Margins (Star Schema: dim_products + fact_order_lines)
+        if any(k in q for k in ["category", "categories", "merchandise", "kitchen", "decor", "lighting", "party", "bags"]) and not any(k in q for k in ["product", "sku", "item"]):
+            return self._handle_categories(user_prompt, start_time)
+
+        # 6. Day of Week / Temporal Velocity (Star Schema: fact_order_lines + dim_date)
+        if any(k in q for k in ["day of week", "weekday", "weekend", "sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]) or re.search(r"\bdow\b", q):
+            return self._handle_day_of_week(user_prompt, start_time)
+
+        # 7. Top Products / Best Sellers
         if (
             re.search(r"\b(top|best|highest|popular)\b.*\b(product|products|item|items|sku|skus|seller|sellers)\b", q)
             or any(k in q for k in ["best seller", "best sellers", "top selling", "top sku", "top skus", "most popular", "highest revenue"])
@@ -99,92 +137,390 @@ class RetailCopilot:
             country = self._extract_country(q)
             return self._handle_top_products(limit, country, user_prompt, start_time)
 
-        # 3. Churn / At-Risk Accounts
+        # 8. Churn / At-Risk Accounts
         if any(k in q for k in ["churn", "at-risk", "at risk", "inactive", "lapsing", "dormant", "loss"]):
             limit = self._extract_limit(q, default=5)
             return self._handle_churn_risk(limit, user_prompt, start_time)
 
-        # 4. Countries / Geographic Markets
+        # 9. Countries / Geographic Markets
         if any(k in q for k in ["country", "countries", "geography", "international", "market", "regions", "uk vs"]):
             limit = self._extract_limit(q, default=5)
             return self._handle_countries(limit, user_prompt, start_time)
 
-        # 5. Monthly Sales Velocity / AOV Trends
+        # 10. Monthly Sales Velocity / AOV Trends
         if any(k in q for k in ["monthly", "velocity", "aov", "trend", "month by month", "revenue by month", "order value"]):
             return self._handle_monthly_velocity(user_prompt, start_time)
 
-        # 6. Forecasting & Demand Questions
+        # 11. Forecasting & Demand Questions
         if any(k in q for k in ["forecast", "predict", "next week", "holiday peak", "q4 peak", "demand"]):
             return self._handle_forecasting(user_prompt, start_time)
 
-        # 7. MLOps / Drift / Model Health
+        # 12. MLOps / Drift / Model Health
         if any(k in q for k in ["drift", "mlops", "model health", "decay", "psi", "retrain"]):
             return self._handle_mlops_health(user_prompt, start_time)
 
         # Fallback to general executive overview query
         return self._handle_general_overview(user_prompt, start_time)
 
-    def _extract_limit(self, q: str, default: int = 5) -> int:
-        match = re.search(r"\b(top|first|show|list)\s+(\d+)\b", q)
-        if match:
-            return min(50, max(1, int(match.group(2))))
-        match_num = re.search(r"\b(\d+)\s+(products|items|customers|accounts|countries)\b", q)
-        if match_num:
-            return min(50, max(1, int(match_num.group(1))))
-        return default
+    # -------------------------------------------------------------------------
+    # Intent Handlers
+    # -------------------------------------------------------------------------
 
-    def _extract_country(self, q: str) -> Optional[str]:
-        countries = [
-            "United Kingdom", "Germany", "France", "EIRE", "Spain", "Netherlands",
-            "Switzerland", "Belgium", "Portugal", "Australia", "Norway", "Italy"
-        ]
-        for c in countries:
-            if c.lower() in q:
-                return c
-        if "uk" in q:
-            return "United Kingdom"
-        return None
+    def _handle_recommendations(self, prompt: str, start_time: float) -> Dict[str, Any]:
+        """Handles Next-Best-SKU and Item-to-Item cross-sell recommendations via Hybrid Recommender."""
+        q = prompt.lower()
+        rec_engine = get_product_recommender()
+        limit = self._extract_limit(q, default=5)
 
-    def _execute_custom_sql(self, sql: str, start_time: float) -> Dict[str, Any]:
-        """Safely executes user-provided SELECT SQL query."""
-        disallowed = ["drop", "delete", "insert", "update", "alter", "truncate", "create", "replace"]
-        tokens = [t.lower() for t in re.findall(r"\b\w+\b", sql)]
-        for d in disallowed:
-            if d in tokens:
-                return {
-                    "query": sql,
-                    "intent": "security_block",
-                    "error": f"Security restriction: modification keyword '{d.upper()}' is not permitted in read-only analytics mode.",
-                    "execution_time_ms": 0.1,
-                    "data": []
-                }
+        # Objective extraction
+        objective = "balanced"
+        if any(k in q for k in ["margin", "profit", "lucrative", "high margin", "upsell", "up-sell"]):
+            objective = "margin_max"
+        elif any(k in q for k in ["discovery", "novel", "novelty", "new", "explore"]):
+            objective = "discovery"
 
-        try:
-            df = self.con.execute(sql).df()
+        # Check for customer ID
+        cust_match = re.search(r"(?:customer|account|client|cust|#)\s*([0-9]{5})", q)
+        if cust_match:
+            cid = cust_match.group(1)
+            recs = rec_engine.recommend_next_best_skus(
+                customer_id=cid,
+                top_n=limit,
+                objective=objective,
+            )
+
+            # Query customer context from dim_customers
+            cust_tier = "Standard"
+            spend_str = "₹0"
+            country = "United Kingdom"
+            try:
+                c_df = self.con.execute(f"SELECT rfm_tier, primary_country, net_spend_gbp FROM dim_customers WHERE customer_id = '{cid}'").df()
+                if not c_df.empty:
+                    cust_tier = c_df.iloc[0]["rfm_tier"]
+                    country = c_df.iloc[0]["primary_country"]
+                    spend_str = f"₹{c_df.iloc[0]['net_spend_gbp'] * GBP_TO_INR:,.2f}"
+            except Exception:
+                pass
+
             elapsed = round((time.perf_counter() - start_time) * 1000, 2)
-            records = self._sanitize_records(df.head(25))
+            top_rec = recs[0]["Description"] if recs else "N/A"
+            top_price = f"₹{recs[0]['UnitPriceINR']:,.2f}" if recs else "₹0"
+            top_badge = recs[0]["ExplanationBadge"] if recs else "Best Match"
+
+            summary = (
+                f"Generated **{len(recs)} Next-Best-SKU recommendations** for **Customer #{cid}** "
+                f"({country}, Tier: **{cust_tier}**, Spend: **{spend_str}**) using **{objective.replace('_', ' ').title()}** optimization. "
+                f"Top recommendation is **{top_rec}** ({top_price}) flagged as **{top_badge}**."
+            )
+
+            table_rows = []
+            for r in recs:
+                table_rows.append({
+                    "Rank": r["Rank"],
+                    "StockCode": r["StockCode"],
+                    "Product": r["Description"],
+                    "Category": r["Category"],
+                    "UnitPriceINR": r["UnitPriceINR"],
+                    "MarginINR": r["EstimatedUnitMarginINR"],
+                    "HybridScore": r["HybridScore"],
+                    "Badge": r["ExplanationBadge"],
+                })
+
             return {
-                "query": sql,
-                "intent": "custom_sql",
-                "sql": sql,
+                "query": prompt,
+                "intent": "product_recommendations",
+                "customer_id": cid,
+                "objective": objective,
+                "sql": f"-- Latent Factor Matrix Factorization (k=20) + Hybrid Profit Re-ranking for Customer #{cid}",
                 "execution_time_ms": elapsed,
-                "summary": f"Executed custom analytical SQL query in {elapsed}ms. Returned {len(df)} records.",
-                "columns": list(df.columns),
-                "data": records,
+                "summary": summary,
+                "columns": ["Rank", "StockCode", "Product", "Category", "UnitPriceINR", "MarginINR", "HybridScore", "Badge"],
+                "data": table_rows,
                 "suggested_followups": [
-                    "Show top 5 products by gross revenue",
-                    "List high-risk churn accounts",
-                    "What is our monthly sales velocity?"
+                    f"Recommend high-margin up-sells for Customer #{cid}",
+                    f"Show purchase history for Customer #{cid}",
+                    "What are our top revenue products by category?"
                 ]
             }
-        except Exception as e:
+
+        # Check for SKU pattern (e.g. "for sku 22423" or "with 85123A")
+        sku_match = re.search(r"\b([0-9]{5}[a-zA-Z]?|[0-9]{4}[a-zA-Z]?)\b", prompt)
+        if sku_match:
+            sku = sku_match.group(1).upper()
+            recs = rec_engine.recommend_similar_items(stock_code=sku, top_n=limit)
+            meta = rec_engine.product_catalog.get(sku, {"Description": "Catalog Item"})
+            elapsed = round((time.perf_counter() - start_time) * 1000, 2)
+
+            summary = (
+                f"Found **{len(recs)} frequent co-purchase cross-sell items** complementary to "
+                f"**[{sku}] {meta.get('Description', 'Product')}**."
+            )
+
+            table_rows = []
+            for i, r in enumerate(recs, 1):
+                table_rows.append({
+                    "Rank": i,
+                    "StockCode": r["StockCode"],
+                    "Product": r["Description"],
+                    "Category": r["Category"],
+                    "UnitPriceINR": r["UnitPriceINR"],
+                    "MarginINR": r["EstimatedUnitMarginINR"],
+                    "SimilarityScore": r["SimilarityScore"],
+                })
+
             return {
-                "query": sql,
-                "intent": "sql_error",
-                "error": f"SQL Error: {str(e)}",
-                "execution_time_ms": round((time.perf_counter() - start_time) * 1000, 2),
-                "data": []
+                "query": prompt,
+                "intent": "cross_sell_recommendations",
+                "stock_code": sku,
+                "sql": f"-- Item-Item Cosine Similarity Vector Lookup for Base SKU [{sku}]",
+                "execution_time_ms": elapsed,
+                "summary": summary,
+                "columns": ["Rank", "StockCode", "Product", "Category", "UnitPriceINR", "MarginINR", "SimilarityScore"],
+                "data": table_rows,
+                "suggested_followups": [
+                    f"Recommend products for Customer #17850",
+                    "Which category has the highest return rate?",
+                    "What is our revenue breakdown by country?"
+                ]
             }
+
+        # Cold-Start / General Catalog Staples
+        recs = rec_engine.get_cold_start_recommendations(top_n=limit, objective=objective)
+        elapsed = round((time.perf_counter() - start_time) * 1000, 2)
+        summary = (
+            f"Here are **{len(recs)} high-velocity catalog anchors** diversified across all 5 merchandise categories "
+            f"for guest checkouts and new customer discovery."
+        )
+
+        table_rows = []
+        for r in recs:
+            table_rows.append({
+                "Rank": r["Rank"],
+                "StockCode": r["StockCode"],
+                "Product": r["Description"],
+                "Category": r["Category"],
+                "UnitPriceINR": r["UnitPriceINR"],
+                "MarginINR": r["EstimatedUnitMarginINR"],
+                "Badge": r["ExplanationBadge"],
+            })
+
+        return {
+            "query": prompt,
+            "intent": "cold_start_recommendations",
+            "sql": "-- Multi-Category Bestseller Diversification for Guest Sessions",
+            "execution_time_ms": elapsed,
+            "summary": summary,
+            "columns": ["Rank", "StockCode", "Product", "Category", "UnitPriceINR", "MarginINR", "Badge"],
+            "data": table_rows,
+            "suggested_followups": [
+                "Recommend products for Customer #14096",
+                "Recommend products for Customer #17850",
+                "Show customer spend breakdown by RFM tier"
+            ]
+        }
+
+    def _handle_return_rate_analysis(self, limit: int, prompt: str, start_time: float) -> Dict[str, Any]:
+        """Analytical Star-Schema query analyzing return and cancellation leakage."""
+        sql = f"""
+        SELECT 
+            p.category AS "Category",
+            COUNT(DISTINCT r.invoice_no) AS "ReturnOrders",
+            SUM(r.quantity) AS "RefundedUnits",
+            ROUND(SUM(r.refund_amount_gbp) * {GBP_TO_INR}, 2) AS "RefundLeakageINR",
+            ROUND(
+                SUM(r.refund_amount_gbp) / 
+                NULLIF(SUM(r.refund_amount_gbp) + (SELECT SUM(total_price) FROM fact_order_lines f JOIN dim_products p2 ON f.stock_code = p2.stock_code WHERE p2.category = p.category), 0) * 100, 
+                2
+            ) AS "ReturnRatePct"
+        FROM fact_returns r
+        JOIN dim_products p ON r.stock_code = p.stock_code
+        GROUP BY p.category
+        ORDER BY "RefundLeakageINR" DESC
+        LIMIT {limit};
+        """
+        try:
+            df = self.con.execute(sql).df()
+        except Exception:
+            # Fallback to simpler query over fact_returns
+            sql = f"""
+            SELECT 
+                p.category AS "Category",
+                COUNT(*) AS "ReturnEvents",
+                SUM(r.quantity) AS "RefundedUnits",
+                ROUND(SUM(r.refund_amount_gbp) * {GBP_TO_INR}, 2) AS "RefundLeakageINR"
+            FROM fact_returns r
+            JOIN dim_products p ON r.stock_code = p.stock_code
+            GROUP BY p.category
+            ORDER BY "RefundLeakageINR" DESC
+            LIMIT {limit};
+            """
+            df = self.con.execute(sql).df()
+
+        elapsed = round((time.perf_counter() - start_time) * 1000, 2)
+        top_cat = df.iloc[0]["Category"] if not df.empty else "Merchandise"
+        top_leak = f"₹{df.iloc[0]['RefundLeakageINR']:,.2f}" if not df.empty else "₹0"
+
+        summary = (
+            f"**Return & Cancellation Quality Telemetry (Star Schema)**: **{top_cat}** represents the highest "
+            f"merchandise return volume totaling **{top_leak}** in refund leakage. Reverse-logistics recovery "
+            f"and packaging re-inspection are recommended."
+        )
+
+        return {
+            "query": prompt,
+            "intent": "return_rate_analysis",
+            "sql": sql.strip(),
+            "execution_time_ms": elapsed,
+            "summary": summary,
+            "columns": list(df.columns),
+            "data": self._sanitize_records(df),
+            "suggested_followups": [
+                "What is our revenue breakdown by product category?",
+                "Who are our top customers at risk of churn?",
+                "Simulate return reduction in Financial Waterfall"
+            ]
+        }
+
+    def _handle_customer_tiers(self, prompt: str, start_time: float) -> Dict[str, Any]:
+        """Analytical Star Schema query aggregating customer RFM personas from dim_customers."""
+        sql = f"""
+        SELECT 
+            rfm_tier AS "RFMTier",
+            COUNT(*) AS "CustomerCount",
+            ROUND(AVG(net_spend_gbp) * {GBP_TO_INR}, 2) AS "AvgSpendINR",
+            ROUND(SUM(net_spend_gbp) * {GBP_TO_INR}, 2) AS "TotalSpendINR",
+            ROUND(AVG(lifetime_orders), 1) AS "AvgOrders",
+            ROUND(AVG(recency_days), 1) AS "AvgRecencyDays"
+        FROM dim_customers
+        WHERE customer_id != 'GUEST'
+        GROUP BY rfm_tier
+        ORDER BY "TotalSpendINR" DESC;
+        """
+        df = self.con.execute(sql).df()
+        elapsed = round((time.perf_counter() - start_time) * 1000, 2)
+        top_tier = df.iloc[0]["RFMTier"] if not df.empty else "Champions"
+        top_spend = f"₹{df.iloc[0]['TotalSpendINR']:,.2f}" if not df.empty else "₹0"
+
+        summary = (
+            f"**Customer Behavioral Segmentation (dim_customers)**: The portfolio is anchored by **{top_tier}** "
+            f"generating **{top_spend}** in cumulative spend. Champions exhibit high transactional frequency "
+            f"and tight recency windows."
+        )
+
+        return {
+            "query": prompt,
+            "intent": "customer_tiers",
+            "sql": sql.strip(),
+            "execution_time_ms": elapsed,
+            "summary": summary,
+            "columns": list(df.columns),
+            "data": self._sanitize_records(df),
+            "suggested_followups": [
+                "Recommend products for Customer #14096 (Champion)",
+                "Show top 5 accounts at risk of churn",
+                "What are our top revenue products by category?"
+            ]
+        }
+
+    def _handle_categories(self, prompt: str, start_time: float) -> Dict[str, Any]:
+        """Category merchandising performance and revenue contribution."""
+        sql = f"""
+        SELECT 
+            p.category AS "Category",
+            COUNT(DISTINCT p.stock_code) AS "UniqueSKUs",
+            SUM(f.quantity) AS "UnitsSold",
+            ROUND(SUM(f.total_price) * {GBP_TO_INR}, 2) AS "RevenueINR",
+            ROUND(SUM(f.total_price) / NULLIF(COUNT(DISTINCT f.invoice_no), 0) * {GBP_TO_INR}, 2) AS "AOV_INR"
+        FROM fact_order_lines f
+        JOIN dim_products p ON f.stock_code = p.stock_code
+        GROUP BY p.category
+        ORDER BY "RevenueINR" DESC;
+        """
+        try:
+            df = self.con.execute(sql).df()
+        except Exception:
+            sql = f"""
+            SELECT 
+                category AS "Category",
+                COUNT(DISTINCT stock_code) AS "UniqueSKUs",
+                SUM(total_units_sold) AS "UnitsSold",
+                ROUND(SUM(total_revenue_gbp) * {GBP_TO_INR}, 2) AS "RevenueINR"
+            FROM dim_products
+            GROUP BY category
+            ORDER BY "RevenueINR" DESC;
+            """
+            df = self.con.execute(sql).df()
+
+        elapsed = round((time.perf_counter() - start_time) * 1000, 2)
+        top_cat = df.iloc[0]["Category"] if not df.empty else "Kitchen & Dining"
+        top_rev = f"₹{df.iloc[0]['RevenueINR']:,.2f}" if not df.empty else "₹0"
+
+        summary = (
+            f"**Category Merchandising Breakdown**: **{top_cat}** leads sales with **{top_rev}** "
+            f"across {df.iloc[0]['UniqueSKUs']} distinct catalog SKUs."
+        )
+
+        return {
+            "query": prompt,
+            "intent": "category_performance",
+            "sql": sql.strip(),
+            "execution_time_ms": elapsed,
+            "summary": summary,
+            "columns": list(df.columns),
+            "data": self._sanitize_records(df),
+            "suggested_followups": [
+                "Which category has the highest return rate?",
+                "Recommend products for Customer #17850",
+                "Show sales velocity by day of the week"
+            ]
+        }
+
+    def _handle_day_of_week(self, prompt: str, start_time: float) -> Dict[str, Any]:
+        """Temporal day-of-week sales velocity."""
+        sql = f"""
+        SELECT 
+            CASE d.day_of_week
+                WHEN 1 THEN '1 - Monday'
+                WHEN 2 THEN '2 - Tuesday'
+                WHEN 3 THEN '3 - Wednesday'
+                WHEN 4 THEN '4 - Thursday'
+                WHEN 5 THEN '5 - Friday'
+                WHEN 6 THEN '6 - Saturday'
+                WHEN 7 THEN '7 - Sunday'
+                ELSE 'Unknown'
+            END AS "DayOfWeek",
+            COUNT(DISTINCT f.invoice_no) AS "OrderCount",
+            SUM(f.quantity) AS "UnitsSold",
+            ROUND(SUM(f.total_price) * {GBP_TO_INR}, 2) AS "RevenueINR",
+            ROUND(SUM(f.total_price) / NULLIF(COUNT(DISTINCT f.invoice_no), 0) * {GBP_TO_INR}, 2) AS "AOV_INR"
+        FROM fact_order_lines f
+        JOIN dim_date d ON f.date_key = d.date_key
+        GROUP BY d.day_of_week
+        ORDER BY d.day_of_week;
+        """
+        df = self.con.execute(sql).df()
+        elapsed = round((time.perf_counter() - start_time) * 1000, 2)
+        peak_day = df.sort_values(by="RevenueINR", ascending=False).iloc[0]["DayOfWeek"] if not df.empty else "Thursday"
+
+        summary = (
+            f"**Day-of-Week Sales Velocity (dim_date)**: Peak transactional velocity occurs on **{peak_day}**, "
+            f"driven by wholesale replenishment cycles."
+        )
+
+        return {
+            "query": prompt,
+            "intent": "temporal_velocity",
+            "sql": sql.strip(),
+            "execution_time_ms": elapsed,
+            "summary": summary,
+            "columns": list(df.columns),
+            "data": self._sanitize_records(df),
+            "suggested_followups": [
+                "Show monthly sales velocity and AOV trends",
+                "What is our demand forecast for next week?",
+                "Who are our top VIP accounts at risk of churn?"
+            ]
+        }
 
     def _handle_top_products(self, limit: int, country: Optional[str], prompt: str, start_time: float) -> Dict[str, Any]:
         where_country = f"AND country = '{country}'" if country else ""
@@ -205,7 +541,7 @@ class RetailCopilot:
         df = self.con.execute(sql).df()
         elapsed = round((time.perf_counter() - start_time) * 1000, 2)
         top_sku = df.iloc[0]["Product"] if not df.empty else "N/A"
-        top_rev = f"₹{df.iloc[0]['GrossRevenueGBP']:,.2f}" if not df.empty else "₹0"
+        top_rev = f"₹{df.iloc[0]['GrossRevenueGBP'] * GBP_TO_INR:,.2f}" if not df.empty else "₹0"
 
         c_text = f" in {country}" if country else " globally"
         summary = (
@@ -259,7 +595,7 @@ class RetailCopilot:
         df = self.con.execute(sql).df()
         elapsed = round((time.perf_counter() - start_time) * 1000, 2)
         top_at_risk = df.iloc[0]["CustomerID"] if not df.empty else "N/A"
-        top_spend = f"₹{df.iloc[0]['LifetimeSpendGBP']:,.2f}" if not df.empty else "₹0"
+        top_spend = f"₹{df.iloc[0]['LifetimeSpendGBP'] * GBP_TO_INR:,.2f}" if not df.empty else "₹0"
 
         summary = (
             f"Found critical accounts with >90 days dormancy. Top vulnerable VIP is "
@@ -299,10 +635,12 @@ class RetailCopilot:
         """
         df = self.con.execute(sql).df()
         elapsed = round((time.perf_counter() - start_time) * 1000, 2)
+        top_country = df.iloc[0]["Country"] if not df.empty else "UK"
+        top_rev = f"₹{df.iloc[0]['GrossRevenueGBP'] * GBP_TO_INR:,.2f}" if not df.empty else "₹0"
 
         summary = (
-            f"Analyzed top {limit} international revenue markets. The United Kingdom dominates volume, "
-            f"followed by key European wholesale markets Netherlands and Germany with significantly higher basket AOV."
+            f"Geographic performance across {len(df)} markets is led by **{top_country}** "
+            f"contributing **{top_rev}** across **{df.iloc[0]['TotalOrders']:,} orders**."
         )
 
         return {
@@ -315,28 +653,29 @@ class RetailCopilot:
             "data": self._sanitize_records(df),
             "suggested_followups": [
                 "Show top 5 products in Germany",
-                "What is our overall cancellation rate by country?",
-                "List top 5 wholesale Champions"
+                "What is our revenue in France vs EIRE?",
+                "What is our monthly sales velocity?"
             ]
         }
 
     def _handle_monthly_velocity(self, prompt: str, start_time: float) -> Dict[str, Any]:
-        sql = """
+        sql = f"""
         SELECT 
-            strftime(invoice_date, '%Y-%m') AS "SalesMonth",
+            STRFTIME(invoice_date, '%Y-%m') AS "YearMonth",
             COUNT(DISTINCT invoice_no) AS "OrdersCount",
+            COUNT(DISTINCT customer_id) AS "ActiveCustomers",
             SUM(quantity) AS "UnitsSold",
-            ROUND(SUM(total_price), 2) AS "RevenueGBP",
+            ROUND(SUM(total_price), 2) AS "GrossRevenueGBP",
             ROUND(SUM(total_price) / COUNT(DISTINCT invoice_no), 2) AS "AOV_GBP"
         FROM ecommerce_transactions
         WHERE is_cancelled = FALSE 
           AND quantity > 0
-        GROUP BY "SalesMonth"
-        ORDER BY "SalesMonth" ASC;
+        GROUP BY "YearMonth"
+        ORDER BY "YearMonth" ASC;
         """
         df = self.con.execute(sql).df()
         elapsed = round((time.perf_counter() - start_time) * 1000, 2)
-        total_rev = f"₹{df['RevenueGBP'].sum():,.2f}" if not df.empty else "₹0"
+        total_rev = f"₹{df['GrossRevenueGBP'].sum() * GBP_TO_INR:,.2f}" if not df.empty else "₹0"
 
         summary = (
             f"Cumulative portfolio gross revenue reached **{total_rev}**. "
@@ -382,7 +721,7 @@ class RetailCopilot:
             summary = f"No commercial transaction history found for Customer ID #{customer_id}."
         else:
             row = df.iloc[0]
-            spend = f"₹{row['LifetimeSpendGBP']:,.2f}"
+            spend = f"₹{row['LifetimeSpendGBP'] * GBP_TO_INR:,.2f}"
             orders = row['LifetimeOrders']
             recency = row['DaysSinceLastOrder']
             risk = "High Churn Risk" if recency > 90 else "Active Customer"
@@ -400,9 +739,9 @@ class RetailCopilot:
             "columns": list(df.columns),
             "data": self._sanitize_records(df),
             "suggested_followups": [
+                f"Recommend products for Customer #{customer_id}",
                 f"Show all products bought by #{customer_id}",
-                "Calculate BTYD Customer Lifetime Value for this account",
-                "List all Champions (VIP) segment accounts"
+                "Calculate BTYD Customer Lifetime Value for this account"
             ]
         }
 
@@ -473,12 +812,12 @@ class RetailCopilot:
         """
         df = self.con.execute(sql).df()
         elapsed = round((time.perf_counter() - start_time) * 1000, 2)
-        rev = f"₹{df.iloc[0]['GrossRevenueGBP']:,.2f}" if not df.empty else "₹0"
+        rev = f"₹{df.iloc[0]['GrossRevenueGBP'] * GBP_TO_INR:,.2f}" if not df.empty else "₹0"
 
         summary = (
             f"Here is your high-level retail intelligence snapshot: Portfolio generated **{rev}** "
             f"across **{df.iloc[0]['CompletedOrders']:,} completed orders** and **{df.iloc[0]['ActiveCustomers']:,} accounts**. "
-            f"Ask me about specific products, churn risks, country sales, or MLOps drift!"
+            f"Ask me about recommendations, customer tiers, return rates, or country sales!"
         )
 
         return {
@@ -490,11 +829,73 @@ class RetailCopilot:
             "columns": list(df.columns),
             "data": self._sanitize_records(df),
             "suggested_followups": [
-                "Show top 5 revenue products",
+                "Recommend products for Customer #14096",
                 "Who are our top VIP accounts at risk of churn?",
                 "What is our international market breakdown?"
             ]
         }
+
+    def _execute_custom_sql(self, sql: str, start_time: float) -> Dict[str, Any]:
+        """Safely executes user-provided SELECT SQL query."""
+        disallowed = ["drop", "delete", "insert", "update", "alter", "truncate", "create", "replace"]
+        tokens = [t.lower() for t in re.findall(r"\b\w+\b", sql)]
+        for d in disallowed:
+            if d in tokens:
+                return {
+                    "query": sql,
+                    "intent": "security_block",
+                    "error": f"Security restriction: modification keyword '{d.upper()}' is not permitted in read-only analytics mode.",
+                    "execution_time_ms": 0.1,
+                    "data": []
+                }
+
+        try:
+            df = self.con.execute(sql).df()
+            elapsed = round((time.perf_counter() - start_time) * 1000, 2)
+            records = self._sanitize_records(df.head(25))
+            return {
+                "query": sql,
+                "intent": "custom_sql",
+                "sql": sql,
+                "execution_time_ms": elapsed,
+                "summary": f"Executed custom analytical SQL query in {elapsed}ms. Returned {len(df)} records.",
+                "columns": list(df.columns),
+                "data": records,
+                "suggested_followups": [
+                    "Recommend products for Customer #14096",
+                    "Show top 5 products by gross revenue",
+                    "List high-risk churn accounts"
+                ]
+            }
+        except Exception as e:
+            return {
+                "query": sql,
+                "intent": "sql_error",
+                "error": f"SQL Error: {str(e)}",
+                "execution_time_ms": round((time.perf_counter() - start_time) * 1000, 2),
+                "data": []
+            }
+
+    def _extract_limit(self, q: str, default: int = 5) -> int:
+        match = re.search(r"\b(top|first|show|list)\s+(\d+)\b", q)
+        if match:
+            return min(50, max(1, int(match.group(2))))
+        match_num = re.search(r"\b(\d+)\s+(products|items|customers|accounts|countries)\b", q)
+        if match_num:
+            return min(50, max(1, int(match_num.group(1))))
+        return default
+
+    def _extract_country(self, q: str) -> Optional[str]:
+        countries = [
+            "United Kingdom", "Germany", "France", "EIRE", "Spain", "Netherlands",
+            "Switzerland", "Belgium", "Portugal", "Australia", "Norway", "Italy"
+        ]
+        for c in countries:
+            if c.lower() in q:
+                return c
+        if "uk" in q:
+            return "United Kingdom"
+        return None
 
     def _sanitize_records(self, df: pd.DataFrame) -> List[Dict[str, Any]]:
         """Converts DataFrame to JSON-compliant records with proper type formatting."""
@@ -510,11 +911,14 @@ class RetailCopilot:
 
 if __name__ == "__main__":
     copilot = RetailCopilot()
-    print("[Copilot Test 1] Top Products:")
-    r1 = copilot.execute_query("What are the top 3 products in Germany?")
+    print("[Copilot Test 1] Recommendation:")
+    r1 = copilot.execute_query("Recommend products for Customer #14096")
     print(r1["summary"])
-    print(r1["sql"])
 
-    print("\n[Copilot Test 2] Churn:")
-    r2 = copilot.execute_query("Who are our top customers at risk of churn?")
+    print("\n[Copilot Test 2] Return Rate Analysis (Star Schema):")
+    r2 = copilot.execute_query("Which category has the highest return rate?")
     print(r2["summary"])
+
+    print("\n[Copilot Test 3] Customer Tiers (dim_customers):")
+    r3 = copilot.execute_query("Show customer spend breakdown by RFM tier")
+    print(r3["summary"])

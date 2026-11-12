@@ -11,7 +11,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 def test_code_split_modules_exist_and_export_initializers():
     app_js = (ROOT_DIR / "app.js").read_text(encoding="utf-8")
     matches = re.findall(r'path:\s*"\./(js/modules/[^"?]+\.js)[^"]*",\s*initName:\s*"([^"]+)"', app_js)
-    assert len(matches) == 7, f"Expected 7 code-split lazy route bindings, found {len(matches)}: {matches}"
+    assert len(matches) == 8, f"Expected 8 code-split lazy route bindings, found {len(matches)}: {matches}"
 
     for rel_path, init_fn in matches:
         mod_file = ROOT_DIR / rel_path
@@ -29,6 +29,7 @@ def test_zero_hardcoded_localhost_urls_in_runtime_clients():
         "js/modules/survival-xai.js",
         "js/modules/tax-invoice.js",
         "js/modules/conformal-budget.js",
+        "js/modules/recommender-studio.js",
     ]:
         text = (ROOT_DIR / rel).read_text(encoding="utf-8")
         # Only console diagnostic text may mention host; all fetch/WebSocket calls must use nexusApiUrl/nexusWsUrl

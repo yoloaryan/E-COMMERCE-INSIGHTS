@@ -22,13 +22,14 @@ function yieldToMain() {
 }
 
 const MODULE_LOADERS = {
-    "pricing-lab": { path: "./js/modules/pricing-lab.js?v=7.25", initName: "initPricingLab" },
-    "fraud-radar": { path: "./js/modules/fraud-radar.js?v=7.25", initName: "initFraudRadar" },
-    "data-warehouse": { path: "./js/modules/warehouse-lab.js?v=7.25", initName: "initDataWarehouseTab" },
-    "churn": { path: "./js/modules/survival-xai.js?v=7.25", initName: "initSurvivalXaiLab" },
-    "transaction-simulator": { path: "./js/modules/tax-invoice.js?v=7.25", initName: "initTaxInvoiceStudio" },
-    "forecasting": { path: "./js/modules/conformal-budget.js?v=7.25", initName: "initConformalForecastLab" },
-    "campaign-studio": { path: "./js/modules/conformal-budget.js?v=7.25", initName: "initBudgetOptimizerLab" },
+    "pricing-lab": { path: "./js/modules/pricing-lab.js?v=7.26", initName: "initPricingLab" },
+    "fraud-radar": { path: "./js/modules/fraud-radar.js?v=7.26", initName: "initFraudRadar" },
+    "data-warehouse": { path: "./js/modules/warehouse-lab.js?v=7.26", initName: "initDataWarehouseTab" },
+    "churn": { path: "./js/modules/survival-xai.js?v=7.26", initName: "initSurvivalXaiLab" },
+    "transaction-simulator": { path: "./js/modules/tax-invoice.js?v=7.26", initName: "initTaxInvoiceStudio" },
+    "forecasting": { path: "./js/modules/conformal-budget.js?v=7.26", initName: "initConformalForecastLab" },
+    "campaign-studio": { path: "./js/modules/conformal-budget.js?v=7.26", initName: "initBudgetOptimizerLab" },
+    "recommendations": { path: "./js/modules/recommender-studio.js?v=7.26", initName: "initRecommenderStudio" },
 };
 const LOADED_MODULES = new Map();
 
@@ -2235,72 +2236,7 @@ const USER_RECS_DATABASE = {
 };
 
 function initRecommenderTab() {
-    const modeSelect = document.getElementById("recModeSelect");
-    const skuGroup = document.getElementById("skuSelectorGroup");
-    const custGroup = document.getElementById("custSelectorGroup");
-    const skuSelect = document.getElementById("skuSelect");
-    const custSelect = document.getElementById("custSelect");
-    const recsTitle = document.getElementById("recsTitle");
-    const recsGrid = document.getElementById("recsGrid");
-
-    function renderRecommendations() {
-        const mode = modeSelect.value;
-        let data;
-
-        if (mode === "item") {
-            skuGroup.style.display = "flex";
-            custGroup.style.display = "none";
-            const sku = skuSelect.value;
-            data = RECS_CATALOG[sku] || RECS_CATALOG["22423"];
-        } else {
-            skuGroup.style.display = "none";
-            custGroup.style.display = "flex";
-            const cid = custSelect.value;
-            data = USER_RECS_DATABASE[cid] || USER_RECS_DATABASE["17850"];
-        }
-
-        recsTitle.textContent = data.title;
-        recsGrid.innerHTML = data.items.map(item => `
-            <div class="rec-card">
-                <div>
-                    <span class="rec-sku">SKU: ${item.sku}</span>
-                    <h4 class="rec-title">${item.desc}</h4>
-                </div>
-                <div>
-                    <div class="rec-price">₹${item.price.toFixed(2)}</div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.4rem;">
-                        <span class="rec-badge">${item.badge}</span>
-                        <button class="btn btn-outline btn-xs add-cart-btn" data-sku="${item.sku}" data-desc="${item.desc}" data-price="${item.price}">+ Add</button>
-                    </div>
-                </div>
-            </div>
-        `).join("");
-
-        document.querySelectorAll(".add-cart-btn").forEach(btn => {
-            btn.addEventListener("click", () => {
-                const sku = btn.getAttribute("data-sku");
-                const desc = btn.getAttribute("data-desc");
-                const price = parseFloat(btn.getAttribute("data-price"));
-                addToCart(sku, desc, price);
-            });
-        });
-    }
-
-    if (modeSelect) modeSelect.addEventListener("change", renderRecommendations);
-    if (skuSelect) skuSelect.addEventListener("change", renderRecommendations);
-    if (custSelect) custSelect.addEventListener("change", renderRecommendations);
-
-    window.quickSelectSku = function(sku) {
-        if (modeSelect) modeSelect.value = "item";
-        if (skuSelect) {
-            skuSelect.value = sku;
-            renderRecommendations();
-            showToast("Catalog Item", `Loaded collaborative cross-sell for SKU [${sku}]`, "info");
-            logAuditEvent("Recommender", `Quick-selected SKU [${sku}]`);
-        }
-    };
-
-    renderRecommendations();
+    ensureTabModuleLoaded("recommendations");
     initMarketBasketRules();
 }
 
