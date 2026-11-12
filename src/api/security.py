@@ -159,7 +159,7 @@ ROLE_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "permissions": ["*"],
         "allowed_tabs": [
             "overview", "segmentation", "forecasting", "churn", "recommendations",
-            "customer-mgmt", "inventory-mart", "campaign-studio", "pricing-lab",
+            "customer-mgmt", "inventory-mart", "campaign-studio", "pricing-lab", "fraud-radar",
             "transaction-simulator", "admin-ops", "api-console", "audit-logs",
         ],
     },
@@ -170,10 +170,11 @@ ROLE_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "permissions": [
             "analytics:read", "predict:execute", "mlops:read", "mlops:retrain",
             "pricing:read", "experiments:run", "copilot:query", "audit:read",
+            "fraud:read", "fraud:resolve",
         ],
         "allowed_tabs": [
             "overview", "segmentation", "forecasting", "churn", "recommendations",
-            "pricing-lab", "admin-ops", "api-console", "audit-logs",
+            "pricing-lab", "fraud-radar", "admin-ops", "api-console", "audit-logs",
         ],
     },
     "growth": {
@@ -195,10 +196,10 @@ ROLE_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "can_switch_tenants": False,
         "permissions": [
             "analytics:read", "predict:execute", "inventory:read", "inventory:write",
-            "webhooks:read", "copilot:query",
+            "webhooks:read", "copilot:query", "fraud:read", "fraud:resolve",
         ],
         "allowed_tabs": [
-            "overview", "forecasting", "recommendations", "inventory-mart", "transaction-simulator",
+            "overview", "forecasting", "recommendations", "inventory-mart", "fraud-radar", "transaction-simulator",
         ],
     },
 }

@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=7.4">
+    <link rel="stylesheet" href="style.css?v=7.5">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -33,8 +33,8 @@
                 <button type="button" class="view-mode-btn active" id="btnModeSimple" onclick="window.setViewMode('simple')" title="5 Core Business Intelligence Modules">
                     <span>🌟</span> Simple View
                 </button>
-                <button type="button" class="view-mode-btn" id="btnModeAll" onclick="window.setViewMode('all')" title="All 13 Operational & MLOps Tools">
-                    <span>⚙️</span> All Tools (13)
+                <button type="button" class="view-mode-btn" id="btnModeAll" onclick="window.setViewMode('all')" title="All 14 Operational & MLOps Tools">
+                    <span>⚙️</span> All Tools (14)
                 </button>
             </div>
 
@@ -96,6 +96,11 @@
                     <span class="nav-label">Pricing &amp; A/B Lab</span>
                     <span class="menu-badge blue">Elasticity</span>
                 </button>
+                <button class="nav-item advanced-module" data-tab="fraud-radar">
+                    <span class="nav-icon">🚨</span>
+                    <span class="nav-label">Fraud &amp; Anomaly Radar</span>
+                    <span class="menu-badge alert">AI</span>
+                </button>
                 <button class="nav-item advanced-module" data-tab="transaction-simulator">
                     <span class="nav-icon">🧪</span>
                     <span class="nav-label">Live POS Simulator</span>
@@ -118,7 +123,7 @@
                 </button>
 
                 <div class="advanced-module-hint" id="simpleModeHint">
-                    Showing 5 core intelligence tools. <a href="javascript:void(0)" id="linkSwitchToAll">Show all 13 modules</a>
+                    Showing 5 core intelligence tools. <a href="javascript:void(0)" id="linkSwitchToAll">Show all 14 modules</a>
                 </div>
             </nav>
 
@@ -164,7 +169,7 @@
                     <!-- Workspace View Mode Toggle (Header) -->
                     <div class="view-mode-toggle-header" title="Switch between Simple View and All Tools">
                         <button type="button" class="view-mode-header-btn active" id="headerBtnModeSimple" onclick="window.setViewMode('simple')">🌟 Simple</button>
-                        <button type="button" class="view-mode-header-btn" id="headerBtnModeAll" onclick="window.setViewMode('all')">⚙️ All (13)</button>
+                        <button type="button" class="view-mode-header-btn" id="headerBtnModeAll" onclick="window.setViewMode('all')">⚙️ All (14)</button>
                     </div>
 
                     <!-- Live FastAPI Status Badge -->
@@ -244,7 +249,7 @@
                     <span class="simple-banner-badge">🌟 SIMPLE VIEW</span>
                     <span class="simple-banner-text">Displaying the 5 core business intelligence modules: Overview, RFM Segments, Demand Forecaster, Churn Scanner & Recommender.</span>
                 </div>
-                <button type="button" class="simple-banner-action" onclick="window.setViewMode('all')">Switch to Full Suite (13 Tools) ⚙️</button>
+                <button type="button" class="simple-banner-action" onclick="window.setViewMode('all')">Switch to Full Suite (14 Tools) ⚙️</button>
             </div>
 
             <!-- ============================================================= -->
@@ -1986,6 +1991,177 @@
                     </div>
                 </div>
             </section>
+
+            <!-- ============================================================= -->
+            <!-- TAB 14: TRANSACTION ANOMALY, FRAUD & CANCELLATION RADAR -->
+            <!-- ============================================================= -->
+            <section id="tab-fraud-radar" class="tab-pane">
+                <!-- In-Page Section Subnav -->
+                <div class="tab-subnav-bar">
+                    <button type="button" class="subnav-pill active" onclick="jumpToSection('fraudKpiGrid', this)">📊 Anomaly Telemetry</button>
+                    <button type="button" class="subnav-pill" onclick="jumpToSection('fraudScorerRow', this)">⚡ Live Risk Scorer</button>
+                    <button type="button" class="subnav-pill" onclick="jumpToSection('fraudQuarantineCard', this)">🚨 Quarantine Triage Queue</button>
+                </div>
+
+                <!-- Summary KPI Grid -->
+                <div class="kpi-grid" id="fraudKpiGrid">
+                    <div class="kpi-card highlight-glow">
+                        <div class="kpi-label">Invoices Scanned (Isolation Forest)</div>
+                        <div class="kpi-value" id="fraudKpiInvoices">23,218</div>
+                        <div class="kpi-subtext" id="fraudKpiSource">100 Trees • 5% Contamination</div>
+                    </div>
+                    <div class="kpi-card red-border">
+                        <div class="kpi-label">Historical Cancellation Rate</div>
+                        <div class="kpi-value" id="fraudKpiCancelRate">14.74%</div>
+                        <div class="kpi-subtext" id="fraudKpiCancelCount">3,422 Cancelled Invoices</div>
+                    </div>
+                    <div class="kpi-card gold-border">
+                        <div class="kpi-label">Flagged Outlier Exposure</div>
+                        <div class="kpi-value" id="fraudKpiExposure">£1.85M</div>
+                        <div class="kpi-subtext" id="fraudKpiAnomalyCount">Structural &amp; Volume Outliers</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Active Quarantine Queue</div>
+                        <div class="kpi-value" id="fraudKpiQueueCount">2 Pending</div>
+                        <div class="kpi-subtext">Real-Time Webhook &amp; POS Hook</div>
+                    </div>
+                </div>
+
+                <!-- Row 2: Live Risk Scorer + Gauge / Country Cancellation Chart -->
+                <div class="charts-row" id="fraudScorerRow">
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <div>
+                                <h3>⚡ Real-Time Transaction Risk &amp; Anomaly Scorer</h3>
+                                <p class="card-sub">Score candidate invoices against Isolation Forest + Z-score + guest/off-hours rules</p>
+                            </div>
+                            <span class="badge live-badge">ML Risk Engine</span>
+                        </div>
+
+                        <div class="quick-preset-bar" style="margin-bottom: 1rem;">
+                            <span class="preset-bar-label">⚡ Test Risk Scenarios:</span>
+                            <button type="button" class="preset-chip" onclick="window.applyFraudPreset('guest_whale')">🚨 Guest Whale (£18k / 02:00)</button>
+                            <button type="button" class="preset-chip" onclick="window.applyFraudPreset('high_cancel')">⚠️ Serial Canceller (65%)</button>
+                            <button type="button" class="preset-chip" onclick="window.applyFraudPreset('safe_retail')">✅ Normal UK Order (£68)</button>
+                        </div>
+
+                        <form id="fraudScoreForm" class="admin-form" aria-labelledby="fraudFormHeading">
+                            <h4 id="fraudFormHeading" class="visually-hidden">Transaction Anomaly Scoring Inputs</h4>
+                            <div class="form-row">
+                                <div class="pricing-field-group flex-1">
+                                    <label for="fraudAmountInput">Order Amount (£ GBP)</label>
+                                    <input type="number" id="fraudAmountInput" name="amount_gbp" value="18500" step="0.01" required class="form-input-sm">
+                                </div>
+                                <div class="pricing-field-group flex-1">
+                                    <label for="fraudUnitsInput">Total Item Units</label>
+                                    <input type="number" id="fraudUnitsInput" name="total_units" value="6200" min="1" required class="form-input-sm">
+                                </div>
+                                <div class="pricing-field-group flex-1">
+                                    <label for="fraudLinesInput">Distinct Line Items</label>
+                                    <input type="number" id="fraudLinesInput" name="line_items" value="1" min="1" required class="form-input-sm">
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="pricing-field-group flex-1">
+                                    <label for="fraudCustInput">Customer ID</label>
+                                    <input type="text" id="fraudCustInput" name="customer_id" value="Guest" class="form-input-sm">
+                                </div>
+                                <div class="pricing-field-group flex-1">
+                                    <label for="fraudHourInput">Hour of Day (0-23 UTC)</label>
+                                    <input type="number" id="fraudHourInput" name="hour_of_day" value="2" min="0" max="23" step="1" required class="form-input-sm">
+                                </div>
+                                <div class="pricing-field-group flex-1">
+                                    <label for="fraudCancelRateInput">Acct Cancel History (%)</label>
+                                    <input type="number" id="fraudCancelRateInput" name="historical_cancel_rate_pct" value="0" min="0" max="100" step="1" class="form-input-sm">
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 1.25rem; flex-wrap: wrap; margin: 0.35rem 0 0.75rem;">
+                                <label for="fraudIsGuestChk" style="display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer; font-size: 0.84rem;">
+                                    <input type="checkbox" id="fraudIsGuestChk" name="is_guest" checked>
+                                    <span>Unauthenticated Guest Checkout</span>
+                                </label>
+                                <label for="fraudAutoQuarantineChk" style="display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer; font-size: 0.84rem;">
+                                    <input type="checkbox" id="fraudAutoQuarantineChk" name="auto_quarantine" checked>
+                                    <span>Auto-Quarantine if Risk Score ≥ 50</span>
+                                </label>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary" id="btnRunFraudScore" style="width: 100%;">
+                                🛡️ Score Transaction Risk &amp; Inspect Signals
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Semantic Progress Ring & Diagnostic Signals + Country Chart -->
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <div>
+                                <h3>Risk Assessment &amp; Triggered Anomaly Signals</h3>
+                                <p class="card-sub">Live Isolation Forest decision score &amp; domain rule breakdown</p>
+                            </div>
+                            <span class="badge red" id="fraudResultTierBadge">AWAITING SCORE</span>
+                        </div>
+
+                        <div class="fraud-gauge-layout" role="status" aria-live="polite">
+                            <div class="progress-ring-wrapper">
+                                <progress id="fraudRiskRing" value="0" max="100" aria-label="Transaction Fraud Risk Score" aria-valuetext="0 out of 100" class="progress-ring"></progress>
+                                <div class="progress-ring-content" aria-hidden="true">
+                                    <strong id="fraudRingScoreText">--</strong>
+                                    <small>/ 100 RISK</small>
+                                </div>
+                            </div>
+                            <div class="fraud-signals-panel">
+                                <div style="margin-bottom: 0.5rem;">
+                                    <span style="font-size: 0.74rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Recommended Gate Action:</span>
+                                    <div id="fraudRecommendedAction" style="font-weight: 700; font-size: 0.95rem; margin-top: 0.15rem;">Submit a transaction to score</div>
+                                </div>
+                                <ul id="fraudTriggeredSignalsList" class="fraud-signals-list">
+                                    <li>Click "Score Transaction Risk" to inspect ML feature contributions.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 1.15rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                            <h4 style="font-size: 0.9rem; margin: 0 0 0.5rem;">Cancellation Rate by Top International Markets (%)</h4>
+                            <div class="chart-wrapper" style="height: 175px;">
+                                <canvas id="countryCancelChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 3: Live Quarantine Triage Queue & Historical Outliers -->
+                <div class="table-card" id="fraudQuarantineCard" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <div>
+                            <h3>🚨 Real-Time Order Quarantine &amp; RBAC Triage Queue</h3>
+                            <p class="card-sub">Approve false positives or block high-risk anomalies (requires Admin, Lead DS, or Supply VP role)</p>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm" id="btnRefreshFraudReport">↻ Refresh Queue</button>
+                    </div>
+                    <div class="table-responsive" style="max-height: 290px;">
+                        <table class="data-table" id="fraudQuarantineTable">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Alert ID</th>
+                                    <th scope="col">Invoice</th>
+                                    <th scope="col">Customer / Guest</th>
+                                    <th scope="col">Amount (£)</th>
+                                    <th scope="col">Risk Score</th>
+                                    <th scope="col">Triggered Anomaly Drivers</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col">Triage Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fraudQuarantineTbody">
+                                <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Loading quarantine queue...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
         </main>
     </div>
 
@@ -2604,6 +2780,6 @@
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=7.4"></script>
+    <script src="app.js?v=7.5"></script>
 </body>
 </html>

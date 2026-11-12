@@ -32,6 +32,7 @@ from src.api.integrations import ECommerceIntegrations, IntegrationRegistry
 from src.api.campaigns import CampaignRegistry, CampaignDispatcher, WatchdogEvaluator, MessageFormatter, VoucherGenerator
 from src.models.pricing_elasticity import PricingElasticityEngine, ABExperimentEngine, PricingExperimentRegistry
 from src.api.security import SecurityRegistry, ROLE_DEFINITIONS, AuthError, get_required_principal, require_permission
+from src.models.anomaly_detection import AnomalyDetectionEngine, AnomalyRegistry
 
 MODELS_DIR = ROOT_DIR / "models"
 MANIFEST_PATH = MODELS_DIR / "model_manifest.json"
@@ -266,6 +267,24 @@ class CreateApiKeyRequest(BaseModel):
 
 class SecurityPolicyRequest(BaseModel):
     strict_rbac_enabled: bool = Field(..., description="Require valid JWT/API key on protected mutations")
+
+
+class ScoreTransactionRequest(BaseModel):
+    amount_gbp: float = Field(..., description="Transaction order amount in GBP")
+    total_units: int = Field(default=10, ge=1)
+    line_items: int = Field(default=3, ge=1)
+    customer_id: str = Field(default="Guest")
+    country: str = Field(default="United Kingdom")
+    hour_of_day: float = Field(default=12.0, ge=0.0, le=23.99)
+    is_guest: bool = Field(default=False)
+    is_cancelled: bool = Field(default=False)
+    historical_cancel_rate: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    invoice_no: Optional[str] = Field(default=None)
+    auto_quarantine: bool = Field(default=True)
+
+
+class ResolveQuarantineRequest(BaseModel):
+    decision: str = Field(..., description="Operator decision: 'APPROVED' or 'BLOCKED'")
 
 
 # -----------------------------------------------------------------------------
@@ -520,6 +539,16 @@ async def inject_pos_order(payload: OrderInjectionRequest):
     # Accounts spending >£500 achieve single-digit churn probability
     updated_churn_risk = 0.08 if total_amount >= 500 else 0.16
 
+    # Real-time Isolation Forest + Z-score Fraud & Anomaly Scoring
+    fraud_assessment = await evaluate_and_broadcast_anomaly(
+        amount_gbp=total_amount,
+        total_units=total_units,
+        line_items=len(payload.items),
+        customer_id=str(payload.customer_id).strip(),
+        country=payload.country,
+        invoice_no=invoice_no,
+    )
+
     event_payload = {
         "invoice_no": invoice_no,
         "timestamp": timestamp,
@@ -530,6 +559,7 @@ async def inject_pos_order(payload: OrderInjectionRequest):
         "items": [item.model_dump() for item in payload.items],
         "updated_churn_probability": updated_churn_risk,
         "updated_recency_days": 0,
+        "fraud_assessment": fraud_assessment,
         "active_clients_notified": len(ws_manager.active_connections)
     }
 
@@ -1029,6 +1059,17 @@ async def simulate_sample_webhook(payload: SimulateWebhookRequest):
     registry = IntegrationRegistry()
     registry.record_event(provider, invoice_no, len(records), total_amount, verified=True, customer_id=customer_id)
 
+    total_units = sum(int(r.get("Quantity", 1)) for r in records)
+    country = records[0].get("Country", "United Kingdom")
+    fraud_assessment = await evaluate_and_broadcast_anomaly(
+        amount_gbp=total_amount,
+        total_units=total_units,
+        line_items=len(records),
+        customer_id=str(customer_id),
+        country=country,
+        invoice_no=invoice_no,
+    )
+
     # Broadcast event
     await ws_manager.broadcast({
         "type": "WEBHOOK_ORDER_INGESTED",
@@ -1041,6 +1082,7 @@ async def simulate_sample_webhook(payload: SimulateWebhookRequest):
             "verified": True,
             "simulated": True,
             "items": records,
+            "fraud_assessment": fraud_assessment,
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
     })
@@ -1054,6 +1096,7 @@ async def simulate_sample_webhook(payload: SimulateWebhookRequest):
         "items_ingested": len(records),
         "total_amount_gbp": round(total_amount, 2),
         "customer_id": customer_id,
+        "fraud_assessment": fraud_assessment,
         "raw_sample_payload": sample_payload,
         "items": records,
         "registry_summary": registry.get_status()["connectors"][provider]
@@ -1503,6 +1546,132 @@ def auth_get_audit_stream(principal: Dict[str, Any] = Depends(require_permission
         if role == "admin" or ev["tenant_id"] in (tenant_id, "none", "tenant_uk_flagship")
     ]
     return {"status": "success", "events": events[:50], "strict_rbac_enabled": registry.strict_rbac_enabled}
+
+
+# -----------------------------------------------------------------------------
+# Transaction Anomaly, Fraud & Cancellation Intelligence Endpoints
+# -----------------------------------------------------------------------------
+anomaly_engine_instance: Optional[AnomalyDetectionEngine] = None
+
+def get_anomaly_engine() -> AnomalyDetectionEngine:
+    """Lazy-initializes and caches the Isolation Forest AnomalyDetectionEngine."""
+    global anomaly_engine_instance
+    if anomaly_engine_instance is None:
+        anomaly_engine_instance = AnomalyDetectionEngine()
+    return anomaly_engine_instance
+
+
+async def evaluate_and_broadcast_anomaly(
+    amount_gbp: float,
+    total_units: int,
+    line_items: int,
+    customer_id: str,
+    country: str,
+    invoice_no: Optional[str] = None,
+    hour_of_day: Optional[float] = None,
+    is_guest: Optional[bool] = None,
+    is_cancelled: bool = False,
+    historical_cancel_rate: Optional[float] = None,
+    auto_quarantine: bool = True,
+) -> Dict[str, Any]:
+    """Scores an incoming transaction and broadcasts high-risk quarantine alerts via WebSocket."""
+    engine = get_anomaly_engine()
+    resolved_hour = hour_of_day if hour_of_day is not None else float(datetime.now(timezone.utc).hour)
+    resolved_guest = is_guest if is_guest is not None else str(customer_id).strip().lower() in ("", "guest", "none")
+
+    assessment = engine.score_transaction(
+        amount_gbp=amount_gbp,
+        total_units=total_units,
+        line_items=line_items,
+        customer_id=customer_id,
+        country=country,
+        hour_of_day=resolved_hour,
+        is_guest=resolved_guest,
+        is_cancelled=is_cancelled,
+        historical_cancel_rate=historical_cancel_rate,
+        invoice_no=invoice_no,
+        auto_quarantine=auto_quarantine,
+    )
+
+    if assessment["risk_score"] >= 50.0:
+        await ws_manager.broadcast({
+            "type": "ANOMALY_ALERT_TRIGGERED",
+            "data": assessment,
+        })
+
+    return assessment
+
+
+@app.get("/api/v1/fraud/anomaly-report", tags=["Fraud, Anomaly & Cancellation AI"])
+def get_fraud_anomaly_report():
+    """
+    Returns Isolation Forest anomaly audit metrics, historical outlier invoices,
+    country cancellation rates, and the active quarantine triage queue.
+    """
+    return get_anomaly_engine().generate_anomaly_report()
+
+
+@app.post("/api/v1/fraud/score-transaction", tags=["Fraud, Anomaly & Cancellation AI"])
+async def score_transaction_risk(
+    payload: ScoreTransactionRequest,
+    _principal: Dict[str, Any] = Depends(require_permission("predict:execute")),
+):
+    """
+    Scores an order vector using Isolation Forest + Z-score behavioral triggers,
+    optionally quarantines high-risk orders, and broadcasts critical alerts over WebSocket.
+    """
+    assessment = await evaluate_and_broadcast_anomaly(
+        amount_gbp=payload.amount_gbp,
+        total_units=payload.total_units,
+        line_items=payload.line_items,
+        customer_id=payload.customer_id,
+        country=payload.country,
+        invoice_no=payload.invoice_no,
+        hour_of_day=payload.hour_of_day,
+        is_guest=payload.is_guest,
+        is_cancelled=payload.is_cancelled,
+        historical_cancel_rate=payload.historical_cancel_rate,
+        auto_quarantine=payload.auto_quarantine,
+    )
+    return {"status": "success", "assessment": assessment}
+
+
+@app.post("/api/v1/fraud/quarantine/{alert_id}/resolve", tags=["Fraud, Anomaly & Cancellation AI"])
+async def resolve_fraud_quarantine(
+    alert_id: str,
+    payload: ResolveQuarantineRequest,
+    principal: Dict[str, Any] = Depends(require_permission("fraud:resolve")),
+):
+    """
+    Marks a quarantined anomaly alert as APPROVED or BLOCKED (RBAC-protected to Admin/Lead DS/Supply VP).
+    """
+    try:
+        updated = AnomalyRegistry().resolve_alert(
+            alert_id=alert_id,
+            decision=payload.decision,
+            actor_email=principal.get("email", "operator"),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    if updated is None:
+        raise HTTPException(status_code=404, detail=f"Quarantine alert '{alert_id}' not found.")
+
+    SecurityRegistry().record_audit_event(
+        event_type="FRAUD_TRIAGE",
+        actor_email=principal.get("email", "operator"),
+        actor_role=principal.get("role", "admin"),
+        tenant_id=principal.get("tenant_id", "tenant_uk_flagship"),
+        action=f"Resolved fraud alert {alert_id} as {updated['status']} (£{updated['amount_gbp']:,.2f})",
+        status_code=200,
+        severity="WARNING" if updated["status"] == "BLOCKED" else "INFO",
+    )
+
+    await ws_manager.broadcast({
+        "type": "FRAUD_QUARANTINE_RESOLVED",
+        "data": updated,
+    })
+    return {"status": "success", "alert": updated}
 
 
 if __name__ == "__main__":
