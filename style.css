@@ -2169,6 +2169,86 @@ body:not(.simple-view-active) .simple-view-banner {
     flex-direction: column;
 }
 
+.modal-card.modal-xlarge {
+    max-width: 980px !important;
+}
+
+/* --------------------------------------------------------------------------
+   E-Commerce Webhook Hub Styles
+   -------------------------------------------------------------------------- */
+.webhook-connectors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.webhook-card {
+    background: var(--bg-surface-alt);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.webhook-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+
+.webhook-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.webhook-endpoint-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 0.4rem 0.6rem;
+    border-radius: var(--radius-sm);
+}
+
+.webhook-url-text {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 190px;
+}
+
+.webhook-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    background: var(--bg-card);
+    padding: 0.5rem;
+    border-radius: var(--radius-sm);
+    text-align: center;
+}
+
+.webhook-kpi-val {
+    display: block;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+}
+
+.webhook-kpi-lbl {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
 .modal-header {
     display: flex;
     justify-content: space-between;

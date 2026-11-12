@@ -36,6 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initExecutiveReportModal();
     initDatasetImporter();
     initAiCopilot();
+    initWebhooksHub();
     initLivePipelineSync();
 });
 
@@ -558,6 +559,11 @@ function initNavigation() {
             const importModal = document.getElementById("datasetImportModalBackdrop");
             if (importModal) {
                 importModal.classList.remove("open");
+                document.body.style.overflow = "";
+            }
+            const webhooksModal = document.getElementById("webhooksHubModalBackdrop");
+            if (webhooksModal) {
+                webhooksModal.classList.remove("open");
                 document.body.style.overflow = "";
             }
             const autoDrop = document.getElementById("searchAutocomplete");
@@ -2741,6 +2747,8 @@ function initLiveOrderWebSocket() {
                         handleMlopsRetrainingBroadcast(msg.data);
                     } else if (msg.type === "DATASET_BATCH_INGESTED" && msg.data) {
                         handleDatasetBatchIngestedBroadcast(msg.data);
+                    } else if (msg.type === "WEBHOOK_ORDER_INGESTED" && msg.data) {
+                        handleWebhookOrderBroadcast(msg.data);
                     }
                 } catch (e) {
                     console.warn("[Nexus WebSocket] Inbound parse warning:", e);
@@ -4391,5 +4399,220 @@ function initAiCopilot() {
         submitCopilotQuery(promptText);
     };
 }
+
+
+// =============================================================================
+// E-COMMERCE INTEGRATION WEBHOOK HUB (SHOPIFY / STRIPE / WOOCOMMERCE)
+// =============================================================================
+function handleWebhookOrderBroadcast(data) {
+    console.log("[Nexus WebSocket] Received live webhook order:", data);
+    showToast(
+        `⚡ ${String(data.provider || 'Store').toUpperCase()} Order Ingested`,
+        `${data.invoice_no}: +£${Number(data.total_amount_gbp || 0).toFixed(2)} (${data.items_count || 1} items) for #${data.customer_id || 'Guest'}`,
+        "success"
+    );
+    logAuditEvent(
+        "Webhooks",
+        `Ingested ${String(data.provider || '').toUpperCase()} order ${data.invoice_no} (+£${Number(data.total_amount_gbp || 0).toFixed(2)}) for #${data.customer_id}`
+    );
+    if (typeof refreshWebhooksTelemetry === "function") {
+        refreshWebhooksTelemetry();
+    }
+}
+
+function initWebhooksHub() {
+    const modalBackdrop = document.getElementById("webhooksHubModalBackdrop");
+    const openBtn = document.getElementById("openWebhooksModalBtn");
+    const closeBtn1 = document.getElementById("closeWebhooksModalBtn");
+    const closeBtn2 = document.getElementById("closeWebhooksModalBtn2");
+    const simulateBtns = document.querySelectorAll(".btn-simulate-webhook");
+    const copyBtns = document.querySelectorAll(".copy-btn");
+    const tableBody = document.getElementById("webhookEventsTableBody");
+    const totalCountBadge = document.getElementById("webhooksTotalCountBadge");
+    const simResultBox = document.getElementById("webhookSimResultBox");
+    const simPayloadCode = document.getElementById("webhookSimPayloadCode");
+    const simHeading = document.getElementById("webhookSimHeading");
+    const simStatus = document.getElementById("webhookSimStatus");
+
+    function openModal() {
+        if (!modalBackdrop) return;
+        modalBackdrop.classList.add("open");
+        document.body.style.overflow = "hidden";
+        refreshWebhooksTelemetry();
+    }
+
+    function closeModal() {
+        if (!modalBackdrop) return;
+        modalBackdrop.classList.remove("open");
+        document.body.style.overflow = "";
+    }
+
+    if (openBtn) openBtn.addEventListener("click", openModal);
+    if (closeBtn1) closeBtn1.addEventListener("click", closeModal);
+    if (closeBtn2) closeBtn2.addEventListener("click", closeModal);
+
+    if (modalBackdrop) {
+        modalBackdrop.addEventListener("click", (e) => {
+            if (e.target === modalBackdrop) closeModal();
+        });
+    }
+
+    // Copy Webhook URL to clipboard
+    copyBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+            const targetId = btn.getAttribute("data-target");
+            const targetEl = document.getElementById(targetId);
+            if (!targetEl) return;
+            const textToCopy = targetEl.textContent.trim();
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = "✓ Copied!";
+                btn.classList.add("btn-success");
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    btn.classList.remove("btn-success");
+                }, 1500);
+            }).catch(err => {
+                console.error("Failed to copy webhook URL:", err);
+            });
+        });
+    });
+
+    // Simulate Webhook Ingestion
+    simulateBtns.forEach(btn => {
+        btn.addEventListener("click", async () => {
+            const provider = btn.getAttribute("data-provider");
+            if (!provider) return;
+
+            const originalText = btn.innerHTML;
+            btn.innerHTML = "⏳ Simulating...";
+            btn.disabled = true;
+
+            try {
+                const res = await fetch("http://localhost:8000/api/v1/integrations/webhook/simulate-sample", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ provider })
+                });
+
+                if (!res.ok) {
+                    throw new Error(`Simulation failed with HTTP ${res.status}`);
+                }
+
+                const data = await res.json();
+
+                // Show dynamic result preview
+                if (simResultBox && simPayloadCode) {
+                    simResultBox.style.display = "block";
+                    if (simHeading) simHeading.textContent = `⚡ Live ${provider.toUpperCase()} Webhook Ingested • ${data.invoice_no}`;
+                    if (simStatus) simStatus.textContent = `200 OK • Ingested (£${Number(data.total_amount_gbp).toFixed(2)})`;
+                    simPayloadCode.textContent = JSON.stringify(data.raw_sample_payload, null, 2);
+                }
+
+                showToast(
+                    `⚡ ${provider.toUpperCase()} Simulated Order Ingested`,
+                    `Invoice ${data.invoice_no}: +£${Number(data.total_amount_gbp).toFixed(2)} (${data.items_ingested} items)`,
+                    "success"
+                );
+
+                refreshWebhooksTelemetry();
+
+            } catch (err) {
+                console.error("[Webhooks] Simulation error:", err);
+                showToast("Simulation Failed", err.message, "danger");
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
+    });
+
+    window.refreshWebhooksTelemetry = async function() {
+        try {
+            const res = await fetch("http://localhost:8000/api/v1/integrations/status");
+            if (!res.ok) return;
+            const data = await res.json();
+
+            // Update Connector Cards
+            if (data.connectors) {
+                const shopify = data.connectors.shopify;
+                if (shopify) {
+                    const cnt = document.getElementById("shopifyOrdersCount");
+                    const rev = document.getElementById("shopifyRevenueVal");
+                    const ping = document.getElementById("shopifyLastPing");
+                    const badge = document.getElementById("shopifyStatusBadge");
+                    if (cnt) cnt.textContent = shopify.events_received;
+                    if (rev) rev.textContent = `£${Number(shopify.total_revenue_gbp).toFixed(2)}`;
+                    if (ping) ping.textContent = shopify.last_event_at ? new Date(shopify.last_event_at).toLocaleTimeString() : "Never";
+                    if (badge) {
+                        badge.textContent = shopify.status === "ACTIVE" ? "● ACTIVE" : "● LISTENING";
+                        badge.style.color = shopify.status === "ACTIVE" ? "#38bdf8" : "#22c55e";
+                    }
+                }
+
+                const stripe = data.connectors.stripe;
+                if (stripe) {
+                    const cnt = document.getElementById("stripeOrdersCount");
+                    const rev = document.getElementById("stripeRevenueVal");
+                    const ping = document.getElementById("stripeLastPing");
+                    const badge = document.getElementById("stripeStatusBadge");
+                    if (cnt) cnt.textContent = stripe.events_received;
+                    if (rev) rev.textContent = `£${Number(stripe.total_revenue_gbp).toFixed(2)}`;
+                    if (ping) ping.textContent = stripe.last_event_at ? new Date(stripe.last_event_at).toLocaleTimeString() : "Never";
+                    if (badge) {
+                        badge.textContent = stripe.status === "ACTIVE" ? "● ACTIVE" : "● LISTENING";
+                        badge.style.color = stripe.status === "ACTIVE" ? "#38bdf8" : "#22c55e";
+                    }
+                }
+
+                const woo = data.connectors.woocommerce;
+                if (woo) {
+                    const cnt = document.getElementById("wooOrdersCount");
+                    const rev = document.getElementById("wooRevenueVal");
+                    const ping = document.getElementById("wooLastPing");
+                    const badge = document.getElementById("wooStatusBadge");
+                    if (cnt) cnt.textContent = woo.events_received;
+                    if (rev) rev.textContent = `£${Number(woo.total_revenue_gbp).toFixed(2)}`;
+                    if (ping) ping.textContent = woo.last_event_at ? new Date(woo.last_event_at).toLocaleTimeString() : "Never";
+                    if (badge) {
+                        badge.textContent = woo.status === "ACTIVE" ? "● ACTIVE" : "● LISTENING";
+                        badge.style.color = woo.status === "ACTIVE" ? "#38bdf8" : "#22c55e";
+                    }
+                }
+            }
+
+            if (totalCountBadge) {
+                totalCountBadge.textContent = `${data.total_events_ingested || 0} Events Ingested (Total: £${Number(data.total_revenue_ingested_gbp || 0).toFixed(2)})`;
+            }
+
+            // Update Events Table
+            if (tableBody && data.recent_events && data.recent_events.length > 0) {
+                tableBody.innerHTML = data.recent_events.map(ev => {
+                    const providerIcon = ev.provider === "shopify" ? "🛍️ Shopify" : ev.provider === "stripe" ? "💳 Stripe" : "🏪 WooCommerce";
+                    const sigBadge = ev.verified 
+                        ? `<span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #22c55e;">✓ VERIFIED</span>`
+                        : `<span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">DEV_MODE</span>`;
+                    const timeStr = ev.timestamp ? new Date(ev.timestamp).toLocaleTimeString() : "Just now";
+
+                    return `
+                        <tr>
+                            <td><strong>${providerIcon}</strong></td>
+                            <td><code>${ev.invoice_no}</code></td>
+                            <td>${ev.items_count} item(s)</td>
+                            <td style="color: var(--success); font-weight: 600;">£${Number(ev.total_amount_gbp).toFixed(2)}</td>
+                            <td>#${ev.customer_id}</td>
+                            <td>${sigBadge}</td>
+                            <td style="color: var(--text-muted); font-size: 0.75rem;">${timeStr}</td>
+                        </tr>
+                    `;
+                }).join("");
+            }
+
+        } catch (err) {
+            console.warn("[Webhooks] Could not fetch status:", err);
+        }
+    };
+}
+
 
 

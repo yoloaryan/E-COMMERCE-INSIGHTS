@@ -335,11 +335,14 @@ class DatasetImporter:
             clean_upload["Quantity"] = pd.to_numeric(clean_upload["Quantity"], errors="coerce").fillna(0).astype(int)
             clean_upload["UnitPrice"] = pd.to_numeric(clean_upload["UnitPrice"], errors="coerce").fillna(0.0).astype(float)
             clean_upload["InvoiceDate"] = pd.to_datetime(clean_upload["InvoiceDate"], errors="coerce")
-            clean_upload["CustomerID"] = pd.to_numeric(clean_upload["CustomerID"], errors="coerce")
+            clean_upload["CustomerID"] = clean_upload["CustomerID"].apply(
+                lambda x: str(int(float(x))) if pd.notna(x) and str(x).strip() != "" and str(x) != "nan" else None
+            )
             clean_upload["Country"] = clean_upload.get("Country", "United Kingdom")
             clean_upload["IsCancelled"] = clean_upload["InvoiceNo"].str.startswith("C", na=False) | (clean_upload["Quantity"] <= 0)
             clean_upload["TotalPrice"] = clean_upload["Quantity"] * clean_upload["UnitPrice"]
             clean_upload["IsRegistered"] = clean_upload["CustomerID"].notna()
+            clean_upload["IsGuest"] = clean_upload["CustomerID"].isna()
 
             # Align column order
             common_cols = [c for c in prod_df.columns if c in clean_upload.columns]

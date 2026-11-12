@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=7.0">
+    <link rel="stylesheet" href="style.css?v=7.1">
 </head>
 <body class="simple-view-active">
     <div class="app-layout">
@@ -171,6 +171,9 @@
                         </button>
                         <button type="button" class="btn btn-secondary btn-sm" id="openImportModalBtn" title="Import CSV or Excel Dataset">
                             <span>📤</span> Import
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" id="openWebhooksModalBtn" title="E-Commerce Integration Hub & Live Webhooks">
+                            <span>🔗</span> Webhooks
                         </button>
                         <button type="button" class="btn btn-secondary btn-sm header-copilot-pill" id="openCopilotBtn" title="Launch AI Copilot & Text-to-SQL Assistant">
                             <span>✨</span> Copilot
@@ -1827,12 +1830,162 @@
         </div>
     </div>
 
+    <!-- ============================================================= -->
+    <!-- MODAL: E-COMMERCE INTEGRATION WEBHOOK HUB (SHOPIFY / STRIPE / WOO) -->
+    <!-- ============================================================= -->
+    <div class="modal-backdrop" id="webhooksHubModalBackdrop">
+        <div class="modal-card modal-large modal-xlarge" id="webhooksHubModalCard" role="dialog" aria-labelledby="webhooksModalTitle">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <span style="font-size: 1.5rem;">🔗</span>
+                    <div>
+                        <h3 id="webhooksModalTitle" style="margin: 0; font-size: 1.25rem;">E-Commerce Webhook Hub & Live Connectors</h3>
+                        <p class="modal-sub" style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">Real-time headless order ingestion from Shopify, Stripe, and WooCommerce</p>
+                    </div>
+                </div>
+                <button class="modal-close-btn" id="closeWebhooksModalBtn">✕</button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto; max-height: calc(90vh - 140px); padding: 1.25rem;">
+                
+                <!-- Connector Cards Grid -->
+                <div class="webhook-connectors-grid">
+                    
+                    <!-- Shopify Connector Card -->
+                    <div class="webhook-card" id="cardShopify">
+                        <div class="webhook-card-header">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.4rem;">🛍️</span>
+                                <div>
+                                    <h4 style="margin: 0; font-size: 0.95rem;">Shopify Store</h4>
+                                    <span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); font-size: 0.7rem;" id="shopifyStatusBadge">● LISTENING</span>
+                                </div>
+                            </div>
+                            <span class="badge" style="font-size: 0.72rem; background: var(--bg-surface-alt);">HMAC-SHA256</span>
+                        </div>
+                        <div class="webhook-endpoint-box">
+                            <span class="webhook-url-text" id="shopifyEndpointUrl">http://localhost:8000/api/v1/integrations/webhook/shopify</span>
+                            <button type="button" class="btn btn-secondary btn-xs copy-btn" data-target="shopifyEndpointUrl" title="Copy Webhook Endpoint URL">📋 Copy</button>
+                        </div>
+                        <div class="webhook-kpis">
+                            <div><span class="webhook-kpi-val" id="shopifyOrdersCount">0</span><span class="webhook-kpi-lbl">Orders</span></div>
+                            <div><span class="webhook-kpi-val" id="shopifyRevenueVal">£0.00</span><span class="webhook-kpi-lbl">Revenue</span></div>
+                            <div><span class="webhook-kpi-val" id="shopifyLastPing">Never</span><span class="webhook-kpi-lbl">Last Ping</span></div>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-sm btn-simulate-webhook" data-provider="shopify" style="width: 100%; justify-content: center;">
+                            ⚡ Simulate Shopify Order
+                        </button>
+                    </div>
+
+                    <!-- Stripe Payments Card -->
+                    <div class="webhook-card" id="cardStripe">
+                        <div class="webhook-card-header">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.4rem;">💳</span>
+                                <div>
+                                    <h4 style="margin: 0; font-size: 0.95rem;">Stripe Payments</h4>
+                                    <span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); font-size: 0.7rem;" id="stripeStatusBadge">● LISTENING</span>
+                                </div>
+                            </div>
+                            <span class="badge" style="font-size: 0.72rem; background: var(--bg-surface-alt);">Stripe-Sig</span>
+                        </div>
+                        <div class="webhook-endpoint-box">
+                            <span class="webhook-url-text" id="stripeEndpointUrl">http://localhost:8000/api/v1/integrations/webhook/stripe</span>
+                            <button type="button" class="btn btn-secondary btn-xs copy-btn" data-target="stripeEndpointUrl" title="Copy Webhook Endpoint URL">📋 Copy</button>
+                        </div>
+                        <div class="webhook-kpis">
+                            <div><span class="webhook-kpi-val" id="stripeOrdersCount">0</span><span class="webhook-kpi-lbl">Charges</span></div>
+                            <div><span class="webhook-kpi-val" id="stripeRevenueVal">£0.00</span><span class="webhook-kpi-lbl">Revenue</span></div>
+                            <div><span class="webhook-kpi-val" id="stripeLastPing">Never</span><span class="webhook-kpi-lbl">Last Ping</span></div>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-sm btn-simulate-webhook" data-provider="stripe" style="width: 100%; justify-content: center;">
+                            ⚡ Simulate Stripe Charge
+                        </button>
+                    </div>
+
+                    <!-- WooCommerce Card -->
+                    <div class="webhook-card" id="cardWoo">
+                        <div class="webhook-card-header">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.4rem;">🏪</span>
+                                <div>
+                                    <h4 style="margin: 0; font-size: 0.95rem;">WooCommerce</h4>
+                                    <span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); font-size: 0.7rem;" id="wooStatusBadge">● LISTENING</span>
+                                </div>
+                            </div>
+                            <span class="badge" style="font-size: 0.72rem; background: var(--bg-surface-alt);">REST-Hook</span>
+                        </div>
+                        <div class="webhook-endpoint-box">
+                            <span class="webhook-url-text" id="wooEndpointUrl">http://localhost:8000/api/v1/integrations/webhook/woocommerce</span>
+                            <button type="button" class="btn btn-secondary btn-xs copy-btn" data-target="wooEndpointUrl" title="Copy Webhook Endpoint URL">📋 Copy</button>
+                        </div>
+                        <div class="webhook-kpis">
+                            <div><span class="webhook-kpi-val" id="wooOrdersCount">0</span><span class="webhook-kpi-lbl">Orders</span></div>
+                            <div><span class="webhook-kpi-val" id="wooRevenueVal">£0.00</span><span class="webhook-kpi-lbl">Revenue</span></div>
+                            <div><span class="webhook-kpi-val" id="wooLastPing">Never</span><span class="webhook-kpi-lbl">Last Ping</span></div>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-sm btn-simulate-webhook" data-provider="woocommerce" style="width: 100%; justify-content: center;">
+                            ⚡ Simulate WooCommerce Order
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- Live Webhook Ingestion Feed Table -->
+                <div style="margin-top: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                        <h4 style="margin: 0; font-size: 0.95rem; display: flex; align-items: center; gap: 0.4rem;">
+                            <span>📡</span> Live Ingested Webhook Transactions
+                        </h4>
+                        <span class="badge" style="background: var(--bg-surface-alt); font-size: 0.75rem;" id="webhooksTotalCountBadge">0 Events Ingested</span>
+                    </div>
+
+                    <div class="table-responsive" style="max-height: 220px; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                        <table class="data-table" style="font-size: 0.8rem; margin: 0;">
+                            <thead>
+                                <tr>
+                                    <th>Platform</th>
+                                    <th>Invoice #</th>
+                                    <th>Items</th>
+                                    <th>Revenue</th>
+                                    <th>Customer</th>
+                                    <th>Signature</th>
+                                    <th>Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody id="webhookEventsTableBody">
+                                <tr>
+                                    <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">
+                                        No webhook events received yet. Click any "Simulate" button above to fire a live test order.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Simulation Result / Payload Preview Box (Dynamic) -->
+                <div id="webhookSimResultBox" style="display: none; margin-top: 1.25rem; padding: 1rem; border-radius: var(--radius-md); background: var(--bg-surface-alt); border: 1px solid var(--border-color);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <span style="font-weight: 600; font-size: 0.85rem;" id="webhookSimHeading">⚡ Simulated Order Processed</span>
+                        <span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #22c55e;" id="webhookSimStatus">200 OK • Ingested</span>
+                    </div>
+                    <pre style="font-family: var(--font-mono); font-size: 0.75rem; max-height: 140px; overflow-y: auto; margin: 0; background: var(--bg-card); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);" id="webhookSimPayloadCode"></pre>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <small class="text-muted">HMAC-SHA256 Cryptographic Verification • Real-time WebSocket Broadcast over /ws/live-orders</small>
+                <button class="btn btn-secondary btn-sm" id="closeWebhooksModalBtn2">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scroll to Top Floating Action Button -->
     <button class="scroll-to-top-btn" id="scrollToTopBtn" aria-label="Scroll to top" title="Back to top">↑</button>
 
     <!-- Global Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="app.js?v=7.0"></script>
+    <script src="app.js?v=7.1"></script>
 </body>
 </html>

@@ -15,11 +15,12 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 sys.path.append(str(ROOT_DIR))
 
 import json
+from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
 import joblib
 from typing import List, Optional, Dict, Any
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect, status, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect, status, UploadFile, File, Form, Request, Header
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -27,6 +28,7 @@ from pydantic import BaseModel, Field
 from src.models.recommender import ProductRecommender
 from src.data.importer import DatasetImporter
 from src.api.copilot import RetailCopilot
+from src.api.integrations import ECommerceIntegrations, IntegrationRegistry
 
 MODELS_DIR = ROOT_DIR / "models"
 MANIFEST_PATH = MODELS_DIR / "model_manifest.json"
@@ -173,6 +175,16 @@ class OrderInjectionRequest(BaseModel):
     customer_id: str = Field(..., json_schema_extra={"example": "14096"})
     country: str = Field(default="United Kingdom", json_schema_extra={"example": "United Kingdom"})
     items: List[OrderItem]
+
+
+class ConfigureSecretRequest(BaseModel):
+    provider: str = Field(..., description="shopify, stripe, or woocommerce")
+    secret: str = Field(..., min_length=4, description="Webhook signing secret")
+
+
+class SimulateWebhookRequest(BaseModel):
+    provider: str = Field(default="shopify", description="shopify, stripe, or woocommerce")
+    customer_id: Optional[int] = Field(default=None, description="Optional override customer ID")
 
 
 # -----------------------------------------------------------------------------
@@ -665,6 +677,300 @@ async def get_copilot_sample_prompts():
                 ]
             }
         ]
+    }
+
+
+# -----------------------------------------------------------------------------
+# E-Commerce Webhook Hub Endpoints (Shopify, Stripe, WooCommerce)
+# -----------------------------------------------------------------------------
+@app.get("/api/v1/integrations/status", tags=["E-Commerce Webhooks"])
+def get_integrations_status():
+    """
+    Returns configured e-commerce connectors, webhook endpoints, masked secrets,
+    and live ingestion telemetry.
+    """
+    return IntegrationRegistry().get_status()
+
+
+@app.post("/api/v1/integrations/configure-secret", tags=["E-Commerce Webhooks"])
+def configure_integration_secret(payload: ConfigureSecretRequest):
+    """
+    Updates or rotates the HMAC signing secret for a target connector.
+    """
+    registry = IntegrationRegistry()
+    success = registry.update_secret(payload.provider, payload.secret)
+    if not success:
+        raise HTTPException(status_code=400, detail=f"Unsupported integration provider: {payload.provider}")
+    return {
+        "status": "success",
+        "message": f"Signing secret updated for {payload.provider.title()}.",
+        "provider": payload.provider.lower()
+    }
+
+
+@app.post("/api/v1/integrations/webhook/shopify", tags=["E-Commerce Webhooks"])
+async def shopify_webhook_endpoint(
+    request: Request,
+    x_shopify_hmac_sha256: Optional[str] = Header(None, alias="X-Shopify-Hmac-Sha256"),
+    x_shopify_topic: Optional[str] = Header(None, alias="X-Shopify-Topic")
+):
+    """
+    Receives and processes live Shopify webhook orders (orders/create, orders/paid).
+    Validates HMAC-SHA256 signature against configured shop secret.
+    """
+    body = await request.body()
+    registry = IntegrationRegistry()
+    secret = registry.connectors["shopify"]["secret"]
+
+    is_verified = False
+    if x_shopify_hmac_sha256:
+        is_verified = ECommerceIntegrations.verify_shopify_hmac(body, x_shopify_hmac_sha256, secret)
+        if not is_verified:
+            raise HTTPException(status_code=401, detail="Invalid Shopify HMAC-SHA256 cryptographic signature.")
+    else:
+        is_verified = False
+
+    try:
+        payload = json.loads(body.decode("utf-8")) if body else {}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Malformed JSON payload: {str(e)}")
+
+    records = ECommerceIntegrations.normalize_shopify_order(payload)
+    if not records:
+        raise HTTPException(status_code=422, detail="Unable to extract order items from Shopify payload.")
+
+    df = pd.DataFrame(records)
+    invoice_no = records[0]["InvoiceNo"]
+    customer_id = records[0]["CustomerID"]
+    total_amount = sum(r["Quantity"] * r["UnitPrice"] for r in records)
+
+    # Ingest and save batch to production Parquet
+    batch_res = DatasetImporter.ingest_and_save_batch(df, f"shopify_{invoice_no}.parquet", merge_to_production=True)
+
+    # Record event in registry telemetry
+    registry.record_event("shopify", invoice_no, len(records), total_amount, is_verified, customer_id)
+
+    # Broadcast event across WebSocket stream
+    await ws_manager.broadcast({
+        "type": "WEBHOOK_ORDER_INGESTED",
+        "data": {
+            "provider": "shopify",
+            "invoice_no": invoice_no,
+            "topic": x_shopify_topic or "orders/create",
+            "items_count": len(records),
+            "total_amount_gbp": round(total_amount, 2),
+            "customer_id": customer_id,
+            "verified": is_verified,
+            "items": records,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    })
+
+    return {
+        "status": "success",
+        "provider": "shopify",
+        "invoice_no": invoice_no,
+        "signature_verified": is_verified,
+        "items_ingested": len(records),
+        "total_amount_gbp": round(total_amount, 2),
+        "batch_status": batch_res.get("valid", True),
+        "message": f"Successfully ingested Shopify order {invoice_no}."
+    }
+
+
+@app.post("/api/v1/integrations/webhook/stripe", tags=["E-Commerce Webhooks"])
+async def stripe_webhook_endpoint(
+    request: Request,
+    stripe_signature: Optional[str] = Header(None, alias="Stripe-Signature")
+):
+    """
+    Receives and processes live Stripe payment events (payment_intent.succeeded, checkout.session.completed).
+    Validates Stripe timestamped signature using HMAC-SHA256.
+    """
+    body = await request.body()
+    registry = IntegrationRegistry()
+    secret = registry.connectors["stripe"]["secret"]
+
+    is_verified = False
+    if stripe_signature:
+        is_verified = ECommerceIntegrations.verify_stripe_signature(body, stripe_signature, secret)
+        if not is_verified:
+            raise HTTPException(status_code=401, detail="Invalid Stripe signature.")
+    else:
+        is_verified = False
+
+    try:
+        payload = json.loads(body.decode("utf-8")) if body else {}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Malformed JSON payload: {str(e)}")
+
+    records = ECommerceIntegrations.normalize_stripe_event(payload)
+    if not records:
+        raise HTTPException(status_code=422, detail="Unable to extract order items from Stripe event.")
+
+    df = pd.DataFrame(records)
+    invoice_no = records[0]["InvoiceNo"]
+    customer_id = records[0]["CustomerID"]
+    total_amount = sum(r["Quantity"] * r["UnitPrice"] for r in records)
+
+    batch_res = DatasetImporter.ingest_and_save_batch(df, f"stripe_{invoice_no}.parquet", merge_to_production=True)
+    registry.record_event("stripe", invoice_no, len(records), total_amount, is_verified, customer_id)
+
+    await ws_manager.broadcast({
+        "type": "WEBHOOK_ORDER_INGESTED",
+        "data": {
+            "provider": "stripe",
+            "invoice_no": invoice_no,
+            "items_count": len(records),
+            "total_amount_gbp": round(total_amount, 2),
+            "customer_id": customer_id,
+            "verified": is_verified,
+            "items": records,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    })
+
+    return {
+        "status": "success",
+        "provider": "stripe",
+        "invoice_no": invoice_no,
+        "signature_verified": is_verified,
+        "items_ingested": len(records),
+        "total_amount_gbp": round(total_amount, 2),
+        "message": f"Successfully ingested Stripe payment {invoice_no}."
+    }
+
+
+@app.post("/api/v1/integrations/webhook/woocommerce", tags=["E-Commerce Webhooks"])
+async def woocommerce_webhook_endpoint(
+    request: Request,
+    x_wc_webhook_signature: Optional[str] = Header(None, alias="X-WC-Webhook-Signature"),
+    x_wc_webhook_topic: Optional[str] = Header(None, alias="X-WC-Webhook-Topic")
+):
+    """
+    Receives and processes live WooCommerce webhooks (order.created, order.updated).
+    Validates WooCommerce Base64 HMAC-SHA256 signature.
+    """
+    body = await request.body()
+    registry = IntegrationRegistry()
+    secret = registry.connectors["woocommerce"]["secret"]
+
+    is_verified = False
+    if x_wc_webhook_signature:
+        is_verified = ECommerceIntegrations.verify_woocommerce_signature(body, x_wc_webhook_signature, secret)
+        if not is_verified:
+            raise HTTPException(status_code=401, detail="Invalid WooCommerce webhook signature.")
+    else:
+        is_verified = False
+
+    try:
+        payload = json.loads(body.decode("utf-8")) if body else {}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Malformed JSON payload: {str(e)}")
+
+    records = ECommerceIntegrations.normalize_woocommerce_order(payload)
+    if not records:
+        raise HTTPException(status_code=422, detail="Unable to extract order items from WooCommerce payload.")
+
+    df = pd.DataFrame(records)
+    invoice_no = records[0]["InvoiceNo"]
+    customer_id = records[0]["CustomerID"]
+    total_amount = sum(r["Quantity"] * r["UnitPrice"] for r in records)
+
+    batch_res = DatasetImporter.ingest_and_save_batch(df, f"woocommerce_{invoice_no}.parquet", merge_to_production=True)
+    registry.record_event("woocommerce", invoice_no, len(records), total_amount, is_verified, customer_id)
+
+    await ws_manager.broadcast({
+        "type": "WEBHOOK_ORDER_INGESTED",
+        "data": {
+            "provider": "woocommerce",
+            "invoice_no": invoice_no,
+            "topic": x_wc_webhook_topic or "order.created",
+            "items_count": len(records),
+            "total_amount_gbp": round(total_amount, 2),
+            "customer_id": customer_id,
+            "verified": is_verified,
+            "items": records,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    })
+
+    return {
+        "status": "success",
+        "provider": "woocommerce",
+        "invoice_no": invoice_no,
+        "signature_verified": is_verified,
+        "items_ingested": len(records),
+        "total_amount_gbp": round(total_amount, 2),
+        "message": f"Successfully ingested WooCommerce order {invoice_no}."
+    }
+
+
+@app.post("/api/v1/integrations/webhook/simulate-sample", tags=["E-Commerce Webhooks"])
+async def simulate_sample_webhook(payload: SimulateWebhookRequest):
+    """
+    Simulates a realistic incoming webhook from Shopify, Stripe, or WooCommerce,
+    calculates cryptographic signatures, and triggers the full live ingestion and streaming pipeline.
+    """
+    provider = payload.provider.lower()
+    if provider not in ["shopify", "stripe", "woocommerce"]:
+        raise HTTPException(status_code=400, detail="Provider must be 'shopify', 'stripe', or 'woocommerce'.")
+
+    sample_payload = ECommerceIntegrations.generate_sample_webhook_payload(provider)
+    if payload.customer_id:
+        if provider == "shopify":
+            sample_payload.setdefault("customer", {})["id"] = payload.customer_id
+        elif provider == "stripe":
+            sample_payload["data"]["object"]["metadata"]["customer_id"] = str(payload.customer_id)
+        elif provider == "woocommerce":
+            sample_payload["customer_id"] = payload.customer_id
+
+    # Normalize based on provider
+    if provider == "shopify":
+        records = ECommerceIntegrations.normalize_shopify_order(sample_payload)
+    elif provider == "stripe":
+        records = ECommerceIntegrations.normalize_stripe_event(sample_payload)
+    else:
+        records = ECommerceIntegrations.normalize_woocommerce_order(sample_payload)
+
+    df = pd.DataFrame(records)
+    invoice_no = records[0]["InvoiceNo"]
+    customer_id = records[0]["CustomerID"]
+    total_amount = sum(r["Quantity"] * r["UnitPrice"] for r in records)
+
+    batch_res = DatasetImporter.ingest_and_save_batch(df, f"simulated_{provider}_{invoice_no}.parquet", merge_to_production=True)
+
+    registry = IntegrationRegistry()
+    registry.record_event(provider, invoice_no, len(records), total_amount, verified=True, customer_id=customer_id)
+
+    # Broadcast event
+    await ws_manager.broadcast({
+        "type": "WEBHOOK_ORDER_INGESTED",
+        "data": {
+            "provider": provider,
+            "invoice_no": invoice_no,
+            "items_count": len(records),
+            "total_amount_gbp": round(total_amount, 2),
+            "customer_id": customer_id,
+            "verified": True,
+            "simulated": True,
+            "items": records,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    })
+
+    return {
+        "status": "success",
+        "simulated": True,
+        "provider": provider,
+        "invoice_no": invoice_no,
+        "signature_verified": True,
+        "items_ingested": len(records),
+        "total_amount_gbp": round(total_amount, 2),
+        "customer_id": customer_id,
+        "raw_sample_payload": sample_payload,
+        "items": records,
+        "registry_summary": registry.get_status()["connectors"][provider]
     }
 
 
