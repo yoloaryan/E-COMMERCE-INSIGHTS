@@ -49,6 +49,7 @@ from src.models.causal_uplift import get_causal_engine
 from src.models.survival_xai import get_survival_xai_engine
 from src.api.invoices import get_invoice_engine
 from src.models.conformal_optimizer import get_conformal_optimizer
+from src.models.bandit import get_bandit_engine
 
 MODELS_DIR = ROOT_DIR / "models"
 MANIFEST_PATH = MODELS_DIR / "model_manifest.json"
@@ -465,6 +466,37 @@ class NextBestSkuRequest(BaseModel):
     current_cart_skus: List[str] = Field(default_factory=list, description="Active shopping basket SKUs")
     objective: str = Field(default="balanced", description="Optimization objective: balanced | margin_max | discovery")
     top_n: int = Field(default=5, ge=1, le=20, description="Number of recommendations to return")
+
+
+class SelectBanditArmRequest(BaseModel):
+    strategy: str = Field(default="thompson", description="thompson | ucb1 | linucb | epsilon_greedy")
+    customer_context: Optional[List[float]] = Field(
+        default=None,
+        description="Optional customer feature vector [intercept=1.0, recency_norm, log_spend_norm, cart_size_norm]",
+    )
+    exploration_factor: float = Field(default=1.0, ge=0.0, le=5.0)
+
+
+class RecordBanditRewardRequest(BaseModel):
+    arm_id: str = Field(..., description="ID of arm being evaluated")
+    converted: bool = Field(..., description="True if customer converted / purchased")
+    revenue: Optional[float] = Field(default=None, ge=0.0, description="Optional monetary revenue recorded")
+    customer_context: Optional[List[float]] = Field(default=None)
+
+
+class CustomBanditArmSpec(BaseModel):
+    arm_id: str
+    label: str
+    price_multiplier: float = Field(..., ge=0.5, le=2.0)
+    true_conversion_rate: float = Field(..., ge=0.01, le=1.0)
+
+
+class SimulateBanditRequest(BaseModel):
+    rounds: int = Field(default=1000, ge=50, le=10000, description="Number of customer arrival steps to simulate")
+    strategy: str = Field(default="thompson", description="thompson | ucb1 | linucb")
+    exploration_factor: float = Field(default=1.0, ge=0.1, le=5.0)
+    seed: Optional[int] = Field(default=42)
+    custom_arms: Optional[List[CustomBanditArmSpec]] = Field(default=None)
 
 
 # -----------------------------------------------------------------------------
@@ -1615,6 +1647,70 @@ async def run_pricing_ab_experiment(
     })
 
     return res
+
+
+# -----------------------------------------------------------------------------
+# Phase 33: Multi-Armed Bandit (MAB) Reinforcement Learning Dynamic Pricing
+# -----------------------------------------------------------------------------
+@app.get("/api/v1/bandit/arms", tags=["Multi-Armed Bandit Reinforcement Learning"])
+def get_bandit_arms():
+    """Returns current bandit pricing tiers, empirical conversions, and 95% Bayesian credible intervals."""
+    return {"status": "success", "arms": get_bandit_engine().get_arms()}
+
+
+@app.post("/api/v1/bandit/select-arm", tags=["Multi-Armed Bandit Reinforcement Learning"])
+def select_bandit_arm(payload: SelectBanditArmRequest):
+    """Selects optimal pricing arm via Thompson Sampling, UCB-1, LinUCB, or Epsilon-Greedy."""
+    try:
+        return get_bandit_engine().select_arm(
+            strategy=payload.strategy,
+            context=payload.customer_context,
+            exploration_factor=payload.exploration_factor,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/api/v1/bandit/reward", tags=["Multi-Armed Bandit Reinforcement Learning"])
+def record_bandit_reward(payload: RecordBanditRewardRequest):
+    """Records live customer purchase feedback and updates Beta posteriors & LinUCB matrices."""
+    try:
+        return get_bandit_engine().record_reward(
+            arm_id=payload.arm_id,
+            converted=payload.converted,
+            revenue=payload.revenue,
+            context=payload.customer_context,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/api/v1/bandit/performance", tags=["Multi-Armed Bandit Reinforcement Learning"])
+def get_bandit_performance():
+    """Returns cumulative revenue, empirical conversion rate, and regret compared to Oracle."""
+    return {"status": "success", "performance": get_bandit_engine().get_performance()}
+
+
+@app.post("/api/v1/bandit/simulate", tags=["Multi-Armed Bandit Reinforcement Learning"])
+def simulate_bandit_experiment(payload: SimulateBanditRequest):
+    """Simulates N customer visits comparing MAB vs Epsilon-Greedy vs Traditional A/B Test vs Oracle."""
+    arms_spec = [arm.model_dump() for arm in payload.custom_arms] if payload.custom_arms else None
+    return get_bandit_engine().simulate(
+        rounds=payload.rounds,
+        strategy=payload.strategy,
+        exploration_factor=payload.exploration_factor,
+        seed=payload.seed,
+        custom_arms=arms_spec,
+    )
+
+
+@app.post("/api/v1/bandit/reset", tags=["Multi-Armed Bandit Reinforcement Learning"])
+def reset_bandit_engine(
+    _principal: Dict[str, Any] = Depends(require_permission("predict:execute")),
+):
+    """Resets bandit history and resets Bayesian priors to uninformative state."""
+    get_bandit_engine().reset()
+    return {"status": "success", "message": "Bandit engine reset successfully."}
 
 
 # -----------------------------------------------------------------------------

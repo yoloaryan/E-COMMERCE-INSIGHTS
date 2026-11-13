@@ -2719,6 +2719,7 @@
                     <button type="button" class="subnav-pill active" onclick="jumpToSection('pricingElasticityCard', this)">📊 Elasticity Matrix</button>
                     <button type="button" class="subnav-pill" onclick="jumpToSection('pricingSimulatorCard', this)">🎛️ Margin &amp; Payoff Simulator</button>
                     <button type="button" class="subnav-pill" onclick="jumpToSection('pricingAbStudioCard', this)">🧪 A/B Experiment &amp; Power Lab</button>
+                    <button type="button" class="subnav-pill" onclick="jumpToSection('pricingBanditCard', this)">🎰 Multi-Armed Bandit (RL) Lab</button>
                 </div>
 
                 <!-- Summary KPI Strip -->
@@ -3056,6 +3057,146 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Card 4: Multi-Armed Bandit (RL) Dynamic Pricing & Regret Minimization Studio -->
+                <div class="chart-card" id="pricingBanditCard" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <div>
+                            <h3>🎰 Multi-Armed Bandit (RL) Dynamic Pricing &amp; Regret Minimizer</h3>
+                            <p class="card-sub">Bayesian Thompson Sampling, UCB-1, and Contextual LinUCB for continuous price discovery without 50/50 A/B opportunity loss</p>
+                        </div>
+                        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-outline btn-sm" id="btnResetBandit">🔄 Reset Priors</button>
+                            <button type="button" class="btn btn-primary btn-sm" id="btnRunBanditSim">⚡ Run MAB Simulation</button>
+                        </div>
+                    </div>
+
+                    <!-- Summary KPI Cards -->
+                    <div class="kpi-grid" style="margin-bottom: 1rem;">
+                        <div class="kpi-card highlight-glow">
+                            <div class="kpi-label">MAB Cumulative Revenue</div>
+                            <div class="kpi-value" id="banditKpiMabRevenue">₹0.00</div>
+                            <div class="kpi-subtext" id="banditKpiOracleRev">Oracle Benchmark: ₹0.00</div>
+                        </div>
+                        <div class="kpi-card green-border">
+                            <div class="kpi-label">Regret Saved vs A/B Test</div>
+                            <div class="kpi-value" id="banditKpiRegretSaved" style="color:var(--accent-green, #10B981);">--%</div>
+                            <div class="kpi-subtext">Opportunity Loss Avoided</div>
+                        </div>
+                        <div class="kpi-card gold-border">
+                            <div class="kpi-label">Converged Optimal Tier</div>
+                            <div class="kpi-value" id="banditKpiWinnerArm" style="font-size:1.15rem;">--</div>
+                            <div class="kpi-subtext">Highest Expected Value / Visitor</div>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Simulation Controls -->
+                    <div class="invoice-controls-grid" style="margin-bottom: 1rem;">
+                        <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                            <label for="banditStrategySelect" style="font-size:0.78rem; color:var(--text-secondary);">RL Policy:</label>
+                            <select id="banditStrategySelect" class="form-input-sm">
+                                <option value="thompson" selected>Thompson Sampling (Beta Posterior Sampling)</option>
+                                <option value="ucb1">Upper Confidence Bound (UCB-1 Optimism)</option>
+                                <option value="linucb">Contextual Disjoint LinUCB (Personalized)</option>
+                                <option value="epsilon_greedy">Epsilon-Greedy (Decaying Exploration)</option>
+                            </select>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                            <label for="banditRoundsSelect" style="font-size:0.78rem; color:var(--text-secondary);">Simulation Customer Visits:</label>
+                            <select id="banditRoundsSelect" class="form-input-sm">
+                                <option value="250">250 Visits (Rapid Convergence)</option>
+                                <option value="500">500 Visits (Mid-Scale Promo)</option>
+                                <option value="1000" selected>1,000 Visits (Enterprise Flash Sale)</option>
+                                <option value="2000">2,000 Visits (High Volume Holdout)</option>
+                            </select>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                            <label for="banditExplorationSlider" style="font-size:0.78rem; color:var(--text-secondary);">Exploration Factor (α / c):</label>
+                            <select id="banditExplorationSlider" class="form-input-sm">
+                                <option value="0.5">0.5 (Conservative / Exploit-Heavy)</option>
+                                <option value="1.0" selected>1.0 (Standard Theoretical Balance)</option>
+                                <option value="1.5">1.5 (High Exploration Search)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Dual Interactive Visualizers -->
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:1.25rem; margin-bottom:1.25rem;">
+                        <div style="border:1px solid var(--border-color); border-radius:8px; padding:1rem; background:rgba(255,255,255,0.02);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                                <strong>📉 Cumulative Regret Trajectory (Opportunity Cost)</strong>
+                                <div style="font-size:0.72rem; display:flex; gap:0.6rem;">
+                                    <span style="color:#10B981;">&bull; MAB Policy</span>
+                                    <span style="color:#F59E0B;">&bull; ε-Greedy</span>
+                                    <span style="color:#EF4444;">&bull; 50/50 A/B Test</span>
+                                </div>
+                            </div>
+                            <div id="banditRegretChartContainer" style="min-height:220px; display:flex; align-items:center; justify-content:center;">
+                                <small class="text-muted">Run simulation to visualize logarithmic regret reduction.</small>
+                            </div>
+                        </div>
+
+                        <div style="border:1px solid var(--border-color); border-radius:8px; padding:1rem; background:rgba(255,255,255,0.02);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                                <strong>📊 Traffic Allocation Share by Arm</strong>
+                                <span class="badge-tag" style="background:#3B82F622; color:#3B82F6; border:1px solid #3B82F6; font-size:0.7rem;">Adaptive Routing</span>
+                            </div>
+                            <div id="banditAllocationChartContainer" style="min-height:220px;">
+                                <small class="text-muted">Simulate to see dynamic traffic shift to the optimal pricing tier.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Live Customer Visit Playground -->
+                    <div style="border:1px solid var(--border-color); border-radius:8px; padding:1rem; background:rgba(59,130,246,0.03); margin-bottom:1.25rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap; gap:0.5rem;">
+                            <div>
+                                <strong>🧪 Single Customer Arrival Playground (Online Inference)</strong>
+                                <p style="font-size:0.78rem; color:var(--text-secondary); margin:0;">
+                                    Simulate an individual buyer context, evaluate real-time policy price selection, and record purchase feedback.
+                                </p>
+                            </div>
+                            <div style="display:flex; gap:0.5rem; align-items:center;">
+                                <label for="banditCustomerPersonaSelect" style="font-size:0.78rem; color:var(--text-secondary);">Customer Persona:</label>
+                                <select id="banditCustomerPersonaSelect" class="form-input-sm">
+                                    <option value="loyal_whale">Loyal Whale (High Spend, High Recency)</option>
+                                    <option value="bargain_hunter">Bargain Hunter (Large Cart, Sensitive)</option>
+                                    <option value="dormant_risk">Dormant Account (Low Recency)</option>
+                                    <option value="balanced" selected>Average Retail Shopper</option>
+                                </select>
+                                <button type="button" class="btn btn-secondary btn-sm" id="btnSampleBanditVisit">🎯 Decide Price</button>
+                            </div>
+                        </div>
+                        <div id="banditVisitResultBox" style="padding:0.75rem; border:1px dashed var(--border-color); border-radius:6px; background:rgba(0,0,0,0.15);">
+                            <small class="text-muted">Click <strong>"Decide Price"</strong> to evaluate current arm posteriors for this buyer profile.</small>
+                        </div>
+                    </div>
+
+                    <!-- Arm Telemetry Table -->
+                    <div class="section-title" style="margin-bottom:0.5rem; font-size:0.9rem; font-weight:700;">
+                        📋 Multi-Armed Bandit Dynamic Pricing Tiers &amp; Bayesian Credible Intervals
+                    </div>
+                    <div tabindex="0" role="region" aria-label="Bandit Pricing Arms Table" class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Arm ID</th>
+                                    <th scope="col">Pricing Tier</th>
+                                    <th scope="col">Multiplier</th>
+                                    <th scope="col">Unit Price</th>
+                                    <th scope="col">Traffic Pulls</th>
+                                    <th scope="col">Conversions</th>
+                                    <th scope="col">Conversion Rate</th>
+                                    <th scope="col">95% Credible Interval</th>
+                                    <th scope="col">Expected Rev / Visit</th>
+                                </tr>
+                            </thead>
+                            <tbody id="banditArmsTbody">
+                                <tr><td colspan="9" style="text-align:center;padding:1rem;">Loading bandit telemetry...</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </section>

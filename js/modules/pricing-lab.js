@@ -666,4 +666,8 @@ export function initPricingLab() {
 
     loadElasticityReport();
     computeAbPower();
+
+    import("./bandit-studio.js").then(m => {
+        if (typeof m.initBanditStudio === "function") m.initBanditStudio();
+    }).catch(err => console.warn("[Pricing Lab] Failed to lazy load Bandit Studio:", err));
 }

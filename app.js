@@ -30,6 +30,7 @@ const MODULE_LOADERS = {
     "forecasting": { path: "./js/modules/conformal-budget.js?v=7.26", initName: "initConformalForecastLab" },
     "campaign-studio": { path: "./js/modules/conformal-budget.js?v=7.26", initName: "initBudgetOptimizerLab" },
     "recommendations": { path: "./js/modules/recommender-studio.js?v=7.26", initName: "initRecommenderStudio" },
+    "bandit-pricing": { path: "./js/modules/bandit-studio.js?v=7.26", initName: "initBanditStudio" },
 };
 const LOADED_MODULES = new Map();
 
