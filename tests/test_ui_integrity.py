@@ -20,10 +20,14 @@ def test_all_15_tabs_and_navigation_match():
     js = APP_JS.read_text(encoding="utf-8")
 
     nav_tabs = re.findall(r'class="nav-item[^"]*"\s+data-tab="([^"]+)"', html)
-    pane_tabs = re.findall(r'<section\s+id="tab-([^"]+)"\s+class="tab-pane', html)
+    pane_tabs = re.findall(r'<section\s+id="tab-([^"]+)"\s+class="tab-pane',
+                           html)
 
-    assert len(nav_tabs) == 15, f"Expected 15 navigation modules, found {len(nav_tabs)}: {nav_tabs}"
-    assert set(nav_tabs) == set(pane_tabs), f"Tab mismatch: nav={set(nav_tabs) ^ set(pane_tabs)}"
+    assert len(
+        nav_tabs
+    ) == 15, f"Expected 15 navigation modules, found {len(nav_tabs)}: {nav_tabs}"
+    assert set(nav_tabs) == set(
+        pane_tabs), f"Tab mismatch: nav={set(nav_tabs) ^ set(pane_tabs)}"
 
     # Confirm cache-bust versions match cleanly between CSS and JS
     css_ver = re.search(r'style\.css\?v=([0-9.]+)', html)
@@ -33,7 +37,8 @@ def test_all_15_tabs_and_navigation_match():
 
     # Confirm every tab appears in JS tabMeta
     for tab in nav_tabs:
-        assert (f"{tab}:" in js or f'"{tab}":' in js), f"Tab '{tab}' missing from tabMeta in app.js"
+        assert (f"{tab}:" in js or f'"{tab}":'
+                in js), f"Tab '{tab}' missing from tabMeta in app.js"
 
 
 def test_no_duplicate_dom_ids_and_valid_labels():

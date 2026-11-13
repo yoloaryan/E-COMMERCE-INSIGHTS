@@ -1,6 +1,6 @@
 # ==============================================================================
 # Render Infrastructure Blueprint Configuration (render.yaml)
-# Nexus Retail AI - Full-Stack Cloud Blueprint (Static Frontend + FastAPI API)
+# Prism Retail - Full-Stack Cloud Blueprint (Static Frontend + FastAPI API)
 # ==============================================================================
 
 services:

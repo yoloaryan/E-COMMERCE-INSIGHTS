@@ -1,4 +1,4 @@
-# Production Container for Nexus Retail AI - FastAPI ML Serving Layer
+# Production Container for Prism Retail - FastAPI ML Serving Layer
 FROM python:3.11-slim
 
 # Prevent Python from writing .pyc files and enable unbuffered logging

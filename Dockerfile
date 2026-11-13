@@ -1,4 +1,4 @@
-# Production Container for Nexus Retail AI (HTML5 / CSS3 / Vanilla JS)
+# Production Container for Prism Retail (HTML5 / CSS3 / Vanilla JS)
 FROM nginx:alpine
 
 # Remove default nginx static assets and configuration
