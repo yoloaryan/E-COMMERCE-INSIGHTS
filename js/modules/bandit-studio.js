@@ -66,10 +66,10 @@ export function renderRegretSvgChart(trajectory) {
 
     const width = 680;
     const height = 260;
-    const padX = 55;
-    const padY = 30;
-    const plotW = width - padX - 20;
-    const plotH = height - padY - 30;
+    const padX = 65;
+    const padY = 35;
+    const plotW = width - padX - 25;
+    const plotH = height - padY - 35;
 
     const maxRound = trajectory[trajectory.length - 1].round || 1000;
     const maxRegret = Math.max(
@@ -84,35 +84,52 @@ export function renderRegretSvgChart(trajectory) {
     const ptsAb = trajectory.map(d => `${getX(d.round).toFixed(1)},${getY(d.cumulative_regret_ab).toFixed(1)}`).join(" ");
     const ptsEgreedy = trajectory.map(d => `${getX(d.round).toFixed(1)},${getY(d.cumulative_regret_egreedy).toFixed(1)}`).join(" ");
 
+    const finalMab = trajectory[trajectory.length - 1].cumulative_regret_mab || 0;
+    const finalAb = trajectory[trajectory.length - 1].cumulative_regret_ab || 0;
+
     container.innerHTML = `
-        <svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; overflow:visible; font-family:var(--font-sans, sans-serif);">
-            <!-- Background Grid Lines -->
-            <line x1="${padX}" y1="${height - padY}" x2="${width - 20}" y2="${height - padY}" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
-            <line x1="${padX}" y1="${getY(maxRegret * 0.5)}" x2="${width - 20}" y2="${getY(maxRegret * 0.5)}" stroke="rgba(255,255,255,0.08)" stroke-dasharray="4,4"/>
-            <line x1="${padX}" y1="${padY}" x2="${width - 20}" y2="${padY}" stroke="rgba(255,255,255,0.08)" stroke-dasharray="4,4"/>
+        <svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; overflow:visible; font-family:var(--font-sans, sans-serif); filter:drop-shadow(0 2px 8px rgba(0,0,0,0.15));">
+            <defs>
+                <linearGradient id="mabGlow" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="#059669"/>
+                    <stop offset="100%" stop-color="#10B981"/>
+                </linearGradient>
+            </defs>
+
+            <!-- Background Chart Region -->
+            <rect x="${padX}" y="${padY}" width="${plotW}" height="${plotH}" fill="rgba(15,23,42,0.25)" rx="6"/>
+
+            <!-- Grid Lines -->
+            <line x1="${padX}" y1="${height - padY}" x2="${width - 25}" y2="${height - padY}" stroke="rgba(255,255,255,0.16)" stroke-width="1"/>
+            <line x1="${padX}" y1="${getY(maxRegret * 0.5)}" x2="${width - 25}" y2="${getY(maxRegret * 0.5)}" stroke="rgba(255,255,255,0.08)" stroke-dasharray="4,4"/>
+            <line x1="${padX}" y1="${padY}" x2="${width - 25}" y2="${padY}" stroke="rgba(255,255,255,0.08)" stroke-dasharray="4,4"/>
 
             <!-- Y-Axis Labels -->
-            <text x="${padX - 8}" y="${padY + 4}" fill="var(--text-muted, #94A3B8)" font-size="10" text-anchor="end">₹${Math.round(maxRegret / 1000)}k</text>
-            <text x="${padX - 8}" y="${getY(maxRegret * 0.5) + 4}" fill="var(--text-muted, #94A3B8)" font-size="10" text-anchor="end">₹${Math.round(maxRegret * 0.5 / 1000)}k</text>
-            <text x="${padX - 8}" y="${height - padY + 4}" fill="var(--text-muted, #94A3B8)" font-size="10" text-anchor="end">₹0</text>
+            <text x="${padX - 10}" y="${padY + 4}" fill="#94A3B8" font-size="11" font-weight="600" text-anchor="end">₹${Math.round(maxRegret / 1000)}k</text>
+            <text x="${padX - 10}" y="${getY(maxRegret * 0.5) + 4}" fill="#94A3B8" font-size="11" text-anchor="end">₹${Math.round(maxRegret * 0.5 / 1000)}k</text>
+            <text x="${padX - 10}" y="${height - padY + 4}" fill="#94A3B8" font-size="11" text-anchor="end">₹0</text>
 
             <!-- X-Axis Labels -->
-            <text x="${padX}" y="${height - 10}" fill="var(--text-muted, #94A3B8)" font-size="10" text-anchor="start">0</text>
-            <text x="${padX + plotW * 0.5}" y="${height - 10}" fill="var(--text-muted, #94A3B8)" font-size="10" text-anchor="middle">${Math.round(maxRound / 2)} Visits</text>
-            <text x="${width - 20}" y="${height - 10}" fill="var(--text-muted, #94A3B8)" font-size="10" text-anchor="end">${maxRound} Visits</text>
+            <text x="${padX}" y="${height - 12}" fill="#94A3B8" font-size="11" text-anchor="start">0</text>
+            <text x="${padX + plotW * 0.5}" y="${height - 12}" fill="#94A3B8" font-size="11" text-anchor="middle">${Math.round(maxRound / 2)} Visits</text>
+            <text x="${width - 25}" y="${height - 12}" fill="#94A3B8" font-size="11" text-anchor="end">${maxRound} Visits</text>
 
             <!-- Line Trajectories -->
-            <!-- 1. Traditional A/B Test (Linear / High Regret - Red) -->
-            <polyline fill="none" stroke="#EF4444" stroke-width="2.5" stroke-dasharray="5,3" points="${ptsAb}"/>
+            <!-- 1. Traditional A/B Test (High Linear Regret - Red Dashed) -->
+            <polyline fill="none" stroke="#EF4444" stroke-width="2.5" stroke-dasharray="6,4" points="${ptsAb}"/>
             
             <!-- 2. Epsilon-Greedy (Decaying Exploration - Amber) -->
             <polyline fill="none" stroke="#F59E0B" stroke-width="2" points="${ptsEgreedy}"/>
 
-            <!-- 3. MAB Selected Policy (Logarithmic / Sub-Linear - Emerald/Cyan) -->
-            <polyline fill="none" stroke="#10B981" stroke-width="3" points="${ptsMab}"/>
+            <!-- 3. MAB Selected Policy (Logarithmic / Sub-Linear - Emerald) -->
+            <polyline fill="none" stroke="url(#mabGlow)" stroke-width="3.5" points="${ptsMab}"/>
 
-            <!-- Interactive Marker at End of MAB -->
-            <circle cx="${getX(maxRound)}" cy="${getY(trajectory[trajectory.length - 1].cumulative_regret_mab)}" r="4.5" fill="#10B981"/>
+            <!-- Final Markers & Badges -->
+            <circle cx="${getX(maxRound)}" cy="${getY(finalMab)}" r="5" fill="#10B981" stroke="#FFFFFF" stroke-width="1.5"/>
+            <text x="${getX(maxRound) - 8}" y="${getY(finalMab) - 8}" fill="#10B981" font-size="10" font-weight="700" text-anchor="end">MAB: ₹${Math.round(finalMab / 1000)}k</text>
+
+            <circle cx="${getX(maxRound)}" cy="${getY(finalAb)}" r="4" fill="#EF4444"/>
+            <text x="${getX(maxRound) - 8}" y="${getY(finalAb) - 8}" fill="#EF4444" font-size="10" font-weight="600" text-anchor="end">A/B: ₹${Math.round(finalAb / 1000)}k</text>
         </svg>
     `;
 }
