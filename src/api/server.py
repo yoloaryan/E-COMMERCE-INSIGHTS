@@ -100,12 +100,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.middleware("http")
+async def head_request_middleware(request: Request, call_next):
+    """Transparently handles HTTP HEAD requests for Render/K8s load-balancer health probes."""
+    is_head = request.method == "HEAD"
+    if is_head:
+        request.scope["method"] = "GET"
+    response = await call_next(request)
+    if is_head:
+        return Response(
+            content=b"",
+            status_code=response.status_code,
+            headers=dict(response.headers),
+            media_type=response.media_type,
+        )
+    return response
+
+
 # Mount frontend ES code-split modules directory for standalone full-stack cloud deployment
 if (ROOT_DIR / "js").exists():
     app.mount("/js", StaticFiles(directory=str(ROOT_DIR / "js")), name="js")
 
 
-@app.get("/style.css", include_in_schema=False)
+@app.api_route("/style.css", methods=["GET", "HEAD"], include_in_schema=False)
 def serve_root_style():
     css_path = ROOT_DIR / "style.css"
     if css_path.exists():
@@ -113,7 +131,7 @@ def serve_root_style():
     raise HTTPException(status_code=404, detail="style.css not found")
 
 
-@app.get("/app.js", include_in_schema=False)
+@app.api_route("/app.js", methods=["GET", "HEAD"], include_in_schema=False)
 def serve_root_js():
     js_path = ROOT_DIR / "app.js"
     if js_path.exists():
@@ -121,8 +139,8 @@ def serve_root_js():
     raise HTTPException(status_code=404, detail="app.js not found")
 
 
-@app.get("/data/nexus_data.json", include_in_schema=False)
-@app.get("/data/prism_data.json", include_in_schema=False)
+@app.api_route("/data/nexus_data.json", methods=["GET", "HEAD"], include_in_schema=False)
+@app.api_route("/data/prism_data.json", methods=["GET", "HEAD"], include_in_schema=False)
 def serve_root_data_json():
     data_path = ROOT_DIR / "data" / "nexus_data.json"
     if data_path.exists():
@@ -130,7 +148,7 @@ def serve_root_data_json():
     raise HTTPException(status_code=404, detail="Data json not found")
 
 
-@app.get("/index.html", include_in_schema=False)
+@app.api_route("/index.html", methods=["GET", "HEAD"], include_in_schema=False)
 def serve_root_index_html():
     index_path = ROOT_DIR / "index.html"
     if index_path.exists():
@@ -540,7 +558,7 @@ class SimulateBanditRequest(BaseModel):
 # -----------------------------------------------------------------------------
 # API Endpoints
 # -----------------------------------------------------------------------------
-@app.get("/", tags=["System"])
+@app.api_route("/", methods=["GET", "HEAD"], tags=["System"])
 def root(request: Request):
     """Health check, API metadata, or frontend dashboard for browser visitors."""
     accept = request.headers.get("accept", "").lower()
@@ -564,10 +582,10 @@ def root(request: Request):
     }
 
 
-@app.get("/health", tags=["System"])
+@app.api_route("/health", methods=["GET", "HEAD"], tags=["System"])
 def health_check():
-    """Kubernetes / Docker health probe endpoint."""
-    return {"status": "healthy", "service": "e-commerce-ml-api"}
+    """Kubernetes / Docker / Render health probe endpoint."""
+    return {"status": "healthy", "service": "prism-retail-ml-api"}
 
 
 @app.post("/api/v1/forecast/sales", tags=["Sales Forecasting"])

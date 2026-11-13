@@ -23,6 +23,19 @@ def test_api_root_and_health():
     assert data["status"] == "online"
     assert data["service"] == "Prism Retail Serving API"
 
+    # Verify HEAD requests (required by Render/K8s health probes)
+    head_root = client.head("/")
+    assert head_root.status_code == 200
+
+    head_health = client.head("/health")
+    assert head_health.status_code == 200
+
+    # Verify browser request serves HTML dashboard
+    html_res = client.get("/", headers={"accept": "text/html,application/xhtml+xml"})
+    assert html_res.status_code == 200
+    assert "text/html" in html_res.headers.get("content-type", "")
+    assert "<title>Prism Retail" in html_res.text
+
     health = client.get("/health")
     assert health.status_code == 200
     assert health.json()["status"] == "healthy"
