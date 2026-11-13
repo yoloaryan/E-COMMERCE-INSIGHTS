@@ -439,6 +439,22 @@ class GenerateTaxInvoiceRequest(BaseModel):
     items: List[InvoiceLineItemRequest] = Field(..., min_length=1)
 
 
+class CreditNoteLineItemRequest(BaseModel):
+    stock_code: str = Field(default="22423")
+    description: str = Field(default="Returned Item")
+    quantity: int = Field(default=1, ge=1)
+    unit_price: float = Field(default=10.95, ge=0.0)
+
+
+class IssueCreditNoteRequest(BaseModel):
+    original_invoice_no: str = Field(..., description="Original invoice number (e.g. 536365 or INV-...)")
+    reason: str = Field(default="Damaged Goods / Quality Reject", description="Statutory reason under GST Rule 53")
+    customer_id: Optional[str] = Field(default=None, description="Optional customer override")
+    seller_state: str = Field(default="Karnataka")
+    supply_state: str = Field(default="Karnataka")
+    items: List[CreditNoteLineItemRequest] = Field(..., min_length=1)
+
+
 class OptimizeBudgetRequest(BaseModel):
     total_budget_inr: float = Field(default=250000.0, ge=10000.0, le=5000000.0)
     min_roi_multiple: float = Field(default=1.5, ge=1.0, le=6.0)
@@ -2510,6 +2526,120 @@ def get_tax_invoice_json(
     if inv is None:
         raise HTTPException(status_code=404, detail=f"Invoice '{invoice_no}' not found.")
     return inv
+
+
+@app.get("/api/v1/invoices/{invoice_no}/qr-code", tags=["Tax Invoicing & Compliance"])
+def get_tax_invoice_upi_qr_svg(
+    invoice_no: str,
+    tax_regime: str = Query(default="GST"),
+    seller_state: str = Query(default="Karnataka"),
+    supply_state: str = Query(default="Karnataka"),
+):
+    """Returns standalone vector SVG UPI dynamic QR code for instant mobile banking scan & pay."""
+    inv = get_invoice_engine().get_invoice(
+        invoice_no=invoice_no,
+        tax_regime=tax_regime,
+        seller_state=seller_state,
+        supply_state=supply_state,
+    )
+    if inv is None:
+        raise HTTPException(status_code=404, detail=f"Invoice '{invoice_no}' not found.")
+    qr_svg = inv.get("upi_payment", {}).get("qr_svg")
+    if not qr_svg:
+        raise HTTPException(status_code=404, detail=f"QR code unavailable for invoice '{invoice_no}'.")
+    return Response(content=qr_svg, media_type="image/svg+xml")
+
+
+@app.get("/api/v1/invoices/{invoice_no}/eway-bill", tags=["Tax Invoicing & Compliance"])
+def get_statutory_eway_bill_data(
+    invoice_no: str,
+    force: bool = Query(default=False, description="Generate even if below ₹50,000 threshold"),
+    seller_state: str = Query(default="Karnataka"),
+    supply_state: str = Query(default="Karnataka"),
+    vehicle_no: Optional[str] = Query(default="KA-01-AB-1234"),
+    transporter_id: Optional[str] = Query(default="29AAACG8899A1Z8"),
+    transporter_name: Optional[str] = Query(default="VRL Logistics Ltd"),
+    mode: Optional[str] = Query(default="Road"),
+):
+    """Generates statutory NIC E-Way Bill (EWB-01) JSON for consignments >= ₹50,000."""
+    engine = get_invoice_engine()
+    transporter_info = {
+        "vehicle_no": vehicle_no,
+        "transporter_id": transporter_id,
+        "transporter_name": transporter_name,
+        "mode": mode,
+    }
+    try:
+        return engine.generate_eway_bill(
+            invoice_no=invoice_no,
+            transporter_info=transporter_info,
+            force=force,
+            seller_state=seller_state,
+            supply_state=supply_state,
+        )
+    except ValueError as e:
+        msg = str(e)
+        if "not found" in msg.lower():
+            raise HTTPException(status_code=404, detail=msg)
+        raise HTTPException(status_code=400, detail=msg)
+
+
+@app.get("/api/v1/invoices/{invoice_no}/eway-bill/html", response_class=HTMLResponse, tags=["Tax Invoicing & Compliance"])
+def get_statutory_eway_bill_html(
+    invoice_no: str,
+    force: bool = Query(default=False, description="Generate even if below ₹50,000 threshold"),
+    seller_state: str = Query(default="Karnataka"),
+    supply_state: str = Query(default="Karnataka"),
+    vehicle_no: Optional[str] = Query(default="KA-01-AB-1234"),
+    transporter_id: Optional[str] = Query(default="29AAACG8899A1Z8"),
+    transporter_name: Optional[str] = Query(default="VRL Logistics Ltd"),
+    mode: Optional[str] = Query(default="Road"),
+):
+    """Returns official Government of India NIC E-Way Bill print slip (Form EWB-01)."""
+    engine = get_invoice_engine()
+    transporter_info = {
+        "vehicle_no": vehicle_no,
+        "transporter_id": transporter_id,
+        "transporter_name": transporter_name,
+        "mode": mode,
+    }
+    try:
+        eway_data = engine.generate_eway_bill(
+            invoice_no=invoice_no,
+            transporter_info=transporter_info,
+            force=force,
+            seller_state=seller_state,
+            supply_state=supply_state,
+        )
+        return HTMLResponse(content=engine.render_eway_bill_html(eway_data), status_code=200)
+    except ValueError as e:
+        msg = str(e)
+        if "not found" in msg.lower():
+            raise HTTPException(status_code=404, detail=msg)
+        raise HTTPException(status_code=400, detail=msg)
+
+
+@app.post("/api/v1/invoices/credit-note", tags=["Tax Invoicing & Compliance"])
+def issue_gst_credit_note(
+    payload: IssueCreditNoteRequest,
+    _principal: Dict[str, Any] = Depends(require_permission("predict:execute")),
+):
+    """Issues an official GST Credit Note (Rule 53) reversing turnover & liability into GSTR-1 Table 9B."""
+    engine = get_invoice_engine()
+    try:
+        return engine.issue_credit_note(
+            original_invoice_no=payload.original_invoice_no,
+            return_items=[item.model_dump() for item in payload.items],
+            reason=payload.reason,
+            customer_id=payload.customer_id,
+            seller_state=payload.seller_state,
+            supply_state=payload.supply_state,
+        )
+    except ValueError as e:
+        msg = str(e)
+        if "not found" in msg.lower():
+            raise HTTPException(status_code=404, detail=msg)
+        raise HTTPException(status_code=400, detail=msg)
 
 
 # -----------------------------------------------------------------------------

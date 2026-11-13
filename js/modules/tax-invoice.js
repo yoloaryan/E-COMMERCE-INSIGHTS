@@ -26,6 +26,9 @@ function renderTaxInvoicePreview(inv) {
     const buyer = inv.buyer || {};
     const tax = inv.tax_summary || {};
     const totals = inv.totals || {};
+    const isGst = (tax.tax_regime || "GST") === "GST";
+    const eway = inv.eway_bill || {};
+    const isEwayReq = Boolean(eway.required || (isGst && !isCn && totals.grand_total >= (eway.threshold_inr || 50000)));
 
     const rowsHtml = (inv.items || []).map(item => `
         <tr>
@@ -49,6 +52,10 @@ function renderTaxInvoicePreview(inv) {
         </div>
     `).join("");
 
+    const itemOptions = (inv.items || []).map((it, idx) => `
+        <option value="${idx}">[${_escInv(it.stock_code)}] ${_escInv(it.description)} (Qty: ${Math.abs(it.quantity)}, Rate: ${sym}${Number(it.unit_price).toFixed(2)})</option>
+    `).join("");
+
     previewBox.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.75rem; margin-bottom:1rem; padding-bottom:0.75rem; border-bottom:1px solid var(--border-color);">
             <div>
@@ -64,6 +71,14 @@ function renderTaxInvoicePreview(inv) {
                 ${inv.irn_reference ? `<div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.2rem;">IRN: <code>${_escInv(inv.irn_reference.slice(0, 22))}…</code></div>` : ""}
             </div>
         </div>
+
+        ${isCn ? `
+            <div style="margin-bottom:1rem; padding:0.65rem 0.9rem; background:rgba(239, 68, 68, 0.08); border:1px solid #EF4444; border-radius:6px; font-size:0.84rem;">
+                <strong>↩️ Statutory GST Credit Note (GSTR-1 Table 9B CDNR Reversal)</strong><br>
+                <span>Original Invoice Reference: <strong>#${_escInv(inv.original_invoice_reference || inv.original_invoice_no || "N/A")}</strong></span> &bull; 
+                <span>Reason: <em>${_escInv(inv.credit_note_reason || "Damaged Goods / Quality Reject")}</em></span>
+            </div>
+        ` : ""}
 
         <div class="invoice-parties-grid">
             <div class="invoice-party-box">
@@ -114,7 +129,189 @@ function renderTaxInvoicePreview(inv) {
                 <strong style="color:${badgeColor};">${sym}${Number(totals.grand_total || 0).toFixed(2)}</strong>
             </div>
         </div>
+
+        <!-- Dynamic Vector UPI QR Code Section -->
+        ${inv.upi_payment?.qr_svg ? `
+            <div class="upi-payment-panel" style="display:flex; align-items:center; gap:1.25rem; background:rgba(16,185,129,0.05); border:1px solid rgba(16,185,129,0.3); border-radius:8px; padding:0.85rem 1.1rem; margin-top:1.25rem;">
+                <div style="background:#FFFFFF; padding:6px; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,0.12); flex-shrink:0;">
+                    ${inv.upi_payment.qr_svg}
+                </div>
+                <div style="flex:1;">
+                    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem;">
+                        <strong style="font-size:0.95rem; color:var(--text-primary);">⚡ Scan &amp; Pay via UPI</strong>
+                        <span class="badge-tag" style="background:#10B98122; color:#10B981; border:1px solid #10B981; font-size:0.7rem;">NPCI Dynamic QR</span>
+                    </div>
+                    <p style="font-size:0.78rem; color:var(--text-secondary); margin:0 0 0.4rem 0;">
+                        Scan with Google Pay, PhonePe, Paytm, BHIM, or any UPI banking app for instant auto-reconciled settlement.
+                    </p>
+                    <div style="font-size:0.78rem; color:var(--text-secondary); margin-bottom:0.5rem;">
+                        VPA: <code>${_escInv(inv.upi_payment.merchant_vpa || "nexus.retail@icici")}</code> &bull; Pay: <strong>${sym}${Number(totals.grand_total || 0).toFixed(2)}</strong>
+                    </div>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button type="button" class="btn btn-outline btn-xs" id="btnCopyUpiLink">📋 Copy UPI Link</button>
+                        <a href="${_escInv(inv.upi_payment.intent_uri || '#')}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-xs">🚀 Open UPI App</a>
+                    </div>
+                </div>
+            </div>
+        ` : ""}
+
+        <!-- Statutory E-Way Bill Section -->
+        <div class="eway-bill-banner" style="margin-top:1rem; padding:0.85rem 1rem; border-radius:8px; border:1px solid ${isEwayReq ? '#059669' : 'var(--border-color)'}; background:${isEwayReq ? 'rgba(5, 150, 105, 0.08)' : 'var(--bg-secondary)'}; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+            <div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <strong>${isEwayReq ? '🚚 Statutory E-Way Bill (EWB-01) Mandatory' : '🚚 E-Way Bill Consignment Status'}</strong>
+                    <span class="badge-tag" style="background:${isEwayReq ? '#059669' : '#64748B'}22; color:${isEwayReq ? '#059669' : '#64748B'}; border:1px solid ${isEwayReq ? '#059669' : '#64748B'}; font-size:0.7rem;">
+                        ${isEwayReq ? 'Mandatory (>= ₹50,000)' : 'Optional (< ₹50,000)'}
+                    </span>
+                </div>
+                <p style="font-size:0.78rem; color:var(--text-secondary); margin:0.25rem 0 0 0;">
+                    ${isEwayReq 
+                        ? 'Consignment value ₹' + Number(totals.grand_total || 0).toLocaleString('en-IN') + ' exceeds statutory Rule 138 CGST threshold (₹50,000). Goods in transit require Form EWB-01 verification slip.'
+                        : 'Consignment value ₹' + Number(totals.grand_total || 0).toLocaleString('en-IN') + ' is below statutory threshold (₹50,000). Optional E-Way Bill can be issued for inter-state tracking.'}
+                </p>
+            </div>
+            <div style="display:flex; gap:0.5rem;">
+                <button type="button" class="btn ${isEwayReq ? 'btn-primary' : 'btn-secondary'} btn-sm" id="btnViewEwayBillSlip">
+                    🚚 View &amp; Print EWB-01 Slip
+                </button>
+            </div>
+        </div>
+
+        <!-- POS Credit Note Lifecycle Action -->
+        ${!isCn ? `
+            <div style="margin-top:1rem; display:flex; justify-content:flex-end;">
+                <button type="button" class="btn btn-outline btn-sm" id="btnToggleCreditNoteDrawer">
+                    🔄 Issue Credit Note for this Invoice (Rule 53)
+                </button>
+            </div>
+
+            <div id="creditNoteDrawer" style="display:none; margin-top:0.75rem; padding:1rem; border:1px dashed var(--accent-red, #EF4444); border-radius:8px; background:rgba(239,68,68,0.03);">
+                <h5 style="margin:0 0 0.5rem 0; color:#DC2626;">Issue Statutory Credit Note (CDNR Table 9B)</h5>
+                <p style="font-size:0.78rem; color:var(--text-secondary); margin-bottom:0.75rem;">
+                    Reverses taxable turnover and output GST liability under CGST Rule 53. Reconciles directly into GSTR-1 Table 9B.
+                </p>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:0.65rem; margin-bottom:0.75rem;">
+                    <div>
+                        <label style="font-size:0.75rem; color:var(--text-secondary);">Select Item to Return:</label>
+                        <select id="cnItemSelect" class="form-input-sm" style="width:100%;">
+                            ${itemOptions}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.75rem; color:var(--text-secondary);">Return Quantity:</label>
+                        <input type="number" id="cnQtyInput" class="form-input-sm" value="1" min="1" max="999" style="width:100%;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.75rem; color:var(--text-secondary);">Statutory Reason:</label>
+                        <select id="cnReasonSelect" class="form-input-sm" style="width:100%;">
+                            <option value="Damaged Goods / Quality Reject" selected>Damaged Goods / Quality Reject</option>
+                            <option value="Post-Sale Volume Discount / Rebate">Post-Sale Volume Discount / Rebate</option>
+                            <option value="Deficiency in Service / Transit Loss">Deficiency in Service / Transit Loss</option>
+                            <option value="Correction in Invoice Value">Correction in Invoice Value</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
+                    <button type="button" class="btn btn-outline btn-xs" id="btnCancelCreditNote">Cancel</button>
+                    <button type="button" class="btn btn-danger btn-xs" id="btnConfirmCreditNote">⚡ Confirm &amp; Issue Credit Note</button>
+                </div>
+            </div>
+        ` : ""}
     `;
+
+    // Bind dynamic QR code actions
+    const copyBtn = document.getElementById("btnCopyUpiLink");
+    if (copyBtn && inv.upi_payment?.intent_uri) {
+        copyBtn.addEventListener("click", () => {
+            navigator.clipboard?.writeText(inv.upi_payment.intent_uri).then(() => {
+                showToast("UPI Link Copied", "Pasted payment URI to clipboard", "success");
+            }).catch(() => {
+                showToast("UPI URI", inv.upi_payment.intent_uri, "info");
+            });
+        });
+    }
+
+    // Bind E-Way bill button
+    const ewbBtn = document.getElementById("btnViewEwayBillSlip");
+    if (ewbBtn) {
+        ewbBtn.addEventListener("click", () => {
+            const supply = document.getElementById("taxSupplyStateSelect")?.value || "Karnataka";
+            const url = nexusApiUrl(`/api/v1/invoices/${encodeURIComponent(inv.invoice_no)}/eway-bill/html?force=true&supply_state=${encodeURIComponent(supply)}`);
+            window.open(url, "_blank", "noopener,noreferrer");
+        });
+    }
+
+    // Bind Credit Note drawer actions
+    const toggleCnBtn = document.getElementById("btnToggleCreditNoteDrawer");
+    const drawer = document.getElementById("creditNoteDrawer");
+    const cancelCnBtn = document.getElementById("btnCancelCreditNote");
+    const confirmCnBtn = document.getElementById("btnConfirmCreditNote");
+
+    if (toggleCnBtn && drawer) {
+        toggleCnBtn.addEventListener("click", () => {
+            drawer.style.display = drawer.style.display === "none" ? "block" : "none";
+        });
+    }
+    if (cancelCnBtn && drawer) {
+        cancelCnBtn.addEventListener("click", () => {
+            drawer.style.display = "none";
+        });
+    }
+    if (confirmCnBtn) {
+        confirmCnBtn.addEventListener("click", async () => {
+            const itemIdx = Number(document.getElementById("cnItemSelect")?.value || 0);
+            const returnQty = Number(document.getElementById("cnQtyInput")?.value || 1);
+            const reason = document.getElementById("cnReasonSelect")?.value || "Damaged Goods / Quality Reject";
+            const item = (inv.items || [])[itemIdx];
+            if (!item) {
+                showToast("No Item Selected", "Please select an item to issue credit note for.", "alert");
+                return;
+            }
+
+            confirmCnBtn.disabled = true;
+            confirmCnBtn.textContent = "Issuing…";
+            try {
+                const supply = document.getElementById("taxSupplyStateSelect")?.value || "Karnataka";
+                const res = await fetch(nexusApiUrl("/api/v1/invoices/credit-note"), {
+                    method: "POST",
+                    headers: window.getAuthHeaders({ "Content-Type": "application/json" }),
+                    body: JSON.stringify({
+                        original_invoice_no: inv.invoice_no,
+                        reason: reason,
+                        customer_id: inv.buyer?.customer_id,
+                        supply_state: supply,
+                        items: [{
+                            stock_code: item.stock_code,
+                            description: item.description,
+                            quantity: returnQty,
+                            unit_price: item.unit_price,
+                        }],
+                    }),
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    showToast("Credit Note Failed", err.detail || `HTTP ${res.status}`, "alert");
+                    confirmCnBtn.disabled = false;
+                    confirmCnBtn.textContent = "⚡ Confirm & Issue Credit Note";
+                    return;
+                }
+
+                const cnData = await res.json();
+                const invInput = document.getElementById("taxInvoiceLookupInput");
+                if (invInput) invInput.value = cnData.invoice_no;
+
+                renderTaxInvoicePreview(cnData);
+                refreshGstr1ReturnPanel();
+                showToast("Credit Note Issued", `Generated #${cnData.invoice_no} linked to #${inv.invoice_no}`, "success");
+                logAuditEvent("Credit Note", `Issued ${cnData.invoice_no} against original invoice ${inv.invoice_no}`);
+            } catch (err) {
+                showToast("Network Error", "Could not issue credit note.", "alert");
+                confirmCnBtn.disabled = false;
+                confirmCnBtn.textContent = "⚡ Confirm & Issue Credit Note";
+            }
+        });
+    }
 }
 
 async function fetchActiveTaxInvoice() {
