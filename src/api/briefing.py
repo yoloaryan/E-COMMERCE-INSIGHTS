@@ -1,7 +1,7 @@
 """
 Executive Boardroom Briefing Pack & Multi-Engine Digest Exporter (Phase 23).
 
-Aggregates live operational telemetry across 6 Nexus Retail AI engines:
+Aggregates live operational telemetry across 6 Prism Retail engines:
 1. Financial P&L Waterfall & Return Leakage Engine
 2. Longitudinal Cohort Retention & RFM Segment Migration Engine
 3. Inventory EOQ, Safety Stock & Purchase Order Optimization Engine
@@ -141,7 +141,7 @@ class ExecutiveBriefingGenerator:
         return {
             "status": "success",
             "generated_at": datetime.now(timezone.utc).isoformat(),
-            "platform_version": "Nexus Retail AI v4.0-prod",
+            "platform_version": "Prism Retail v4.0-prod",
             "country": finance["filters"]["country"],
             "executive_health_score": wd_latest.get("health_score", 100.0),
             "headline_kpis": headline_kpis,
@@ -153,7 +153,7 @@ class ExecutiveBriefingGenerator:
     def render_markdown_memo(briefing: Dict[str, Any]) -> str:
         """Formats structured executive briefing into a boardroom-ready Markdown report."""
         lines = [
-            "# Nexus Retail AI — Executive Boardroom Briefing",
+            "# Prism Retail — Executive Boardroom Briefing",
             "",
             f"- **Generated (UTC):** {briefing['generated_at']}",
             f"- **Market Scope:** {briefing['country']}",

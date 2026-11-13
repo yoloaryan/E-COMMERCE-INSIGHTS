@@ -84,7 +84,7 @@ async def _app_lifespan(_app: FastAPI):
 
 # Initialize FastAPI App
 app = FastAPI(
-    title="Nexus Retail AI | ML Serving Engine",
+    title="Prism Retail | ML Serving Engine",
     description="Enterprise REST API for E-Commerce Customer Intelligence & Sales Prediction",
     version="1.0.0",
     lifespan=_app_lifespan,
@@ -507,7 +507,7 @@ def root():
     """Health check and general API metadata."""
     return {
         "status": "online",
-        "service": "Nexus Retail AI Serving API",
+        "service": "Prism Retail Serving API",
         "version": "1.0.0",
         "docs_url": "/docs",
         "models_loaded": {
@@ -788,7 +788,7 @@ async def websocket_live_orders_endpoint(websocket: WebSocket):
         # Initial greeting & active listeners telemetry
         await websocket.send_json({
             "type": "CONNECTION_ESTABLISHED",
-            "service": "Nexus Live Order WebSocket Stream",
+            "service": "Prism Live Order WebSocket Stream",
             "status": "connected",
             "active_clients": len(ws_manager.active_connections)
         })
@@ -1464,7 +1464,7 @@ async def test_notification_channel(payload: TestChannelRequest):
 
     if channel == "slack":
         slack_payload = MessageFormatter.build_slack_blocks(
-            title="Nexus Retail AI Channel Verification",
+            title="Prism Retail Channel Verification",
             message="Live Slack Block Kit webhook verification test ping.",
             audience_segment="Internal Ops",
             audience_size=1,
@@ -1478,7 +1478,7 @@ async def test_notification_channel(payload: TestChannelRequest):
 
     elif channel == "discord":
         discord_payload = MessageFormatter.build_discord_embed(
-            title="Nexus Retail AI Channel Verification",
+            title="Prism Retail Channel Verification",
             message="Live Discord rich embed webhook verification test ping.",
             audience_segment="Internal Ops",
             audience_size=1,
@@ -2375,13 +2375,13 @@ def download_executive_briefing_pack(
         return Response(
             content=content,
             media_type="application/json",
-            headers={"Content-Disposition": 'attachment; filename="nexus_executive_briefing.json"'},
+            headers={"Content-Disposition": 'attachment; filename="prism_executive_briefing.json"'},
         )
     memo = ExecutiveBriefingGenerator.render_markdown_memo(briefing)
     return Response(
         content=memo,
         media_type="text/markdown; charset=utf-8",
-        headers={"Content-Disposition": 'attachment; filename="nexus_executive_briefing.md"'},
+        headers={"Content-Disposition": 'attachment; filename="prism_executive_briefing.md"'},
     )
 
 

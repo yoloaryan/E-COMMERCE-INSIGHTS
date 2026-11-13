@@ -490,7 +490,7 @@ class TaxInvoiceEngine:
             "invoice_date": str(raw.get("invoice_date", dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M:%S"))),
             "irn_reference": irn_hash if is_gst else None,
             "seller": {
-                "legal_name": "Nexus Retail AI Commerce Pvt Ltd" if is_gst else "Nexus Retail AI Flagship Ltd",
+                "legal_name": "Prism Retail Systems Pvt Ltd" if is_gst else "Prism Retail Flagship Ltd",
                 "tax_id_label": "GSTIN" if is_gst else "UK VAT Reg",
                 "tax_id": "29AAACN4192K1ZV" if is_gst else "GB-394-8821-09",
                 "state": f"{seller_state} ({mode['seller_state_code']})",
@@ -532,16 +532,16 @@ class TaxInvoiceEngine:
             },
             "upi_payment": {
                 "intent_uri": (
-                    f"upi://pay?pa=nexusretail@icici&pn=NexusRetailAI&mc=5311"
+                    f"upi://pay?pa=prismretail@icici&pn=PrismRetail&mc=5311"
                     f"&tr={raw['invoice_no']}&am={grand_total:.2f}&cu=INR"
                     f"&tn=Invoice-{raw['invoice_no']}"
                 ) if is_gst and not is_cn and grand_total > 0 else None,
-                "payee_vpa": "nexusretail@icici" if is_gst else None,
-                "merchant_vpa": "nexusretail@icici" if is_gst else None,
+                "payee_vpa": "prismretail@icici" if is_gst else None,
+                "merchant_vpa": "prismretail@icici" if is_gst else None,
                 "amount": grand_total if is_gst else 0.0,
                 "currency": "INR" if is_gst else "GBP",
                 "qr_svg": generate_dynamic_upi_qr_svg(
-                    f"upi://pay?pa=nexusretail@icici&pn=NexusRetailAI&mc=5311&tr={raw['invoice_no']}&am={grand_total:.2f}&cu=INR&tn=Invoice-{raw['invoice_no']}",
+                    f"upi://pay?pa=prismretail@icici&pn=PrismRetail&mc=5311&tr={raw['invoice_no']}&am={grand_total:.2f}&cu=INR&tn=Invoice-{raw['invoice_no']}",
                     size=150,
                 ) if is_gst and not is_cn and grand_total > 0 else None,
             },
@@ -732,7 +732,7 @@ class TaxInvoiceEngine:
             <div style="border:1px solid #CBD5E1; border-radius:8px; padding:0.75rem 1rem; background:#F8FAFC; display:inline-block; margin-bottom:0.75rem;">
                 <div style="font-weight:700; font-size:0.8rem; margin-bottom:0.4rem; color:#0F172A;">⚡ Scan &amp; Pay via UPI</div>
                 {upi_data['qr_svg']}
-                <div style="font-size:0.7rem; color:#64748B; margin-top:0.3rem;">VPA: <code>nexusretail@icici</code><br>BHIM / PhonePe / GPay / Paytm</div>
+                <div style="font-size:0.7rem; color:#64748B; margin-top:0.3rem;">VPA: <code>prismretail@icici</code><br>BHIM / PhonePe / GPay / Paytm</div>
             </div>
             """
 

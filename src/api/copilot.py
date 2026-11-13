@@ -1,5 +1,5 @@
 """
-Nexus AI Copilot & Star-Schema Text-to-SQL Analytics Engine (Phase 31).
+Prism AI Copilot & Star-Schema Text-to-SQL Analytics Engine (Phase 31).
 
 Translates natural language questions from business operators into:
 1. Optimized DuckDB SQL queries over both flat transaction views and the 6-table Kimball Star Schema

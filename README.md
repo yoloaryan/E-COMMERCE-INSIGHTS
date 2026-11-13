@@ -56,7 +56,7 @@ This system integrates **Customer Behavioral Segmentation (RFM + K-Means + Cohor
                 └──────────────────────────┼───────────────────────┘
                                            ▼
   ┌─────────────────────────────────────────────────────────────────────────────┐
-  │         NEXUS RETAIL AI WEB APPLICATION (`index.html`, `style.css`, `app.js`)│
+  │         PRISM RETAIL WEB APPLICATION (`index.html`, `style.css`, `app.js`)   │
   │  🌐 Live at: https://e-commerce-insights.onrender.com/                       │
   │  Executive KPIs • Customer Segmentation • Sales Forecaster • Churn Early   │
   │  Warning • Recommender Mart • POS Simulator • MLOps Console • Audit Stream  │

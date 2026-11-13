@@ -145,7 +145,7 @@ function renderTaxInvoicePreview(inv) {
                         Scan with Google Pay, PhonePe, Paytm, BHIM, or any UPI banking app for instant auto-reconciled settlement.
                     </p>
                     <div style="font-size:0.78rem; color:var(--text-secondary); margin-bottom:0.5rem;">
-                        VPA: <code>${_escInv(inv.upi_payment.merchant_vpa || "nexus.retail@icici")}</code> &bull; Pay: <strong>${sym}${Number(totals.grand_total || 0).toFixed(2)}</strong>
+                        VPA: <code>${_escInv(inv.upi_payment.merchant_vpa || "prismretail@icici")}</code> &bull; Pay: <strong>${sym}${Number(totals.grand_total || 0).toFixed(2)}</strong>
                     </div>
                     <div style="display:flex; gap:0.5rem;">
                         <button type="button" class="btn btn-outline btn-xs" id="btnCopyUpiLink">📋 Copy UPI Link</button>

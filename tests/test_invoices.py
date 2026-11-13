@@ -128,7 +128,7 @@ def test_api_gstr1_return_endpoint():
 def test_dynamic_upi_qr_code_svg_and_endpoint(tmp_path):
     from src.api.invoices import generate_dynamic_upi_qr_svg
 
-    uri = "upi://pay?pa=nexusretail@icici&pn=NexusRetailAI&am=1250.00&cu=INR"
+    uri = "upi://pay?pa=prismretail@icici&pn=PrismRetail&am=1250.00&cu=INR"
     svg = generate_dynamic_upi_qr_svg(uri, size=150)
     assert svg.startswith('<svg xmlns="http://www.w3.org/2000/svg"')
     assert svg.endswith("</svg>")
@@ -139,9 +139,9 @@ def test_dynamic_upi_qr_code_svg_and_endpoint(tmp_path):
     inv = engine.get_invoice("536365", tax_regime="GST")
     assert "upi_payment" in inv
     upi = inv["upi_payment"]
-    assert upi["merchant_vpa"] == "nexusretail@icici"
+    assert upi["merchant_vpa"] == "prismretail@icici"
     assert upi["currency"] == "INR"
-    assert upi["intent_uri"].startswith("upi://pay?pa=nexusretail@icici")
+    assert upi["intent_uri"].startswith("upi://pay?pa=prismretail@icici")
     assert "<svg" in upi["qr_svg"]
 
     # Test QR API Endpoint

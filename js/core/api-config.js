@@ -1,13 +1,14 @@
 /**
- * Nexus Retail AI - Unified Local / Docker / Cloud API Endpoint Resolver
+ * Prism Retail - Unified Local / Docker / Cloud API Endpoint Resolver
  * Seamlessly routes requests across:
  *   1. Local dual-process dev (http.server :8080 + FastAPI :8000)
  *   2. Docker Compose / Nginx reverse proxy (:80 / :8080 same-origin /api/ & /ws/)
  *   3. Render / Vercel Cloud Blueprints (same-origin rewrite proxy or ?api= override)
  */
 
-(function initNexusApiConfig() {
-    const STORAGE_KEY = "nexus_api_base";
+(function initPrismApiConfig() {
+    const STORAGE_KEY = "prism_api_base";
+    const LEGACY_STORAGE_KEY = "nexus_api_base";
 
     function normalizeBase(url) {
         return String(url || "").trim().replace(/\/+$/, "");
@@ -20,17 +21,20 @@
             if (qp) {
                 if (qp.toLowerCase() === "reset") {
                     localStorage.removeItem(STORAGE_KEY);
+                    localStorage.removeItem(LEGACY_STORAGE_KEY);
                 } else {
                     const clean = normalizeBase(qp);
                     localStorage.setItem(STORAGE_KEY, clean);
                     return clean;
                 }
             }
-            const stored = normalizeBase(localStorage.getItem(STORAGE_KEY));
+            const stored = normalizeBase(localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY));
             if (stored) return stored;
         } catch (_e) {}
 
-        const metaEl = typeof document !== "undefined" ? document.querySelector('meta[name="nexus-api-base"]') : null;
+        const metaEl = typeof document !== "undefined"
+            ? (document.querySelector('meta[name="prism-api-base"]') || document.querySelector('meta[name="nexus-api-base"]'))
+            : null;
         const metaBase = normalizeBase(metaEl ? metaEl.getAttribute("content") : "");
         if (metaBase) return metaBase;
 
@@ -120,6 +124,12 @@
             return modeLabel;
         },
     };
+    window.PRISM_CONFIG = window.NEXUS_CONFIG;
+    window.prismApiUrl = window.nexusApiUrl;
+    window.prismWsUrl = window.nexusWsUrl;
+    window.prismGetApiBase = window.nexusGetApiBase;
+    window.prismSetApiBase = window.nexusSetApiBase;
+    window.prismSyncDomEndpoints = window.nexusSyncDomEndpoints;
 
     if (typeof document !== "undefined") {
         if (document.readyState === "loading") {

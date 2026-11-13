@@ -28,9 +28,11 @@ from src.utils.state_store import get_state_store
 # Cryptographic Helpers (PBKDF2-SHA256 & HS256 JWT)
 # -----------------------------------------------------------------------------
 JWT_ALGORITHM = "HS256"
-JWT_ISSUER = "nexus-retail-ai"
+JWT_ISSUER = "prism-retail"
 DEFAULT_JWT_SECRET = os.environ.get(
-    "NEXUS_JWT_SECRET", "nexus-retail-ai-enterprise-jwt-signing-key-v3")
+    "PRISM_JWT_SECRET",
+    os.environ.get("NEXUS_JWT_SECRET", "prism-retail-enterprise-jwt-signing-key-v3"),
+)
 
 
 def _b64url_encode(raw: bytes) -> str:
@@ -307,7 +309,7 @@ class SecurityRegistry:
         self.tenants: Dict[str, Dict[str, Any]] = {
             "tenant_uk_flagship": {
                 "tenant_id": "tenant_uk_flagship",
-                "name": "Nexus UK Flagship Wholesale",
+                "name": "Prism UK Flagship Wholesale",
                 "country": "United Kingdom",
                 "currency": "GBP",
                 "plan": "Enterprise",
@@ -336,6 +338,41 @@ class SecurityRegistry:
 
         # Pre-seeded RBAC identities with salted PBKDF2-SHA256 hashes
         self.users: Dict[str, Dict[str, Any]] = {
+            "admin@prismretail.ai": {
+                "user_id": "usr_admin_01",
+                "email": "admin@prismretail.ai",
+                "name": "Aryan Gupta",
+                "role": "admin",
+                "tenant_id": "tenant_uk_flagship",
+                "password_hash":
+                PasswordHasher.hash_password("PrismAdmin2026!"),
+            },
+            "ds@prismretail.ai": {
+                "user_id": "usr_ds_02",
+                "email": "ds@prismretail.ai",
+                "name": "Dr. Maya Lin",
+                "role": "lead_ds",
+                "tenant_id": "tenant_uk_flagship",
+                "password_hash": PasswordHasher.hash_password("PrismDS2026!"),
+            },
+            "growth@prismretail.ai": {
+                "user_id": "usr_growth_03",
+                "email": "growth@prismretail.ai",
+                "name": "Elena Vance",
+                "role": "growth",
+                "tenant_id": "tenant_eu_nordics",
+                "password_hash":
+                PasswordHasher.hash_password("PrismGrowth2026!"),
+            },
+            "supply@prismretail.ai": {
+                "user_id": "usr_supply_04",
+                "email": "supply@prismretail.ai",
+                "name": "Marcus Sterling",
+                "role": "supply",
+                "tenant_id": "tenant_uk_flagship",
+                "password_hash": PasswordHasher.hash_password("PrismOps2026!"),
+            },
+            # Backward-compatible legacy aliases
             "admin@nexusretail.ai": {
                 "user_id": "usr_admin_01",
                 "email": "admin@nexusretail.ai",
@@ -452,8 +489,22 @@ class SecurityRegistry:
     def authenticate_user(self, email: str, password: str) -> Dict[str, Any]:
         clean_email = email.strip().lower()
         user = self.users.get(clean_email)
-        if not user or not PasswordHasher.verify_password(
-                password, user["password_hash"]):
+        if not user:
+            if clean_email.endswith("@nexusretail.ai"):
+                user = self.users.get(clean_email.replace("@nexusretail.ai", "@prismretail.ai"))
+            elif clean_email.endswith("@prismretail.ai"):
+                user = self.users.get(clean_email.replace("@prismretail.ai", "@nexusretail.ai"))
+
+        is_valid = False
+        if user:
+            if PasswordHasher.verify_password(password, user["password_hash"]):
+                is_valid = True
+            elif password.startswith("Nexus") and PasswordHasher.verify_password(password.replace("Nexus", "Prism", 1), user["password_hash"]):
+                is_valid = True
+            elif password.startswith("Prism") and PasswordHasher.verify_password(password.replace("Prism", "Nexus", 1), user["password_hash"]):
+                is_valid = True
+
+        if not user or not is_valid:
             self.record_audit_event(
                 event_type="LOGIN_FAILED",
                 actor_email=clean_email or "unknown",
@@ -753,7 +804,7 @@ def _extract_principal(
         # Backward-compatible open dev context when strict RBAC is disabled and no credentials passed
         return {
             "sub": "dev_anonymous",
-            "email": "dev@nexusretail.ai",
+            "email": "dev@prismretail.ai",
             "name": "Dev Workspace Session",
             "role": "admin",
             "tenant_id": x_tenant_id or "tenant_uk_flagship",

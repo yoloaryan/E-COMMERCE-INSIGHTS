@@ -62,7 +62,7 @@ def test_sqlite_state_store_roundtrips_all_operational_tables(tmp_path: Path):
     })
     store.save_tenant({
         "tenant_id": "tenant_ap_tokyo",
-        "name": "Nexus Japan GK",
+        "name": "Prism Japan GK",
         "country": "Japan",
         "currency": "JPY",
         "plan": "Enterprise",

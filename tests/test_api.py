@@ -21,7 +21,7 @@ def test_api_root_and_health():
     assert res.status_code == 200
     data = res.json()
     assert data["status"] == "online"
-    assert data["service"] == "Nexus Retail AI Serving API"
+    assert data["service"] == "Prism Retail Serving API"
 
     health = client.get("/health")
     assert health.status_code == 200

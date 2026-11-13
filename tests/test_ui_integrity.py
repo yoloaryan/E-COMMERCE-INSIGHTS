@@ -1,5 +1,5 @@
 """
-Static & Structural UI/UX Integrity Verification Suite for Nexus Retail AI.
+Static & Structural UI/UX Integrity Verification Suite for Prism Retail.
 Guards all 14 dashboard modules, DOM IDs, labels, dialog semantics, toast styles,
 and API console endpoint alignments across index.html, style.css, and app.js.
 """

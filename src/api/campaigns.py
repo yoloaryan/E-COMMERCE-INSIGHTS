@@ -115,7 +115,7 @@ class MessageFormatter:
                     "elements": [
                         {
                             "type": "mrkdwn",
-                            "text": f"Dispatched by *Nexus Retail AI Campaign Engine* • {datetime.now(timezone.utc).strftime('%b %d, %Y %H:%M UTC')}"
+                            "text": f"Dispatched by *Prism Retail Campaign Engine* • {datetime.now(timezone.utc).strftime('%b %d, %Y %H:%M UTC')}"
                         }
                     ]
                 }
@@ -145,7 +145,7 @@ class MessageFormatter:
         color = color_map.get(severity, 0x38BDF8)
 
         return {
-            "username": "Nexus Retail AI Watchdog",
+            "username": "Prism Retail Watchdog",
             "avatar_url": "https://img.icons8.com/fluency/96/artificial-intelligence.png",
             "embeds": [
                 {
@@ -158,7 +158,7 @@ class MessageFormatter:
                         {"name": "Voucher Code", "value": f"`{voucher_code}` ({discount_pct}% OFF)", "inline": True}
                     ],
                     "footer": {
-                        "text": "Nexus Retail AI • Automated Campaign Watchdog"
+                        "text": "Prism Retail • Automated Campaign Watchdog"
                     },
                     "timestamp": datetime.now(timezone.utc).isoformat()
                 }
@@ -212,7 +212,7 @@ class MessageFormatter:
       </div>
     </div>
     <div class="footer">
-      Sent with ❤️ from Nexus Retail AI • Automated Retention System
+      Sent with ❤️ from Prism Retail • Automated Retention System
     </div>
   </div>
 </body>
@@ -473,7 +473,7 @@ class CampaignDispatcher:
             req = urllib.request.Request(
                 url,
                 data=req_data,
-                headers={"Content-Type": "application/json", "User-Agent": "NexusRetailAI/2.0"}
+                headers={"Content-Type": "application/json", "User-Agent": "PrismRetail/2.0"}
             )
             with urllib.request.urlopen(req, timeout=5) as response:
                 return {

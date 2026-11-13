@@ -1,7 +1,7 @@
 """
 Autonomous Telemetry Watchdog & Cross-Engine Digest Scheduler (Phase 20).
 
-Performs unified health sweeps across all core Nexus Retail AI subsystems:
+Performs unified health sweeps across all core Prism Retail subsystems:
 1. Inventory & Supply Chain EOQ Engine (critical stockouts <= ROP)
 2. Cohort Retention & RFM Migration Engine (Champion slippage & M1 drop)
 3. Enterprise MLOps Drift Monitor (PSI / Kolmogorov-Smirnov decay)

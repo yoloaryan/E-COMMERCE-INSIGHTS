@@ -26,7 +26,7 @@ def test_executive_briefing_six_engine_aggregation():
     assert len(briefing["strategic_directives"]) >= 1
 
     memo = ExecutiveBriefingGenerator.render_markdown_memo(briefing)
-    assert "# Nexus Retail AI — Executive Boardroom Briefing" in memo
+    assert "# Prism Retail — Executive Boardroom Briefing" in memo
     assert "## 1. Headline Financial & Intelligence KPIs" in memo
     assert "## 3. Prioritized Board Strategic Directives" in memo
     assert "₹" in memo
@@ -43,11 +43,11 @@ def test_api_executive_briefing_and_downloads():
     dl_md = client.get("/api/v1/reports/executive-briefing/download?format=markdown")
     assert dl_md.status_code == 200
     assert "attachment" in dl_md.headers.get("content-disposition", "")
-    assert "nexus_executive_briefing.md" in dl_md.headers.get("content-disposition", "")
-    assert "# Nexus Retail AI" in dl_md.text
+    assert "prism_executive_briefing.md" in dl_md.headers.get("content-disposition", "")
+    assert "# Prism Retail" in dl_md.text
 
     dl_json = client.get("/api/v1/reports/executive-briefing/download?format=json")
     assert dl_json.status_code == 200
-    assert "nexus_executive_briefing.json" in dl_json.headers.get("content-disposition", "")
+    assert "prism_executive_briefing.json" in dl_json.headers.get("content-disposition", "")
     assert dl_json.json()["status"] == "success"
 

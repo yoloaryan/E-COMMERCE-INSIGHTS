@@ -22,21 +22,25 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
-DEFAULT_STATE_DB = ROOT_DIR / "data" / "state" / "nexus_state.db"
+DEFAULT_STATE_DB = (
+    ROOT_DIR / "data" / "state" / "prism_state.db"
+    if (ROOT_DIR / "data" / "state" / "prism_state.db").exists() or not (ROOT_DIR / "data" / "state" / "nexus_state.db").exists()
+    else ROOT_DIR / "data" / "state" / "nexus_state.db"
+)
 
 
 def resolve_default_db_path() -> Path:
     """Resolves production DB path vs isolated process-scoped test DB under pytest."""
-    env_override = os.environ.get("NEXUS_STATE_DB")
+    env_override = os.environ.get("PRISM_STATE_DB") or os.environ.get("NEXUS_STATE_DB")
     if env_override:
         return Path(env_override)
     if os.environ.get("PYTEST_CURRENT_TEST"):
-        return Path(tempfile.gettempdir()) / f"nexus_pytest_state_{os.getpid()}.db"
+        return Path(tempfile.gettempdir()) / f"prism_pytest_state_{os.getpid()}.db"
     return DEFAULT_STATE_DB
 
 
 class SQLiteStateStore:
-    """Thread-safe SQLite (WAL) state store backing Nexus Retail AI operational registries."""
+    """Thread-safe SQLite (WAL) state store backing Prism Retail operational registries."""
 
     def __init__(self, db_path: Optional[Path] = None):
         self.db_path = Path(db_path) if db_path is not None else resolve_default_db_path()

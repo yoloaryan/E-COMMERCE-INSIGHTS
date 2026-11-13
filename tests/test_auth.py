@@ -333,3 +333,13 @@ def test_cross_tenant_key_management_guard():
         reg.revoke_api_key("key_uk_pos_prod", actor=growth_principal)
     assert exc_rev.value.status_code == 403
 
+
+def test_prism_retail_identity_authentication():
+    """Verify primary Prism Retail branding credentials authenticate successfully."""
+    login_data = _login_as("admin@prismretail.ai", "PrismAdmin2026!")
+    assert "access_token" in login_data
+    assert login_data["user"]["role"] == "admin"
+    assert login_data["user"]["email"] == "admin@prismretail.ai"
+    assert "Prism" in login_data["active_tenant"]["name"]
+
+
