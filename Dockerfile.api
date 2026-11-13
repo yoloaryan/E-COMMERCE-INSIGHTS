@@ -24,6 +24,13 @@ RUN useradd -m -u 10001 -s /bin/bash appuser
 COPY src/ /app/src/
 COPY models/ /app/models/
 COPY data/processed/ /app/data/processed/
+COPY data/nexus_data.json /app/data/nexus_data.json
+
+# Copy web application assets so container can serve unified frontend + API
+COPY index.html /app/index.html
+COPY style.css /app/style.css
+COPY app.js /app/app.js
+COPY js/ /app/js/
 
 # Set up runtime directories and ownership
 RUN mkdir -p /app/data/raw/imported_batches && \

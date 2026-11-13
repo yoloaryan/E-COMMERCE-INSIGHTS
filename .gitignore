@@ -7,17 +7,15 @@ __pycache__/
 *$py.class
 *.ipynb_checkpoints/
 
-# Data files (keep raw & large data out of git)
+# Data files (keep raw & heavy CSV data out of git, include compact processed parquet)
 data/raw/*
 !data/raw/.gitkeep
-data/processed/*
-!data/processed/.gitkeep
+data/processed/*.csv
 data/state/*.db*
 !data/state/.gitkeep
 
-# Models & Artifacts
-models/*.pkl
-models/*.joblib
+# Models & Artifacts (tracked for containerized cloud deployment)
+# models/*.joblib and models/*.pkl are tracked
 !models/.gitkeep
 
 # OS & IDE

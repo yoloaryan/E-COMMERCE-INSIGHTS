@@ -24,7 +24,8 @@ import pandas as pd
 import joblib
 from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect, status, UploadFile, File, Form, Request, Header, Depends
-from fastapi.responses import Response, HTMLResponse
+from fastapi.responses import Response, HTMLResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -98,6 +99,43 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount frontend ES code-split modules directory for standalone full-stack cloud deployment
+if (ROOT_DIR / "js").exists():
+    app.mount("/js", StaticFiles(directory=str(ROOT_DIR / "js")), name="js")
+
+
+@app.get("/style.css", include_in_schema=False)
+def serve_root_style():
+    css_path = ROOT_DIR / "style.css"
+    if css_path.exists():
+        return FileResponse(css_path, media_type="text/css")
+    raise HTTPException(status_code=404, detail="style.css not found")
+
+
+@app.get("/app.js", include_in_schema=False)
+def serve_root_js():
+    js_path = ROOT_DIR / "app.js"
+    if js_path.exists():
+        return FileResponse(js_path, media_type="application/javascript")
+    raise HTTPException(status_code=404, detail="app.js not found")
+
+
+@app.get("/data/nexus_data.json", include_in_schema=False)
+@app.get("/data/prism_data.json", include_in_schema=False)
+def serve_root_data_json():
+    data_path = ROOT_DIR / "data" / "nexus_data.json"
+    if data_path.exists():
+        return FileResponse(data_path, media_type="application/json")
+    raise HTTPException(status_code=404, detail="Data json not found")
+
+
+@app.get("/index.html", include_in_schema=False)
+def serve_root_index_html():
+    index_path = ROOT_DIR / "index.html"
+    if index_path.exists():
+        return FileResponse(index_path, media_type="text/html")
+    raise HTTPException(status_code=404, detail="index.html not found")
 
 # -----------------------------------------------------------------------------
 # Global Model Registry / Cache
@@ -503,8 +541,15 @@ class SimulateBanditRequest(BaseModel):
 # API Endpoints
 # -----------------------------------------------------------------------------
 @app.get("/", tags=["System"])
-def root():
-    """Health check and general API metadata."""
+def root(request: Request):
+    """Health check, API metadata, or frontend dashboard for browser visitors."""
+    accept = request.headers.get("accept", "").lower()
+    # If a web browser opens the root URL, serve the Liquid Glass application
+    if "text/html" in accept and "application/json" not in accept:
+        index_file = ROOT_DIR / "index.html"
+        if index_file.exists():
+            return FileResponse(index_file, media_type="text/html")
+
     return {
         "status": "online",
         "service": "Prism Retail Serving API",
