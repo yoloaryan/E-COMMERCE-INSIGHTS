@@ -141,7 +141,7 @@ class ExecutiveBriefingGenerator:
         return {
             "status": "success",
             "generated_at": datetime.now(timezone.utc).isoformat(),
-            "platform_version": "Prism Retail v4.0-prod",
+            "platform_version": "Prism Retail v4.13.0",
             "country": finance["filters"]["country"],
             "executive_health_score": wd_latest.get("health_score", 100.0),
             "headline_kpis": headline_kpis,

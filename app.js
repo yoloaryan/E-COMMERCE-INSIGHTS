@@ -5147,7 +5147,7 @@ const API_ENDPOINTS = {
         path: "/api/v1/reports/executive-briefing",
         url: nexusApiUrl("/api/v1/reports/executive-briefing?country=All"),
         payload: { info: "GET endpoint; aggregates all 6 core operational engines into a Boardroom Briefing." },
-        handler: () => ({ status: "success", platform_version: "Nexus Retail AI v4.0-prod" })
+        handler: () => ({ status: "success", platform_version: "Prism Retail v4.13.0" })
     },
     customer_360: {
         method: "GET",
